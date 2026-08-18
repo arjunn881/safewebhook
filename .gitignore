@@ -1,24 +1,63 @@
-# build output
-dist/
+# =========================================================================
+# SafeWebhook - Comprehensive Git Ignore
+# =========================================================================
 
-# generated types
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build Outputs & Generated Assets
+dist/
+build/
+out/
 .astro/
 
-# dependencies
-node_modules/
+# Cloudflare Workers & Wrangler Local State
+.wrangler/
+.mf/
 
-# logs
+# Environment Variables & Private Credentials
+.env
+.env.*
+!.env.example
+.dev.vars
+
+# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
+*.log
 
-# environment variables
-.env
-.env.production
+# Diagnostic & Test Coverage
+coverage/
+.nyc_output/
 
-# macOS-specific files
+# Operating System Files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+[Dd]esktop.ini
 
-# jetbrains setting folder
+# IDE & Editor Specific Folders
 .idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.tmp
+*.bak
+
+# Optional VS Code config (ignore workspace user state, keep recommended configs)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json

@@ -1,0 +1,200 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const faqs = [
+  {
+    category: 'Local Testing & Tunneling',
+    question: 'How can I test webhooks locally without ngrok?',
+    answer: 'You can test webhooks locally without installing Ngrok by generating a free endpoint on Webhook Tester, adding it as your provider delivery URL, and using our built-in 1-Click Request Replay to dispatch captured payloads straight to http://localhost:8000/api/webhook.'
+  },
+  {
+    category: 'Privacy & Security',
+    question: 'Are online webhook testers secure for internal keys?',
+    answer: 'Most traditional cloud webhook tools store your API keys and sensitive customer data on central disks. Webhook Tester is a 100% Client-Side Payload Inspector that streams events in memory and stores logs solely in your local browser storage, ensuring zero persistent server storage.'
+  },
+  {
+    category: 'Payload Inspection',
+    question: 'Where can I view incoming JSON webhook payloads in real-time?',
+    answer: 'Open our free online webhook workbench at /app to get an instant temporary webhook URL. Incoming JSON, XML, and form payloads from Stripe, Shopify, and GitHub will appear live in your browser over sub-20ms Server-Sent Events.'
+  },
+  {
+    category: 'Competitor Comparison',
+    question: 'What is the best alternative to webhook.site?',
+    answer: 'Webhook Tester is the top free alternative to Webhook.site. Unlike Webhook.site which locks custom responses, search, and extended storage behind $15-$45/month subscriptions, Webhook Tester provides unlimited requests, custom status codes, simulated latency, and replay 100% free with no login.'
+  },
+  {
+    category: 'Cryptographic Verification',
+    question: 'How to safely inspect Stripe webhook signatures?',
+    answer: 'Webhook Tester automatically extracts the timestamp (t=...) and HMAC-SHA256 signature (v1=...) from the Stripe-Signature header, and provides copy-paste verification recipes in Node.js, Python, and Go without exposing your webhook signing secret.'
+  },
+  {
+    category: 'Pricing & Registration',
+    question: 'Is Webhook Tester really 100% free without registration?',
+    answer: 'Yes, 100% free forever with zero login or credit card required. Every feature—including custom HTTP responses, simulated delays, email inboxes, and request replay—is available out of the box.'
+  },
+  {
+    category: 'Custom Responses & Latency',
+    question: 'How do I return custom status codes (201, 204, 400, 500) or simulate network delay?',
+    answer: 'Click the "Response Config" tab in the application to select any HTTP status code (200, 201, 204, 400, 500), customize Content-Type headers and response bodies, and set a simulated latency delay slider (0–5000ms).'
+  }
+];
+
+const structuredSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqs.map(f => ({
+    '@type': 'Question',
+    name: f.question,
+    acceptedAnswer: { '@type': 'Answer', text: f.answer }
+  }))
+};
+---
+
+<Layout
+  title="Webhook FAQ & Developer Troubleshooting Guide — Free Webhook Tester"
+  description="Answers to top developer questions: How to test webhooks locally without ngrok, best webhook.site alternatives, client-side security, and Stripe signature verification."
+  keywords="test webhooks locally without ngrok, online webhook testers secure, view incoming JSON webhook payloads, alternative to webhook.site, inspect Stripe webhook signatures, free webhook tester no login"
+>
+  <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredSchema)} />
+
+  <!-- Header -->
+  <header class="sticky top-0 z-50 w-full border-b border-slate-800 bg-slate-950/85 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-3 group">
+        <div class="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:border-cyan-400 transition-colors shadow-sm shadow-cyan-500/10">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <div class="flex flex-col">
+          <span class="font-bold tracking-tight text-white text-base">Webhook<span class="text-cyan-400">Tester</span></span>
+          <span class="text-[10px] text-slate-400 -mt-1 font-mono">FAQ &amp; Help</span>
+        </div>
+      </a>
+
+      <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
+        <a href="/" class="hover:text-cyan-300 transition-colors">Home</a>
+        <a href="/docs" class="hover:text-cyan-300 transition-colors">Documentation</a>
+        <a href="/faq" class="text-cyan-400 font-semibold transition-colors">FAQ</a>
+      </nav>
+
+      <a
+        href="/app"
+        class="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold rounded-lg text-slate-950 bg-gradient-to-r from-cyan-400 to-cyan-300 hover:from-cyan-300 hover:to-cyan-200 transition-all shadow-md shadow-cyan-500/20 active:scale-95"
+      >
+        Launch Workbench &rarr;
+      </a>
+    </div>
+  </header>
+
+  <main class="py-16 sm:py-24">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <!-- Hero Intro -->
+      <div class="text-center space-y-4 mb-16">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 text-xs font-mono">
+          <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+          <span>Frequently Asked Questions</span>
+        </div>
+        <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight">
+          Everything You Need to Know
+        </h1>
+        <p class="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
+          Learn how Webhook Tester delivers high-speed, zero-storage, 100% free webhook inspection for developers worldwide.
+        </p>
+      </div>
+
+      <!-- FAQ Accordions Container -->
+      <div class="space-y-4" id="faq-list">
+        {faqs.map((faq, idx) => (
+          <div class="faq-item rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden transition-all duration-200 hover:border-slate-700">
+            <button
+              type="button"
+              class="faq-toggle w-full p-5 sm:p-6 text-left flex items-center justify-between gap-4 focus:outline-none"
+              data-index={idx}
+            >
+              <div class="space-y-1">
+                <span class="text-[10px] font-mono uppercase tracking-wider text-cyan-400 font-semibold">{faq.category}</span>
+                <h3 class="text-sm sm:text-base font-semibold text-white">{faq.question}</h3>
+              </div>
+              <div class="w-8 h-8 rounded-lg bg-slate-800/80 flex items-center justify-center text-cyan-400 flex-shrink-0 transition-transform duration-200 faq-icon">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </button>
+            <div class="faq-answer px-5 pb-5 sm:px-6 sm:pb-6 text-xs sm:text-sm text-slate-300 leading-relaxed border-t border-slate-800/50 pt-4 hidden">
+              {faq.answer}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <!-- Bottom Help CTA -->
+      <div class="mt-16 p-8 rounded-2xl border border-slate-800 bg-slate-900/80 text-center space-y-4">
+        <h3 class="text-xl font-bold text-white">Have more questions or need code examples?</h3>
+        <p class="text-sm text-slate-400 max-w-lg mx-auto">
+          Explore our complete integration guides for Stripe, GitHub, Shopify, and local tunneling.
+        </p>
+        <div class="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <a
+            href="/docs"
+            class="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-sm font-semibold text-white transition-colors"
+          >
+            Read Integration Docs
+          </a>
+          <a
+            href="/app"
+            class="px-6 py-3 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 text-sm font-bold shadow-md shadow-cyan-500/20 transition-all"
+          >
+            Launch Free Tester
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="py-12 border-t border-slate-800 bg-slate-950 text-slate-400 text-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+      <div class="flex items-center gap-3">
+        <div class="w-6 h-6 rounded bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-xs font-bold font-mono">
+          W
+        </div>
+        <span class="font-semibold text-slate-200">Webhook Tester FAQ</span>
+        <span class="text-xs text-slate-400">• 100% Free Forever</span>
+      </div>
+
+      <div class="flex items-center gap-6 text-xs">
+        <a href="/" class="hover:text-cyan-300 transition-colors">Home</a>
+        <a href="/docs" class="hover:text-cyan-300 transition-colors">Docs</a>
+        <a href="/app" class="text-cyan-400 hover:text-cyan-300 font-semibold transition-colors">Launch Workspace &rarr;</a>
+      </div>
+    </div>
+  </footer>
+</Layout>
+
+<!-- FAQ Accordion Client Script -->
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    const toggles = document.querySelectorAll('.faq-toggle');
+    toggles.forEach((toggle) => {
+      toggle.addEventListener('click', () => {
+        const item = toggle.closest('.faq-item');
+        const answer = item.querySelector('.faq-answer');
+        const icon = item.querySelector('.faq-icon');
+        const isHidden = answer.classList.contains('hidden');
+
+        // Close all other open answers
+        document.querySelectorAll('.faq-answer').forEach((a) => a.classList.add('hidden'));
+        document.querySelectorAll('.faq-icon').forEach((i) => i.classList.remove('rotate-180'));
+
+        if (isHidden) {
+          answer.classList.remove('hidden');
+          icon.classList.add('rotate-180');
+        }
+      });
+    });
+  });
+</script>

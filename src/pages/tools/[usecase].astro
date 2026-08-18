@@ -1,0 +1,219 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { USE_CASES, type ToolUseCase } from '../../data/usecases';
+
+export const prerender = false;
+
+const { usecase } = Astro.params;
+const caseData: ToolUseCase | undefined = usecase ? USE_CASES[usecase] : undefined;
+
+if (!caseData) {
+  return Astro.redirect('/docs');
+}
+
+const pageTitle = `${caseData.name} — SafeWebhook Developer Tool`;
+const pageDescription = `${caseData.headline}. ${caseData.description} Powered by SafeWebhook at safewebhook.com.`;
+
+const structuredSchema = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'HowTo',
+      name: caseData.name,
+      description: pageDescription,
+      step: caseData.practicalGuide.map((step, idx) => ({
+        '@type': 'HowToStep',
+        position: idx + 1,
+        name: `Step ${idx + 1}`,
+        text: step
+      }))
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://safewebhook.com/' },
+        { '@type': 'ListItem', position: 2, name: 'Tools', item: 'https://safewebhook.com/docs' },
+        { '@type': 'ListItem', position: 3, name: caseData.name, item: Astro.url.href }
+      ]
+    },
+    {
+      '@type': 'FAQPage',
+      mainEntity: caseData.faqs.map(f => ({
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a }
+      }))
+    }
+  ]
+};
+---
+
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  canonicalURL={Astro.url.href}
+  keywords={caseData.targetQueries.join(', ')}
+>
+  <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredSchema)} />
+
+  <!-- Navigation Header -->
+  <header class="sticky top-0 z-50 w-full border-b border-slate-800 bg-slate-950/85 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-3 group">
+        <div class="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:border-cyan-400 transition-colors shadow-sm shadow-cyan-500/10">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <div class="flex flex-col">
+          <span class="font-bold tracking-tight text-white text-base font-sans">Safe<span class="text-cyan-400">Webhook</span></span>
+          <span class="text-[10px] text-slate-400 -mt-1 font-mono">safewebhook.com</span>
+        </div>
+      </a>
+
+      <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
+        <a href="/" class="hover:text-cyan-300 transition-colors">Home</a>
+        <a href="/docs" class="hover:text-cyan-300 transition-colors">Docs</a>
+        <a href="/faq" class="hover:text-cyan-300 transition-colors">FAQ</a>
+      </nav>
+
+      <a
+        href="/app"
+        class="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold rounded-lg text-slate-950 bg-gradient-to-r from-cyan-400 to-cyan-300 hover:from-cyan-300 hover:to-cyan-200 transition-all shadow-md shadow-cyan-500/20 active:scale-95"
+      >
+        Launch Workbench &rarr;
+      </a>
+    </div>
+  </header>
+
+  <main class="py-12 sm:py-20">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+      
+      <!-- Breadcrumbs -->
+      <nav class="flex items-center gap-2 text-xs font-mono text-slate-400">
+        <a href="/" class="hover:text-cyan-300 transition-colors">Home</a>
+        <span>/</span>
+        <a href="/docs" class="hover:text-cyan-300 transition-colors">Tools</a>
+        <span>/</span>
+        <span class="text-cyan-400 font-semibold">{caseData.name}</span>
+      </nav>
+
+      <!-- Hero Header -->
+      <div class="space-y-4">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 text-xs font-mono">
+          <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+          <span>SafeWebhook Developer Tool</span>
+        </div>
+        <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight leading-tight">
+          {caseData.name}
+        </h1>
+        <p class="text-base sm:text-lg text-slate-300 leading-relaxed">
+          {caseData.headline}
+        </p>
+
+        <!-- Target Search Query Tags -->
+        <div class="pt-2 flex flex-wrap gap-2">
+          {caseData.targetQueries.map(q => (
+            <span class="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono text-cyan-300">
+              #{q}
+            </span>
+          ))}
+        </div>
+
+        <div class="pt-4 flex flex-wrap items-center gap-4">
+          <a
+            href="/app"
+            class="px-6 py-3 rounded-xl text-sm font-bold text-slate-950 bg-gradient-to-r from-cyan-400 via-cyan-300 to-teal-300 hover:from-cyan-300 hover:to-teal-200 transition-all shadow-lg shadow-cyan-500/25"
+          >
+            Launch Live Interactive Tool &rarr;
+          </a>
+        </div>
+      </div>
+
+      <!-- Core Benefits -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 font-mono text-xs">
+        {caseData.benefits.map(b => (
+          <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 flex items-start gap-3">
+            <div class="w-5 h-5 rounded bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 flex-shrink-0 mt-0.5">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+            </div>
+            <span class="text-slate-200 text-sm font-sans">{b}</span>
+          </div>
+        ))}
+      </div>
+
+      <!-- Step-by-Step Practical Guide -->
+      <section class="space-y-6 pt-8 border-t border-slate-800">
+        <h2 class="text-2xl font-bold text-white">How to Use This Tool</h2>
+        <div class="space-y-3">
+          {caseData.practicalGuide.map((step, idx) => (
+            <div class="flex items-start gap-3.5 p-4 rounded-xl border border-slate-800 bg-slate-900/40 text-sm text-slate-200">
+              <span class="w-6 h-6 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-mono text-xs flex items-center justify-center flex-shrink-0 font-bold">
+                {idx + 1}
+              </span>
+              <span class="leading-relaxed">{step}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <!-- Code Snippet / API Recipe -->
+      <section class="space-y-4 pt-8 border-t border-slate-800">
+        <h2 class="text-2xl font-bold text-white">Code Implementation Recipe</h2>
+        <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-3 font-mono text-xs">
+          <pre class="p-4 rounded-xl bg-slate-950 text-cyan-300 overflow-x-auto border border-slate-850 leading-relaxed"><code>{caseData.codeSnippet}</code></pre>
+        </div>
+      </section>
+
+      <!-- FAQs -->
+      <section class="space-y-6 pt-8 border-t border-slate-800">
+        <h2 class="text-2xl font-bold text-white">Frequently Asked Questions</h2>
+        <div class="space-y-4">
+          {caseData.faqs.map(faq => (
+            <div class="p-5 rounded-xl border border-slate-800 bg-slate-900/60 space-y-2">
+              <h3 class="font-semibold text-white text-base">{faq.q}</h3>
+              <p class="text-sm text-slate-300 leading-relaxed">{faq.a}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <!-- CTA Box -->
+      <div class="p-8 rounded-2xl border border-cyan-500/30 bg-slate-900/90 text-center space-y-4">
+        <h3 class="text-2xl font-bold text-white">Start testing on SafeWebhook right now</h3>
+        <p class="text-sm text-slate-300 max-w-lg mx-auto">
+          No signups, subscriptions, or credit cards required. 100% private in-browser memory at safewebhook.com.
+        </p>
+        <div class="pt-2">
+          <a
+            href="/app"
+            class="inline-flex items-center justify-center px-8 py-3.5 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold text-sm shadow-md shadow-cyan-500/20 transition-all"
+          >
+            Launch SafeWebhook Workbench &rarr;
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="py-12 border-t border-slate-800 bg-slate-950 text-slate-400 text-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+      <div class="flex items-center gap-3">
+        <div class="w-6 h-6 rounded bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-xs font-bold font-mono">
+          S
+        </div>
+        <span class="font-semibold text-slate-200">SafeWebhook</span>
+        <span class="text-xs text-slate-400">&bull; safewebhook.com &bull; {caseData.name}</span>
+      </div>
+
+      <div class="flex items-center gap-6 text-xs">
+        <a href="/" class="hover:text-cyan-300 transition-colors">Home</a>
+        <a href="/docs" class="hover:text-cyan-300 transition-colors">Docs</a>
+        <a href="/faq" class="hover:text-cyan-300 transition-colors">FAQ</a>
+        <a href="/app" class="text-cyan-400 hover:text-cyan-300 font-semibold transition-colors">Open App &rarr;</a>
+      </div>
+    </div>
+  </footer>
+</Layout>

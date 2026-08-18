@@ -1,0 +1,14 @@
+---
+import Layout from '../layouts/Layout.astro';
+import WebhookDashboard from '../components/WebhookDashboard.astro';
+
+export const prerender = false;
+---
+
+<Layout
+  title="Online Webhook Tester Workspace — Live Payload Inspector"
+  description="Real-time edge webhook debugging workspace. Intercept HTTP requests, inspect full headers and payloads with zero configuration."
+  robots="noindex, nofollow"
+>
+  <WebhookDashboard />
+</Layout>

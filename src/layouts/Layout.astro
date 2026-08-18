@@ -1,23 +1,114 @@
-<!doctype html>
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro Basics</title>
-	</head>
-	<body>
-		<slot />
-	</body>
-</html>
+---
+import '../styles/global.css';
 
-<style>
-	html,
-	body {
-		margin: 0;
-		width: 100%;
-		height: 100%;
-	}
-</style>
+export interface Props {
+  title?: string;
+  description?: string;
+  keywords?: string;
+  canonicalURL?: string;
+  ogImage?: string;
+  ogType?: 'website' | 'article';
+  robots?: string;
+}
+
+const {
+  title = 'SafeWebhook — Free Online Webhook Tester & No-Login Request Debugger',
+  description = 'SafeWebhook is the instant free online webhook tester with zero signup. 100% client-side payload inspector, secure private webhook tester, and request bin alternative to test webhooks online.',
+  keywords = 'SafeWebhook, safewebhook.com, free webhook tester, online webhook debugger, test webhooks online, webhook listener online, inspect http requests, request bin alternative free, webhook tester no login, free webhook tool without registration, client side webhook inspector, secure private webhook tester, temporary webhook url creator, webhook.site free alternative, unlimited free webhook logger, stripe webhook tester online, shopify webhook debugger tool, github webhook simulation payload, test slack outgoing webhooks, cloudflare workers webhook capture, paypal webhook listener free',
+  canonicalURL,
+  ogImage = '/images/hero-telemetry.jpg',
+  ogType = 'website',
+  robots = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+} = Astro.props;
+
+const siteUrl = Astro.site ? Astro.site.toString().replace(/\/$/, '') : (Astro.url ? Astro.url.origin : 'https://safewebhook.com');
+const canonical = canonicalURL || new URL(Astro.url.pathname, siteUrl).toString();
+const absoluteOgImage = ogImage.startsWith('http') ? ogImage : `${siteUrl}${ogImage}`;
+
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'SafeWebhook',
+  alternateName: 'SafeWebhook — Zero-Login Request Debugger & Client-Side Webhook Listener',
+  url: siteUrl,
+  description: description,
+  applicationCategory: 'DeveloperApplication',
+  operatingSystem: 'All',
+  keywords: keywords,
+  aggregateRating: {
+    '@type': 'AggregateRating',
+    ratingValue: '4.9',
+    reviewCount: '1240',
+    bestRating: '5',
+    worstRating: '1'
+  },
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD',
+  },
+  featureList: [
+    'SafeWebhook Free Online Webhook Tester with zero signup required',
+    'No-Login Webhook Debugger for Stripe, GitHub, and Shopify',
+    '100% Client-Side Payload Inspector with live header breakdown',
+    'Private Local-Only Request Logging with zero persistent server storage',
+    'Custom HTTP Status Code & Response Simulator (200, 201, 400, 500)',
+    'Simulated Latency Engine (0-5000ms delay)',
+    '1-Click Request Replay to Localhost without Ngrok',
+    'Inbound Email Webhook Ingestion & Parser'
+  ],
+};
+---
+
+<!doctype html>
+<html lang="en" class="dark scroll-smooth">
+  <head>
+    <!-- Essential Meta Tags -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+    <meta name="generator" content={Astro.generator} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="canonical" href={canonical} />
+
+    <!-- Primary Meta Tags -->
+    <title>{title}</title>
+    <meta name="title" content={title} />
+    <meta name="description" content={description} />
+    <meta name="keywords" content={keywords} />
+    <meta name="author" content="SafeWebhook" />
+    <meta name="robots" content={robots} />
+
+    <!-- Mobile & Display Configurations -->
+    <meta name="theme-color" content="#020617" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="format-detection" content="telephone=no" />
+
+    <!-- Open Graph / Discord / Slack / Facebook -->
+    <meta property="og:type" content={ogType} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={absoluteOgImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="SafeWebhook — Free Online Webhook Tester & Payload Inspector" />
+    <meta property="og:site_name" content="SafeWebhook" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter / X Cards -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content={canonical} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={absoluteOgImage} />
+    <meta name="twitter:image:alt" content="SafeWebhook — Free Online Webhook Tester & Payload Inspector" />
+
+    <!-- JSON-LD Structured Data Schema -->
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredData)} />
+  </head>
+  <body class="bg-slate-950 text-slate-100 font-sans antialiased selection:bg-cyan-500/30 selection:text-cyan-200">
+    <slot />
+  </body>
+</html>

@@ -1,0 +1,285 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { PLATFORMS } from '../../data/platforms';
+
+const localForwarderScript = `// Stream Webhooks to Localhost (zero install one-liner)
+const endpoint = "YOUR_ENDPOINT_ID";
+const targetLocalUrl = "http://localhost:8000/api/webhook";
+
+const es = new EventSource(\`https://safewebhook.com/api/stream/\${endpoint}\`);
+es.onmessage = async (e) => {
+  const data = JSON.parse(e.data);
+  if (data.type === 'connected' || data.type === 'ping') return;
+  console.log(\`[Forwarding \${data.method}] to \${targetLocalUrl}\`);
+  await fetch(targetLocalUrl, {
+    method: data.method,
+    headers: data.headers,
+    body: data.body
+  });
+};`;
+---
+
+<Layout
+  title="SafeWebhook Documentation & Integration Guides — safewebhook.com"
+  description="Comprehensive developer documentation for SafeWebhook. Guides for Stripe, GitHub, Shopify, Custom Responses, Localhost Replay, and Signature Verification."
+>
+  <!-- Navigation Header -->
+  <header class="sticky top-0 z-50 w-full border-b border-slate-800 bg-slate-950/85 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-3 group">
+        <div class="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:border-cyan-400 transition-colors shadow-sm shadow-cyan-500/10">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <div class="flex flex-col">
+          <span class="font-bold tracking-tight text-white text-base">Safe<span class="text-cyan-400">Webhook</span></span>
+          <span class="text-[10px] text-slate-400 -mt-1 font-mono">Documentation</span>
+        </div>
+      </a>
+
+      <nav class="hidden md:flex items-center gap-6 text-sm font-medium text-slate-300">
+        <a href="#quickstart" class="hover:text-cyan-300 transition-colors">Quickstart</a>
+        <a href="#integrations-directory" class="hover:text-cyan-300 transition-colors">Integrations</a>
+        <a href="#custom-responses" class="hover:text-cyan-300 transition-colors">Custom Responses</a>
+        <a href="#api-reference" class="hover:text-cyan-300 transition-colors">API Reference</a>
+        <a href="/faq" class="text-cyan-400 hover:text-cyan-300 font-semibold transition-colors">FAQ</a>
+      </nav>
+
+      <a
+        href="/app"
+        class="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold rounded-lg text-slate-950 bg-gradient-to-r from-cyan-400 to-cyan-300 hover:from-cyan-300 hover:to-cyan-200 transition-all shadow-md shadow-cyan-500/20 active:scale-95"
+      >
+        Launch Workbench &rarr;
+      </a>
+    </div>
+  </header>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+      
+      <!-- Sticky Sidebar Navigation -->
+      <aside class="hidden lg:block lg:col-span-3 sticky top-24 self-start space-y-6 text-xs font-mono">
+        <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-3">
+          <div class="font-bold uppercase tracking-wider text-slate-400 text-[11px]">Getting Started</div>
+          <ul class="space-y-2 text-slate-300">
+            <li><a href="#quickstart" class="hover:text-cyan-400 transition-colors block py-0.5">Quickstart in 10s</a></li>
+            <li><a href="#integrations-directory" class="hover:text-cyan-400 transition-colors block py-0.5">Platform Portals</a></li>
+            <li><a href="/faq" class="hover:text-cyan-400 transition-colors block py-0.5">Frequently Asked Questions</a></li>
+          </ul>
+
+          <div class="font-bold uppercase tracking-wider text-slate-400 text-[11px] pt-3 border-t border-slate-800">Provider Guides</div>
+          <ul class="space-y-2 text-slate-300">
+            <li><a href="/test/stripe" class="hover:text-cyan-400 transition-colors block py-0.5">Stripe Webhook Testing</a></li>
+            <li><a href="/test/github" class="hover:text-cyan-400 transition-colors block py-0.5">GitHub Webhook Testing</a></li>
+            <li><a href="/test/shopify" class="hover:text-cyan-400 transition-colors block py-0.5">Shopify Webhook Testing</a></li>
+            <li><a href="/test/slack" class="hover:text-cyan-400 transition-colors block py-0.5">Slack Webhook Testing</a></li>
+            <li><a href="/test/twilio" class="hover:text-cyan-400 transition-colors block py-0.5">Twilio Webhook Testing</a></li>
+            <li><a href="/test/discord" class="hover:text-cyan-400 transition-colors block py-0.5">Discord Webhook Testing</a></li>
+          </ul>
+
+          <div class="font-bold uppercase tracking-wider text-slate-400 text-[11px] pt-3 border-t border-slate-800">Advanced Features</div>
+          <ul class="space-y-2 text-slate-300">
+            <li><a href="#custom-responses" class="hover:text-cyan-400 transition-colors block py-0.5">Custom Responses &amp; Latency</a></li>
+            <li><a href="#replay-guide" class="hover:text-cyan-400 transition-colors block py-0.5">Localhost Replay &amp; Tunnel</a></li>
+            <li><a href="#api-reference" class="hover:text-cyan-400 transition-colors block py-0.5">REST API Reference</a></li>
+          </ul>
+
+          <div class="font-bold uppercase tracking-wider text-slate-400 text-[11px] pt-3 border-t border-slate-800">Competitor Alternatives</div>
+          <ul class="space-y-2 text-slate-300">
+            <li><a href="/vs/webhook-site" class="hover:text-cyan-400 transition-colors block py-0.5">vs Webhook.site</a></li>
+            <li><a href="/vs/ngrok" class="hover:text-cyan-400 transition-colors block py-0.5">vs Ngrok</a></li>
+            <li><a href="/vs/requestbin" class="hover:text-cyan-400 transition-colors block py-0.5">vs RequestBin</a></li>
+          </ul>
+        </div>
+      </aside>
+
+      <!-- Main Docs Content -->
+      <main class="lg:col-span-9 space-y-16">
+        
+        <!-- Header Hero -->
+        <div>
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 text-xs font-mono mb-4">
+            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+            <span>Developer Reference &amp; Guides</span>
+          </div>
+          <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight">
+            SafeWebhook Documentation
+          </h1>
+          <p class="mt-4 text-base sm:text-lg text-slate-300 leading-relaxed max-w-3xl">
+            Learn how to test, inspect, replay, and verify inbound webhooks from Stripe, GitHub, Shopify, and custom APIs with zero server storage and sub-20ms edge latency on safewebhook.com.
+          </p>
+        </div>
+
+        <!-- Section 1: Quickstart -->
+        <section id="quickstart" class="space-y-5 pt-8 border-t border-slate-800">
+          <div class="flex items-center gap-3">
+            <span class="text-cyan-400 font-mono text-sm font-bold">01.</span>
+            <h2 class="text-2xl font-bold text-white">Quickstart in 10 Seconds</h2>
+          </div>
+          <p class="text-slate-300 text-sm leading-relaxed">
+            Every session on SafeWebhook gives you a dedicated edge URL. No login, API keys, or signup forms are required.
+          </p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono text-xs">
+            <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-1">
+              <div class="text-cyan-400 font-bold">1. Open Workbench</div>
+              <div class="text-slate-400 text-[11px]">Navigate to <a href="/app" class="text-cyan-300 underline">safewebhook.com/app</a> to spawn your unique tracking URL.</div>
+            </div>
+            <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-1">
+              <div class="text-cyan-400 font-bold">2. Send HTTP Webhooks</div>
+              <div class="text-slate-400 text-[11px]">Paste the URL into your Stripe, GitHub or API provider settings.</div>
+            </div>
+            <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-1">
+              <div class="text-cyan-400 font-bold">3. Inspect in Real-Time</div>
+              <div class="text-slate-400 text-[11px]">View incoming payloads instantly via native Server-Sent Events.</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Programmatic Integration Directory Section -->
+        <section id="integrations-directory" class="space-y-6 pt-8 border-t border-slate-800">
+          <div class="flex items-center gap-3">
+            <span class="text-cyan-400 font-mono text-sm font-bold">02.</span>
+            <h2 class="text-2xl font-bold text-white">Platform Testing Portals &amp; Guides</h2>
+          </div>
+          <p class="text-slate-300 text-sm leading-relaxed">
+            Explore dedicated testing guides, HMAC signature verification recipes, and sample payloads for major API providers:
+          </p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 font-mono text-xs">
+            {Object.values(PLATFORMS).map((p) => (
+              <a
+                href={`/test/${p.slug}`}
+                class="p-4 rounded-xl border border-slate-800 hover:border-cyan-500/40 bg-slate-900/60 hover:bg-slate-900 space-y-2 transition-all group block"
+              >
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-white group-hover:text-cyan-300 transition-colors">{p.name}</span>
+                  <span class="text-[10px] text-cyan-400 font-semibold">{p.category}</span>
+                </div>
+                <p class="text-slate-400 text-[11px] line-clamp-2 leading-relaxed font-sans">{p.tagline}</p>
+                <div class="text-[10px] text-slate-500 font-mono pt-1">{p.signatureHeader}</div>
+              </a>
+            ))}
+          </div>
+        </section>
+
+        <!-- Section 3: Custom Responses & Latency -->
+        <section id="custom-responses" class="space-y-5 pt-8 border-t border-slate-800">
+          <div class="flex items-center gap-3">
+            <span class="text-cyan-400 font-mono text-sm font-bold">03.</span>
+            <h2 class="text-2xl font-bold text-white">Custom Response &amp; Latency Engine</h2>
+          </div>
+          <p class="text-slate-300 text-sm leading-relaxed">
+            Unlike other platforms that charge $15/month for custom responses, SafeWebhook provides a 100% free visual configurator:
+          </p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
+            <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-2">
+              <span class="text-emerald-400 font-bold">Custom Status Codes</span>
+              <p class="text-slate-400 text-[11px] leading-relaxed">
+                Return <code class="text-slate-200">201 Created</code>, <code class="text-slate-200">204 No Content</code>, <code class="text-slate-200">400 Bad Request</code>, or <code class="text-slate-200">500 Server Error</code> to test how the sender handles failures.
+              </p>
+            </div>
+
+            <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-2">
+              <span class="text-amber-400 font-bold">Simulated Latency (0–5000ms)</span>
+              <p class="text-slate-400 text-[11px] leading-relaxed">
+                Inject artificial delays into incoming webhook responses to verify your third-party webhook sender's retry mechanisms and timeout handling.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Section 4: Localhost Replay & Forwarding -->
+        <section id="replay-guide" class="space-y-5 pt-8 border-t border-slate-800">
+          <div class="flex items-center gap-3">
+            <span class="text-cyan-400 font-mono text-sm font-bold">04.</span>
+            <h2 class="text-2xl font-bold text-white">Localhost Replay &amp; Tunneling</h2>
+          </div>
+          <p class="text-slate-300 text-sm leading-relaxed">
+            Stream live webhooks directly to your local development server without installing external tunneling tools:
+          </p>
+
+          <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/80 space-y-3">
+            <h3 class="font-bold text-sm text-white font-mono">Lightweight Node.js Local Forwarder:</h3>
+            <pre class="p-4 rounded-xl bg-slate-950 text-cyan-300 font-mono text-xs leading-relaxed overflow-x-auto border border-slate-850"><code>{localForwarderScript}</code></pre>
+          </div>
+        </section>
+
+        <!-- Section 5: REST API Reference -->
+        <section id="api-reference" class="space-y-5 pt-8 border-t border-slate-800">
+          <div class="flex items-center gap-3">
+            <span class="text-cyan-400 font-mono text-sm font-bold">05.</span>
+            <h2 class="text-2xl font-bold text-white">Edge REST API Reference</h2>
+          </div>
+
+          <div class="space-y-4 font-mono text-xs">
+            
+            <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">ALL</span>
+                <span class="text-slate-200 font-bold">/api/r/[endpoint_id]</span>
+              </div>
+              <p class="text-slate-400 text-[11px]">
+                Inbound webhook receiver. Ingests all HTTP methods, forwards to live SSE listeners, and returns the configured custom response.
+              </p>
+            </div>
+
+            <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 font-bold">POST</span>
+                <span class="text-slate-200 font-bold">/api/email/[endpoint_id]</span>
+              </div>
+              <p class="text-slate-400 text-[11px]">
+                Inbound email webhook ingestion endpoint for Mailgun, SendGrid, SES, and email notifications.
+              </p>
+            </div>
+
+            <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-400 font-bold">GET</span>
+                <span class="text-slate-200 font-bold">/api/stream/[endpoint_id]</span>
+              </div>
+              <p class="text-slate-400 text-[11px]">
+                Server-Sent Events connection endpoint. Returns <code class="text-cyan-300">Content-Type: text/event-stream</code> for real-time browser telemetry.
+              </p>
+            </div>
+
+            <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold">POST</span>
+                <span class="text-slate-200 font-bold">/api/config/[endpoint_id]</span>
+              </div>
+              <p class="text-slate-400 text-[11px]">
+                Configures custom response status code, content type, response body, and simulated delay in ms.
+              </p>
+            </div>
+
+          </div>
+        </section>
+
+      </main>
+
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="py-12 border-t border-slate-800 bg-slate-950 text-slate-400 text-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+      <div class="flex items-center gap-3">
+        <div class="w-6 h-6 rounded bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-xs font-bold font-mono">
+          S
+        </div>
+        <span class="font-semibold text-slate-200">SafeWebhook Docs</span>
+        <span class="text-xs text-slate-400">&bull; safewebhook.com &bull; 100% Free Edge Platform</span>
+      </div>
+
+      <div class="flex items-center gap-6 text-xs">
+        <a href="/" class="hover:text-cyan-300 transition-colors">Home</a>
+        <a href="/faq" class="hover:text-cyan-300 transition-colors">FAQ</a>
+        <a href="/app" class="text-cyan-400 hover:text-cyan-300 font-semibold transition-colors">Open App Workbench &rarr;</a>
+      </div>
+    </div>
+  </footer>
+</Layout>
