@@ -13,21 +13,17 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
 <!-- CRITICAL: Global Functions - must run BEFORE any onclick attr -->
 <!-- ============================================================ -->
 <script is:inline>
-  // These functions are attached to window immediately as this script
-  // is parsed, BEFORE any button onclick attributes can fire.
-
   window.switchInspectorTab = function(tabId) {
     document.querySelectorAll('.tab-btn').forEach(function(btn) {
       if (btn.getAttribute('data-tab') === tabId) {
-        btn.className = 'tab-btn py-3 border-b-2 border-cyan-400 text-cyan-300 font-semibold active-tab flex items-center gap-1.5 cursor-pointer';
+        btn.className = 'tab-btn py-3 border-b-2 border-cyan-400 text-cyan-300 font-semibold active-tab flex items-center gap-1.5 cursor-pointer flex-shrink-0';
       } else {
-        btn.className = 'tab-btn py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer';
+        btn.className = 'tab-btn py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer flex-shrink-0';
       }
     });
     document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.add('hidden'); });
     var panel = document.getElementById('tab-panel-' + tabId);
     if (panel) panel.classList.remove('hidden');
-    // Sync into app state if available
     if (window.__appState) window.__appState.currentTab = tabId;
   };
 
@@ -37,6 +33,9 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
     if (modalId === 'code-modal' && typeof window.__renderExportCode === 'function') {
       window.__renderExportCode();
     }
+    if (modalId === 'endpoint-modal' && typeof window.__renderEndpointList === 'function') {
+      window.__renderEndpointList();
+    }
   };
 
   window.closeAppModal = function(modalId) {
@@ -44,7 +43,6 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
     if (el) el.classList.add('hidden');
   };
 
-  // Shared app state bridge between early script and main IIFE
   window.__appState = { currentTab: 'body' };
 </script>
 
@@ -69,22 +67,34 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
 
       <div class="h-4 w-px bg-slate-800 hidden sm:block"></div>
 
-      <!-- Live Stream SSE Connection Badge -->
-      <div id="connection-status-badge" class="flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-950/80 border border-slate-800 text-xs font-mono">
-        <span class="relative flex h-2 w-2">
-          <span id="conn-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-          <span id="conn-dot" class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-        </span>
-        <span id="conn-text" class="text-slate-300 text-[11px] font-medium hidden lg:inline">Live SSE Stream</span>
-        <span id="conn-text-mobile" class="text-slate-300 text-[11px] font-medium lg:hidden">Live</span>
+      <!-- Live Stream SSE Connection Badge & Stream Pause Control -->
+      <div class="flex items-center gap-1.5">
+        <div id="connection-status-badge" class="flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-950/80 border border-slate-800 text-xs font-mono">
+          <span class="relative flex h-2 w-2">
+            <span id="conn-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span id="conn-dot" class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span id="conn-text" class="text-slate-300 text-[11px] font-medium hidden lg:inline">Live SSE Stream</span>
+          <span id="conn-text-mobile" class="text-slate-300 text-[11px] font-medium lg:hidden">Live</span>
+        </div>
+
+        <button
+          id="toggle-pause-stream-btn"
+          type="button"
+          class="h-7 px-2 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-cyan-300 border border-slate-700/80 text-[10px] font-mono flex items-center gap-1 transition-colors cursor-pointer"
+          title="Pause or resume live incoming requests"
+        >
+          <span id="stream-pause-icon">⏸</span>
+          <span id="stream-pause-text" class="hidden md:inline">Pause</span>
+        </button>
       </div>
     </div>
 
-    <!-- Center: Webhook Tracking URL String & Inbound Email -->
-    <div class="flex items-center gap-2 flex-1 max-w-xl justify-end">
+    <!-- Center & Right: Webhook Tracking URL String, Inbound Email & Tools -->
+    <div class="flex items-center gap-2 flex-1 max-w-4xl justify-end">
       
       <!-- Generated Tracking URL Field -->
-      <div class="relative flex items-center flex-1 min-w-[200px] max-w-sm group">
+      <div class="relative flex items-center flex-1 min-w-[180px] max-w-sm group">
         <span class="absolute left-2.5 text-cyan-400 font-bold text-[10px] font-mono pointer-events-none hidden sm:inline">URL</span>
         <input
           id="endpoint-url-input"
@@ -98,7 +108,7 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
         <button
           id="copy-link-btn"
           type="button"
-          class="absolute right-1 px-2.5 h-6 sm:h-7 rounded-md bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold text-xs flex items-center gap-1 transition-all active:scale-95 shadow-sm"
+          class="absolute right-1 px-2.5 h-6 sm:h-7 rounded-md bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold text-xs flex items-center gap-1 transition-all active:scale-95 shadow-sm cursor-pointer"
           title="Copy webhook tracking URL"
         >
           <svg id="copy-icon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -109,23 +119,65 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
       </div>
 
       <!-- Inbound Email Address Pill & Copy -->
-      <div class="relative hidden xl:flex items-center max-w-xs group">
+      <div class="relative hidden 2xl:flex items-center max-w-xs group">
         <input
           id="endpoint-email-input"
           type="text"
           readonly
-          value="ep_dev_9a7d3b@inbound.tester"
+          value="ep_dev_9a7d3b@safewebhook.com"
           class="w-full h-8 sm:h-9 pl-3 pr-16 rounded-lg bg-slate-950 border border-slate-700/80 text-xs font-mono text-purple-300 select-all outline-none"
         />
         <button
           id="copy-email-btn"
           type="button"
-          class="absolute right-1 px-2 h-6 sm:h-7 rounded-md bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 text-xs font-medium flex items-center gap-1 transition-all active:scale-95"
+          class="absolute right-1 px-2 h-6 sm:h-7 rounded-md bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 text-xs font-medium flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
           title="Copy matching Inbound Email Address"
         >
           <span>Email</span>
         </button>
       </div>
+
+      <!-- Endpoints Switcher / Manager Trigger -->
+      <button
+        id="open-endpoint-mgr-btn"
+        type="button"
+        onclick="window.openAppModal('endpoint-modal')"
+        class="h-8 sm:h-9 px-2 sm:px-2.5 rounded-lg bg-slate-800/80 hover:bg-slate-750 text-cyan-300 border border-slate-700 text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer"
+        title="Manage endpoints, switch sessions, or create custom slugs"
+      >
+        <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+        <span class="hidden md:inline font-mono">Endpoints</span>
+      </button>
+
+      <!-- Custom Request Composer Trigger -->
+      <button
+        id="open-composer-btn"
+        type="button"
+        onclick="window.openAppModal('composer-modal')"
+        class="h-8 sm:h-9 px-2 sm:px-2.5 rounded-lg bg-gradient-to-r from-cyan-500/20 to-blue-500/20 hover:from-cyan-500/30 hover:to-blue-500/30 text-cyan-300 border border-cyan-500/30 text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer"
+        title="Compose and dispatch custom HTTP webhooks"
+      >
+        <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+        </svg>
+        <span class="hidden sm:inline font-mono">Compose</span>
+      </button>
+
+      <!-- Localhost Forwarder Helper Trigger -->
+      <button
+        id="open-forwarder-btn"
+        type="button"
+        onclick="window.openAppModal('forwarder-modal')"
+        class="h-8 sm:h-9 px-2 sm:px-2.5 rounded-lg bg-slate-800/80 hover:bg-slate-750 text-amber-300 border border-amber-500/30 text-xs font-medium hidden lg:flex items-center gap-1 transition-colors cursor-pointer"
+        title="Forward webhooks directly to http://localhost without ngrok"
+      >
+        <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+        <span>Localhost</span>
+      </button>
 
       <!-- Custom Response Configurator Trigger Button -->
       <button
@@ -144,13 +196,13 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
         id="open-workflow-btn"
         type="button"
         onclick="window.openAppModal('workflow-modal')"
-        class="h-8 sm:h-9 px-2 sm:px-2.5 rounded-lg bg-slate-800/80 hover:bg-slate-750 text-purple-300 border border-purple-500/30 text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer"
+        class="h-8 sm:h-9 px-2 sm:px-2.5 rounded-lg bg-slate-800/80 hover:bg-slate-750 text-purple-300 border border-purple-500/30 text-xs font-medium hidden sm:flex items-center gap-1 transition-colors cursor-pointer"
         title="Configure Custom Workflows, JS Transformers, Auto-Forwarding Rules & Alerts"
       >
         <svg class="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
         </svg>
-        <span class="hidden md:inline">Workflows</span>
+        <span class="hidden xl:inline">Workflows</span>
       </button>
 
       <!-- Uptime / SSL Monitor Trigger -->
@@ -158,27 +210,13 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
         id="open-monitor-btn"
         type="button"
         onclick="window.openAppModal('monitor-modal')"
-        class="h-8 sm:h-9 px-2 sm:px-2.5 rounded-lg bg-slate-800/80 hover:bg-slate-750 text-emerald-300 border border-emerald-500/30 text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer"
+        class="h-8 sm:h-9 px-2 sm:px-2.5 rounded-lg bg-slate-800/80 hover:bg-slate-750 text-emerald-300 border border-emerald-500/30 text-xs font-medium hidden md:flex items-center gap-1 transition-colors cursor-pointer"
         title="Schedule automated uptime pings, SSL certificate checks & cron monitors"
       >
         <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
-        <span class="hidden md:inline">Monitors</span>
-      </button>
-
-      <!-- Custom Domain Trigger -->
-      <button
-        id="open-domain-btn"
-        type="button"
-        onclick="window.openAppModal('domain-modal')"
-        class="h-8 sm:h-9 px-2 rounded-lg bg-slate-800/80 hover:bg-slate-750 text-slate-300 border border-slate-700 text-xs font-medium hidden lg:flex items-center gap-1 transition-colors cursor-pointer"
-        title="Configure branded custom domain CNAME"
-      >
-        <svg class="w-3.5 h-3.5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-        </svg>
-        <span>Domain</span>
+        <span class="hidden xl:inline">Monitors</span>
       </button>
 
       <!-- Mock Event Generator Trigger -->
@@ -195,22 +233,13 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
         <span class="hidden lg:inline">Mock</span>
       </button>
 
-      <!-- Documentation Shortcut Link -->
+      <!-- Documentation Link -->
       <a
         href="/docs"
         class="h-8 sm:h-9 px-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-cyan-300 border border-slate-700/60 text-xs font-medium inline-flex items-center gap-1 transition-colors"
         title="View integration guides and docs"
       >
         <span>Docs</span>
-      </a>
-
-      <!-- FAQ Shortcut Link -->
-      <a
-        href="/faq"
-        class="h-8 sm:h-9 px-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-cyan-300 border border-slate-700/60 text-xs font-medium inline-flex items-center gap-1 transition-colors"
-        title="Frequently asked questions"
-      >
-        <span>FAQ</span>
       </a>
     </div>
   </header>
@@ -221,7 +250,7 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
     <!-- LEFT COLUMN (Narrow): Captured Webhook Timeline Inbox with Search & Filters -->
     <aside class="w-full md:w-80 lg:w-96 flex-shrink-0 border-r border-slate-800 bg-slate-900/50 flex flex-col h-full overflow-hidden">
       
-      <!-- Timeline Header: Counter & Action Tools (Filter, Clear, Export) -->
+      <!-- Timeline Header: Counter & Action Tools (Filter, Clear, Export, Import) -->
       <div class="p-3 border-b border-slate-800 bg-slate-900/90 space-y-2.5">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
@@ -229,20 +258,29 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
             <span id="webhook-count-badge" class="px-2 py-0.5 rounded-full text-[11px] font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">0</span>
           </div>
           
-          <div class="flex items-center gap-1.5">
+          <div class="flex items-center gap-1">
             <button
               id="export-session-btn"
               type="button"
-              class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-medium border border-slate-700 transition-colors"
+              class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-medium border border-slate-700 transition-colors cursor-pointer"
               title="Export captured requests as JSON"
             >
               Export
             </button>
             <button
+              id="import-session-trigger"
+              type="button"
+              onclick="window.openAppModal('import-modal')"
+              class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-medium border border-slate-700 transition-colors cursor-pointer"
+              title="Import previously exported session JSON"
+            >
+              Import
+            </button>
+            <button
               id="clear-logs-btn"
               type="button"
-              class="px-2 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 text-[11px] font-medium border border-rose-500/30 transition-colors"
-              title="Clear all local logs"
+              class="px-2 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 text-[11px] font-medium border border-rose-500/30 transition-colors cursor-pointer"
+              title="Clear all logs for active endpoint"
             >
               Clear
             </button>
@@ -264,13 +302,13 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
 
         <!-- HTTP Method Filter Pills -->
         <div class="flex items-center gap-1 overflow-x-auto pb-1 text-[10px] font-mono scrollbar-none" id="method-filters">
-          <button data-filter="ALL" class="method-filter-btn px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold active-filter">ALL</button>
-          <button data-filter="POST" class="method-filter-btn px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10 border border-slate-700">POST</button>
-          <button data-filter="GET" class="method-filter-btn px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-sky-400 hover:bg-sky-500/10 border border-slate-700">GET</button>
-          <button data-filter="PUT" class="method-filter-btn px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-amber-400 hover:bg-amber-500/10 border border-slate-700">PUT</button>
-          <button data-filter="DELETE" class="method-filter-btn px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-slate-700">DEL</button>
-          <button data-filter="PATCH" class="method-filter-btn px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-purple-400 hover:bg-purple-500/10 border border-slate-700">PATCH</button>
-          <button data-filter="EMAIL" class="method-filter-btn px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-fuchsia-400 hover:bg-fuchsia-500/10 border border-slate-700">EMAIL</button>
+          <button data-filter="ALL" class="method-filter-btn px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold active-filter cursor-pointer">ALL</button>
+          <button data-filter="POST" class="method-filter-btn px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10 border border-slate-700 cursor-pointer">POST</button>
+          <button data-filter="GET" class="method-filter-btn px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-sky-400 hover:bg-sky-500/10 border border-slate-700 cursor-pointer">GET</button>
+          <button data-filter="PUT" class="method-filter-btn px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-amber-400 hover:bg-amber-500/10 border border-slate-700 cursor-pointer">PUT</button>
+          <button data-filter="DELETE" class="method-filter-btn px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-slate-700 cursor-pointer">DEL</button>
+          <button data-filter="PATCH" class="method-filter-btn px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-purple-400 hover:bg-purple-500/10 border border-slate-700 cursor-pointer">PATCH</button>
+          <button data-filter="EMAIL" class="method-filter-btn px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-fuchsia-400 hover:bg-fuchsia-500/10 border border-slate-700 cursor-pointer">EMAIL</button>
         </div>
       </div>
 
@@ -287,16 +325,25 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
           <div class="space-y-1">
             <h4 class="text-sm font-semibold text-slate-300">Listening for Webhooks &amp; Emails</h4>
             <p class="text-xs text-slate-400 leading-relaxed max-w-xs mx-auto">
-              Send a request to your unique endpoint URL or email address. New events will appear here in real-time.
+              Send a request to your endpoint URL or compose a custom webhook. Events will appear here in real-time.
             </p>
           </div>
-          <button
-            id="empty-mock-trigger"
-            type="button"
-            class="mt-2 px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-mono transition-colors"
-          >
-            Dispatch Mock Event &rarr;
-          </button>
+          <div class="flex flex-col gap-2 pt-1">
+            <button
+              id="empty-mock-trigger"
+              type="button"
+              class="px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-mono transition-colors cursor-pointer"
+            >
+              ⚡ Dispatch Mock Event
+            </button>
+            <button
+              type="button"
+              onclick="window.openAppModal('composer-modal')"
+              class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono transition-colors cursor-pointer"
+            >
+              📝 Open Request Composer
+            </button>
+          </div>
         </div>
 
         <!-- Dynamic List Elements Injected by Client JS -->
@@ -309,16 +356,16 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
     <section class="flex-1 flex flex-col h-full bg-slate-950 overflow-hidden" id="inspector-workspace">
       
       <!-- Selected Webhook Header Summary Bar -->
-      <div id="inspector-header-bar" class="flex-shrink-0 h-16 border-b border-slate-800 bg-slate-900/80 px-6 flex items-center justify-between gap-4 hidden">
+      <div id="inspector-header-bar" class="flex-shrink-0 h-16 border-b border-slate-800 bg-slate-900/80 px-4 sm:px-6 flex items-center justify-between gap-4 hidden">
         <div class="flex items-center gap-3 min-w-0">
           <span id="ins-method-badge" class="px-2.5 py-1 rounded text-xs font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">POST</span>
           <div class="flex flex-col min-w-0">
-            <span id="ins-summary-text" class="text-sm font-semibold text-white font-mono truncate">customer.subscription.created</span>
+            <span id="ins-summary-text" class="text-sm font-semibold text-white font-mono truncate">payment_intent.succeeded</span>
             <span id="ins-meta-text" class="text-[11px] text-slate-400 font-mono">1.4 KB • 127.0.0.1 • 12:45:02</span>
           </div>
         </div>
 
-        <!-- Top Right Action Controls (Replay, Code Export, Copy cURL) -->
+        <!-- Top Right Action Controls (Replay, Code Export, Copy cURL, Delete Single) -->
         <div class="flex items-center gap-2">
           <!-- Replay Button -->
           <button
@@ -340,56 +387,68 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
             type="button"
             onclick="window.openAppModal('code-modal')"
             class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700 text-xs font-mono flex items-center gap-1.5 transition-colors cursor-pointer"
-            title="Export request code in 8+ programming languages"
+            title="Export request code in 9+ programming languages"
           >
             <svg class="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
             </svg>
-            <span>Export Code</span>
+            <span class="hidden sm:inline">Export Code</span>
           </button>
 
           <!-- Copy as cURL Button -->
           <button
             id="copy-curl-btn"
             type="button"
-            class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700 text-xs font-mono flex items-center gap-1.5 transition-colors active:scale-95"
+            class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700 text-xs font-mono flex items-center gap-1.5 transition-colors active:scale-95 cursor-pointer"
             title="Copy as bash cURL command"
           >
             <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
-            <span id="curl-btn-text">Copy cURL</span>
+            <span id="curl-btn-text" class="hidden sm:inline">Copy cURL</span>
+          </button>
+
+          <!-- Delete Single Item Button -->
+          <button
+            id="delete-single-wh-btn"
+            type="button"
+            class="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-slate-700 hover:border-rose-500/30 transition-colors cursor-pointer"
+            title="Delete this captured request"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
           </button>
         </div>
       </div>
 
       <!-- Super-Tabs Navigation Bar -->
-      <div id="inspector-tabs-nav" class="flex-shrink-0 px-6 border-b border-slate-800 bg-slate-950 flex items-center gap-6 text-xs font-mono hidden">
-        <button type="button" onclick="window.switchInspectorTab('body')" data-tab="body" class="tab-btn py-3 border-b-2 border-cyan-400 text-cyan-300 font-semibold active-tab flex items-center gap-1.5 cursor-pointer">
+      <div id="inspector-tabs-nav" class="flex-shrink-0 px-4 sm:px-6 border-b border-slate-800 bg-slate-950 flex items-center gap-4 sm:gap-6 text-xs font-mono overflow-x-auto scrollbar-none hidden">
+        <button type="button" onclick="window.switchInspectorTab('body')" data-tab="body" class="tab-btn py-3 border-b-2 border-cyan-400 text-cyan-300 font-semibold active-tab flex items-center gap-1.5 cursor-pointer flex-shrink-0">
           <span>Structured Body</span>
         </button>
-        <button type="button" onclick="window.switchInspectorTab('headers')" data-tab="headers" class="tab-btn py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer">
+        <button type="button" onclick="window.switchInspectorTab('headers')" data-tab="headers" class="tab-btn py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer flex-shrink-0">
           <span>Parsed Headers</span>
           <span id="headers-count-pill" class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-800 text-slate-300">0</span>
         </button>
-        <button type="button" onclick="window.switchInspectorTab('query')" data-tab="query" class="tab-btn py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer">
+        <button type="button" onclick="window.switchInspectorTab('query')" data-tab="query" class="tab-btn py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer flex-shrink-0">
           <span>Query Params</span>
           <span id="query-count-pill" class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-800 text-slate-300">0</span>
         </button>
-        <button type="button" onclick="window.switchInspectorTab('security')" data-tab="security" class="tab-btn py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer">
+        <button type="button" onclick="window.switchInspectorTab('security')" data-tab="security" class="tab-btn py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer flex-shrink-0">
           <span>Security &amp; Signature</span>
           <span id="signature-indicator-dot" class="w-2 h-2 rounded-full bg-emerald-400 hidden"></span>
         </button>
-        <button type="button" onclick="window.switchInspectorTab('telemetry')" data-tab="telemetry" class="tab-btn py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer">
-          <span>Geo &amp; TLS</span>
+        <button type="button" onclick="window.switchInspectorTab('telemetry')" data-tab="telemetry" class="tab-btn py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer flex-shrink-0">
+          <span>Telemetry &amp; TLS</span>
         </button>
-        <button type="button" onclick="window.switchInspectorTab('raw')" data-tab="raw" class="tab-btn py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-colors cursor-pointer">
+        <button type="button" onclick="window.switchInspectorTab('raw')" data-tab="raw" class="tab-btn py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-colors cursor-pointer flex-shrink-0">
           <span>Raw Payload</span>
         </button>
       </div>
 
       <!-- Tab Content Panels -->
-      <div class="flex-1 overflow-y-auto p-6 focus:outline-none" id="inspector-content-area">
+      <div class="flex-1 overflow-y-auto p-4 sm:p-6 focus:outline-none" id="inspector-content-area">
         
         <!-- INITIAL ZERO-STATE WORKBENCH SCREEN -->
         <div id="inspector-zero-state" class="h-full flex flex-col items-center justify-center text-center max-w-xl mx-auto space-y-6">
@@ -400,20 +459,20 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
           </div>
 
           <div class="space-y-2">
-            <h3 class="text-xl font-bold text-white tracking-tight">Ready to Inspect Webhooks &amp; Inbound Emails</h3>
+            <h3 class="text-xl font-bold text-white tracking-tight">Production Webhook Debugging &amp; Testing Platform</h3>
             <p class="text-sm text-slate-400 leading-relaxed">
-              Send an HTTP POST or inbound email to your endpoint. Data will stream in real-time directly into browser memory with zero server storage.
+              Send HTTP requests or emails to your dedicated endpoint. Payloads stream in real-time with instant signature verification, replay, and zero server data retention.
             </p>
           </div>
 
-          <!-- Prominent Active Endpoint URL Banner -->
+          <!-- Active Endpoint URL Banner -->
           <div class="w-full text-left rounded-2xl border border-cyan-500/30 bg-slate-900/90 p-4 space-y-2 shadow-xl">
             <div class="flex items-center justify-between text-xs font-mono">
               <span class="text-cyan-400 font-bold uppercase text-[11px] flex items-center gap-1.5">
                 <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
-                Your Active Webhook URL
+                Active Inbound Webhook URL
               </span>
-              <span class="text-slate-400 text-[10px]">No Signup Required</span>
+              <span class="text-slate-400 text-[10px]">Edge Anycast</span>
             </div>
             <div class="flex items-center gap-2">
               <input
@@ -426,7 +485,7 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
               <button
                 id="zero-state-copy-url-btn"
                 type="button"
-                class="px-4 h-10 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold text-xs font-mono flex items-center gap-1.5 transition-all flex-shrink-0 active:scale-95 shadow-md shadow-cyan-500/20"
+                class="px-4 h-10 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold text-xs font-mono flex items-center gap-1.5 transition-all flex-shrink-0 active:scale-95 shadow-md shadow-cyan-500/20 cursor-pointer"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
                 <span id="zero-copy-text">Copy URL</span>
@@ -437,11 +496,11 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
           <!-- Quick Test Command Codeblock -->
           <div class="w-full text-left rounded-xl border border-slate-800 bg-slate-900/90 p-4 space-y-2 font-mono text-xs shadow-lg">
             <div class="flex items-center justify-between text-slate-400 text-[11px]">
-              <span>Try sending a sample request via terminal:</span>
+              <span>Sample cURL command:</span>
               <button
                 id="zero-state-copy-curl-btn"
                 type="button"
-                class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-cyan-400 text-[11px] font-mono flex items-center gap-1 transition-all active:scale-95"
+                class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-cyan-400 text-[11px] font-mono flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
               >
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
                 <span id="zero-curl-copy-text">Copy cURL</span>
@@ -450,20 +509,21 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
             <pre class="p-3 rounded-lg bg-slate-950 text-cyan-300 overflow-x-auto border border-slate-850"><code id="zero-state-curl-code">{defaultEmptyCurl}</code></pre>
           </div>
 
-          <div class="flex items-center gap-3 pt-2">
+          <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
             <button
               id="zero-state-mock-btn"
               type="button"
-              class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-cyan-300 hover:from-cyan-300 hover:to-cyan-200 text-slate-950 text-xs font-bold transition-all shadow-md shadow-cyan-500/20 active:scale-95"
+              class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-cyan-300 hover:from-cyan-300 hover:to-cyan-200 text-slate-950 text-xs font-bold transition-all shadow-md shadow-cyan-500/20 active:scale-95 cursor-pointer"
             >
-              Dispatch Mock Stripe Event &rarr;
+              ⚡ Dispatch Mock Stripe Event
             </button>
-            <a
-              href="/docs"
-              class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-200 text-xs font-semibold transition-colors"
+            <button
+              type="button"
+              onclick="window.openAppModal('composer-modal')"
+              class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-200 text-xs font-semibold transition-colors cursor-pointer"
             >
-              View Documentation
-            </a>
+              📝 Open Request Composer
+            </button>
           </div>
         </div>
 
@@ -485,16 +545,18 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
 
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <span class="text-slate-400 uppercase tracking-wider text-[11px] font-semibold font-mono">Payload Formatter</span>
+              <span class="text-slate-400 uppercase tracking-wider text-[11px] font-semibold font-mono">Payload Viewer</span>
               <span id="body-format-badge" class="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 text-[10px]">JSON</span>
             </div>
-            <button
-              id="copy-body-btn"
-              type="button"
-              class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-mono border border-slate-700 transition-colors"
-            >
-              Copy Body
-            </button>
+            <div class="flex items-center gap-2">
+              <button
+                id="copy-body-btn"
+                type="button"
+                class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-mono border border-slate-700 transition-colors cursor-pointer"
+              >
+                Copy Body
+              </button>
+            </div>
           </div>
 
           <div class="rounded-xl border border-slate-800 bg-slate-900/90 overflow-hidden shadow-inner">
@@ -544,18 +606,75 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
 
         <!-- TAB 4: SECURITY & SIGNATURE VERIFICATION PANEL -->
         <div id="tab-panel-security" class="tab-panel hidden space-y-5 font-mono text-xs">
+          
+          <!-- Status Banner -->
           <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/80 space-y-3">
             <div class="flex items-center justify-between">
               <span class="text-sm font-bold text-white">Cryptographic Signature Verification</span>
               <span id="detected-provider-badge" class="px-2.5 py-1 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 font-bold">Auto-Detect</span>
             </div>
             <p class="text-slate-400 text-xs leading-relaxed">
-              Webhook signatures ensure incoming payloads originated from genuine third-party payment gateways and web services.
+              Verify webhook authenticity using cryptographic HMAC hashing. Enter your secret key below to perform real-time verification in your browser without sending secrets to any server.
             </p>
           </div>
 
+          <!-- Interactive Signature Verification Form -->
+          <div class="p-5 rounded-2xl border border-cyan-500/30 bg-slate-900/90 space-y-4 shadow-xl">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-cyan-300 text-xs uppercase tracking-wider">Interactive HMAC Verifier</span>
+              <span class="text-slate-400 text-[11px]">Client-Side WebCrypto (SubtleCrypto)</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-slate-400 mb-1">Provider Preset</label>
+                <select id="sig-provider-select" class="w-full h-9 px-3 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 focus:border-cyan-400 outline-none">
+                  <option value="auto">Auto-Detect</option>
+                  <option value="stripe">Stripe (Stripe-Signature / v1)</option>
+                  <option value="github">GitHub (X-Hub-Signature-256 / sha256)</option>
+                  <option value="shopify">Shopify (X-Shopify-Hmac-Sha256 / Base64)</option>
+                  <option value="slack">Slack (X-Slack-Signature / v0)</option>
+                  <option value="svix">Svix (svix-signature)</option>
+                  <option value="lemonsqueezy">LemonSqueezy (X-Signature)</option>
+                  <option value="generic_sha256_hex">Generic HMAC-SHA256 (Hex)</option>
+                  <option value="generic_sha256_b64">Generic HMAC-SHA256 (Base64)</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-slate-400 mb-1">Webhook Secret Key</label>
+                <input
+                  id="sig-secret-input"
+                  type="password"
+                  placeholder="e.g. whsec_... or your secret key"
+                  class="w-full h-9 px-3 rounded-lg bg-slate-950 border border-slate-800 text-cyan-300 focus:border-cyan-400 outline-none font-mono"
+                />
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-1">
+              <button
+                id="run-sig-verify-btn"
+                type="button"
+                class="px-4 py-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold text-xs transition-all active:scale-95 shadow-md shadow-cyan-500/20 cursor-pointer"
+              >
+                Verify Signature Now
+              </button>
+
+              <div id="sig-verify-result-badge" class="hidden px-3 py-1.5 rounded-lg text-xs font-bold font-mono">
+                <!-- Result dynamically rendered -->
+              </div>
+            </div>
+
+            <div id="sig-debug-details" class="hidden p-3 rounded-xl bg-slate-950 border border-slate-850 space-y-1.5 text-[11px]">
+              <div class="text-slate-400">Extracted Signature: <span id="sig-extracted-val" class="text-slate-200 select-all"></span></div>
+              <div class="text-slate-400">Calculated Signature: <span id="sig-computed-val" class="text-cyan-300 select-all"></span></div>
+            </div>
+          </div>
+
+          <!-- Code Verification Recipe -->
           <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/80 space-y-3">
-            <h4 class="font-bold text-xs uppercase tracking-wider text-slate-300">Ready-to-Run Verification Recipe:</h4>
+            <h4 class="font-bold text-xs uppercase tracking-wider text-slate-300">Production Code Verification Recipes:</h4>
             <div class="rounded-xl border border-slate-850 bg-slate-950 p-4 text-cyan-300 overflow-x-auto text-[11px] leading-relaxed">
               <pre><code id="signature-recipe-code"></code></pre>
             </div>
@@ -568,13 +687,25 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
             <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-2">
               <span class="text-cyan-400 font-bold uppercase tracking-wider text-[11px]">Client IP &amp; Network</span>
               <div class="text-slate-200 text-sm font-bold" id="telemetry-ip">127.0.0.1</div>
-              <div class="text-slate-400 text-[11px]">Cloudflare Edge Global Anycast</div>
+              <div class="text-slate-400 text-[11px]">Edge Ingress Anycast Routing</div>
             </div>
 
             <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-2">
-              <span class="text-emerald-400 font-bold uppercase tracking-wider text-[11px]">TLS Encryption &amp; Cipher</span>
-              <div class="text-slate-200 text-sm font-bold">TLS 1.3 / AES-256-GCM</div>
-              <div class="text-slate-400 text-[11px]">Full HTTPS encryption verified</div>
+              <span class="text-emerald-400 font-bold uppercase tracking-wider text-[11px]">TLS Encryption &amp; Security</span>
+              <div class="text-slate-200 text-sm font-bold">TLS 1.3 / HTTPS</div>
+              <div class="text-slate-400 text-[11px]">Full End-to-End SSL Enforced</div>
+            </div>
+
+            <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-2">
+              <span class="text-purple-400 font-bold uppercase tracking-wider text-[11px]">Request Format</span>
+              <div class="text-slate-200 text-sm font-bold" id="telemetry-format">JSON</div>
+              <div class="text-slate-400 text-[11px]">Auto-parsed content stream</div>
+            </div>
+
+            <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-2">
+              <span class="text-amber-400 font-bold uppercase tracking-wider text-[11px]">Payload Size</span>
+              <div class="text-slate-200 text-sm font-bold" id="telemetry-size">0 Bytes</div>
+              <div class="text-slate-400 text-[11px]">Zero server data retention</div>
             </div>
           </div>
         </div>
@@ -614,7 +745,7 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
             <p class="text-xs text-slate-400">Configure HTTP status codes, headers, and simulated delay</p>
           </div>
         </div>
-        <button id="close-config-modal-btn" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
+        <button id="close-config-modal-btn" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
       </div>
@@ -626,11 +757,16 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
             <select id="cfg-status-code" class="w-full h-9 px-3 rounded-lg bg-slate-950 border border-slate-800 text-white focus:border-cyan-400 outline-none">
               <option value="200">200 OK</option>
               <option value="201">201 Created</option>
+              <option value="202">202 Accepted</option>
               <option value="204">204 No Content</option>
               <option value="400">400 Bad Request</option>
               <option value="401">401 Unauthorized</option>
+              <option value="403">403 Forbidden</option>
               <option value="404">404 Not Found</option>
+              <option value="422">422 Unprocessable Entity</option>
+              <option value="429">429 Too Many Requests</option>
               <option value="500">500 Internal Server Error</option>
+              <option value="502">502 Bad Gateway</option>
               <option value="503">503 Service Unavailable</option>
             </select>
           </div>
@@ -661,8 +797,8 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
       </div>
 
       <div class="flex items-center justify-end gap-3 pt-2 border-t border-slate-800">
-        <button id="cancel-config-btn" type="button" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-semibold">Cancel</button>
-        <button id="save-config-btn" type="button" class="px-5 py-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 text-xs font-bold shadow-md shadow-cyan-500/20">Save Configuration</button>
+        <button id="cancel-config-btn" type="button" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-semibold cursor-pointer">Cancel</button>
+        <button id="save-config-btn" type="button" class="px-5 py-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 text-xs font-bold shadow-md shadow-cyan-500/20 cursor-pointer">Save Configuration</button>
       </div>
     </div>
   </div>
@@ -684,7 +820,7 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
             <p class="text-xs text-slate-400">Auto-forward webhooks, run JavaScript transformations, and trigger alerts</p>
           </div>
         </div>
-        <button id="close-workflow-modal-btn" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
+        <button id="close-workflow-modal-btn" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
       </div>
@@ -703,7 +839,7 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
           <input
             id="wf-forward-url"
             type="url"
-            placeholder="http://localhost:8000/api/webhook"
+            placeholder="http://localhost:3000/api/webhook"
             class="w-full h-9 px-3 rounded-lg bg-slate-950 border border-slate-800 text-purple-300 focus:border-purple-400 outline-none"
           />
         </div>
@@ -730,8 +866,8 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
       </div>
 
       <div class="flex items-center justify-end gap-3 pt-2 border-t border-slate-800">
-        <button id="cancel-workflow-btn" type="button" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-semibold">Cancel</button>
-        <button id="save-workflow-btn" type="button" class="px-5 py-2 rounded-xl bg-purple-400 hover:bg-purple-300 text-slate-950 text-xs font-bold shadow-md shadow-purple-500/20">Save Workflow</button>
+        <button id="cancel-workflow-btn" type="button" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-semibold cursor-pointer">Cancel</button>
+        <button id="save-workflow-btn" type="button" class="px-5 py-2 rounded-xl bg-purple-400 hover:bg-purple-300 text-slate-950 text-xs font-bold shadow-md shadow-purple-500/20 cursor-pointer">Save Workflow</button>
       </div>
     </div>
   </div>
@@ -753,7 +889,7 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
             <p class="text-xs text-slate-400">Perform health checks, check SSL expiry, and measure DNS latency</p>
           </div>
         </div>
-        <button id="close-monitor-modal-btn" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
+        <button id="close-monitor-modal-btn" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
       </div>
@@ -770,7 +906,7 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
           <button
             id="mon-run-ping-btn"
             type="button"
-            class="px-4 h-9 rounded-lg bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-bold transition-all"
+            class="px-4 h-9 rounded-lg bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-bold transition-all cursor-pointer"
           >
             Run Ping
           </button>
@@ -790,62 +926,13 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
       </div>
 
       <div class="flex items-center justify-end border-t border-slate-800 pt-3">
-        <button id="close-monitor-btn" type="button" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">Done</button>
+        <button id="close-monitor-btn" type="button" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold cursor-pointer">Done</button>
       </div>
     </div>
   </div>
 
   <!-- ========================================================================= -->
-  <!-- MODAL 4: CUSTOM DOMAINS & WHITE-LABELING                                  -->
-  <!-- ========================================================================= -->
-  <div id="domain-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm hidden">
-    <div class="relative w-full max-w-xl rounded-2xl border border-sky-500/30 bg-slate-900 p-6 shadow-2xl space-y-5 font-sans">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
-        <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-            </svg>
-          </div>
-          <div>
-            <h3 class="font-bold text-white text-base">Custom Domain &amp; White-labeling</h3>
-            <p class="text-xs text-slate-400">Route your company domain to Webhook Tester endpoints</p>
-          </div>
-        </div>
-        <button id="close-domain-modal-btn" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-        </button>
-      </div>
-
-      <div class="space-y-4 text-xs font-mono">
-        <div>
-          <label class="block text-slate-400 font-semibold mb-1">Your Custom Domain</label>
-          <input
-            id="dom-input-val"
-            type="text"
-            placeholder="webhooks.yourcompany.com"
-            class="w-full h-9 px-3 rounded-lg bg-slate-950 border border-slate-800 text-sky-300 focus:border-sky-400 outline-none"
-          />
-        </div>
-
-        <div class="p-4 rounded-xl border border-slate-800 bg-slate-950 space-y-2">
-          <span class="text-slate-400 font-bold uppercase text-[10px]">Required DNS Record:</span>
-          <div class="p-2.5 rounded bg-slate-900 text-slate-200 text-[11px] leading-relaxed">
-            <span class="text-sky-400">Type:</span> CNAME<br/>
-            <span class="text-sky-400">Name:</span> webhooks<br/>
-            <span class="text-sky-400">Target:</span> cname.safewebhook.com
-          </div>
-        </div>
-      </div>
-
-      <div class="flex items-center justify-end border-t border-slate-800 pt-3">
-        <button id="close-domain-btn" type="button" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">Done</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ========================================================================= -->
-  <!-- MODAL 5: REPLAY & FORWARDING DRAWER                                       -->
+  <!-- MODAL 4: REPLAY & FORWARDING DRAWER                                       -->
   <!-- ========================================================================= -->
   <div id="replay-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm hidden">
     <div class="relative w-full max-w-xl rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl space-y-5 font-sans">
@@ -861,7 +948,7 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
             <p class="text-xs text-slate-400">Dispatch this payload to your local server or staging API</p>
           </div>
         </div>
-        <button id="close-replay-modal-btn" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
+        <button id="close-replay-modal-btn" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
       </div>
@@ -870,8 +957,8 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
         <div>
           <label class="block text-slate-400 font-semibold mb-1">Target Destination URL</label>
           <div class="flex gap-2">
-            <input id="rep-target-url" type="url" placeholder="http://localhost:8000/api/webhook" value="http://localhost:8000/api/webhook" class="flex-1 h-9 px-3 rounded-lg bg-slate-950 border border-slate-800 text-cyan-300 focus:border-cyan-400 outline-none" />
-            <button id="dispatch-replay-btn" type="button" class="px-4 h-9 rounded-lg bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold transition-all">Dispatch Replay</button>
+            <input id="rep-target-url" type="url" placeholder="http://localhost:3000/api/webhook" value="http://localhost:3000/api/webhook" class="flex-1 h-9 px-3 rounded-lg bg-slate-950 border border-slate-800 text-cyan-300 focus:border-cyan-400 outline-none" />
+            <button id="dispatch-replay-btn" type="button" class="px-4 h-9 rounded-lg bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold transition-all cursor-pointer">Dispatch</button>
           </div>
         </div>
 
@@ -889,13 +976,13 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
       </div>
 
       <div class="flex items-center justify-end border-t border-slate-800 pt-3">
-        <button id="close-replay-drawer-btn" type="button" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">Close</button>
+        <button id="close-replay-drawer-btn" type="button" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold cursor-pointer">Close</button>
       </div>
     </div>
   </div>
 
   <!-- ========================================================================= -->
-  <!-- MODAL 6: MULTI-LANGUAGE CODE GENERATOR                                    -->
+  <!-- MODAL 5: MULTI-LANGUAGE CODE GENERATOR                                    -->
   <!-- ========================================================================= -->
   <div id="code-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm hidden">
     <div class="relative w-full max-w-2xl rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl space-y-5 font-sans">
@@ -908,33 +995,35 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
           </div>
           <div>
             <h3 class="font-bold text-white text-base">Multi-Language Code Generator</h3>
-            <p class="text-xs text-slate-400">Export ready-to-run replay code</p>
+            <p class="text-xs text-slate-400">Export ready-to-run replay and integration code</p>
           </div>
         </div>
-        <button id="close-code-modal-btn" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
+        <button id="close-code-modal-btn" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
       </div>
 
       <!-- Language Selector Tabs -->
       <div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs font-mono" id="code-lang-selector">
-        <button data-lang="curl" class="code-lang-btn px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-bold active-lang">cURL</button>
-        <button data-lang="js" class="code-lang-btn px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700">Fetch (JS)</button>
-        <button data-lang="python" class="code-lang-btn px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700">Python</button>
-        <button data-lang="go" class="code-lang-btn px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700">Go</button>
-        <button data-lang="php" class="code-lang-btn px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700">PHP</button>
-        <button data-lang="rust" class="code-lang-btn px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700">Rust</button>
+        <button data-lang="curl" class="code-lang-btn px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-bold active-lang cursor-pointer">cURL</button>
+        <button data-lang="js" class="code-lang-btn px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700 cursor-pointer">Fetch (JS)</button>
+        <button data-lang="python" class="code-lang-btn px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700 cursor-pointer">Python</button>
+        <button data-lang="go" class="code-lang-btn px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700 cursor-pointer">Go</button>
+        <button data-lang="php" class="code-lang-btn px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700 cursor-pointer">PHP</button>
+        <button data-lang="rust" class="code-lang-btn px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700 cursor-pointer">Rust</button>
+        <button data-lang="ruby" class="code-lang-btn px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700 cursor-pointer">Ruby</button>
+        <button data-lang="csharp" class="code-lang-btn px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700 cursor-pointer">C#</button>
       </div>
 
       <div class="rounded-xl border border-slate-800 bg-slate-950 p-4 relative font-mono text-xs overflow-x-auto">
-        <button id="copy-lang-code-btn" type="button" class="absolute top-3 right-3 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 text-[11px]">Copy</button>
+        <button id="copy-lang-code-btn" type="button" class="absolute top-3 right-3 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 text-[11px] cursor-pointer">Copy</button>
         <pre><code id="export-code-display" class="text-cyan-300 leading-relaxed"></code></pre>
       </div>
     </div>
   </div>
 
   <!-- ========================================================================= -->
-  <!-- MODAL 7: MOCK EVENT DISPATCHER                                            -->
+  <!-- MODAL 6: MOCK EVENT DISPATCHER                                            -->
   <!-- ========================================================================= -->
   <div id="mock-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm hidden">
     <div class="relative w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl space-y-5 font-sans">
@@ -950,41 +1039,256 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
             <p class="text-xs text-slate-400">1-Click realistic payload generator</p>
           </div>
         </div>
-        <button id="close-mock-modal-btn" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
+        <button id="close-mock-modal-btn" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
-        <button data-mock="stripe-sub" class="mock-dispatch-btn p-3 rounded-xl border border-slate-800 hover:border-cyan-500/40 bg-slate-950 text-left space-y-1 transition-all">
+        <button data-mock="stripe-sub" class="mock-dispatch-btn p-3 rounded-xl border border-slate-800 hover:border-cyan-500/40 bg-slate-950 text-left space-y-1 transition-all cursor-pointer">
           <div class="font-bold text-cyan-300">Stripe Subscription</div>
           <div class="text-[10px] text-slate-400">customer.subscription.created</div>
         </button>
 
-        <button data-mock="stripe-pay" class="mock-dispatch-btn p-3 rounded-xl border border-slate-800 hover:border-emerald-500/40 bg-slate-950 text-left space-y-1 transition-all">
+        <button data-mock="stripe-pay" class="mock-dispatch-btn p-3 rounded-xl border border-slate-800 hover:border-emerald-500/40 bg-slate-950 text-left space-y-1 transition-all cursor-pointer">
           <div class="font-bold text-emerald-300">Stripe Payment</div>
           <div class="text-[10px] text-slate-400">payment_intent.succeeded</div>
         </button>
 
-        <button data-mock="github-push" class="mock-dispatch-btn p-3 rounded-xl border border-slate-800 hover:border-sky-500/40 bg-slate-950 text-left space-y-1 transition-all">
+        <button data-mock="github-push" class="mock-dispatch-btn p-3 rounded-xl border border-slate-800 hover:border-sky-500/40 bg-slate-950 text-left space-y-1 transition-all cursor-pointer">
           <div class="font-bold text-sky-300">GitHub Push</div>
           <div class="text-[10px] text-slate-400">push to refs/heads/main</div>
         </button>
 
-        <button data-mock="shopify-order" class="mock-dispatch-btn p-3 rounded-xl border border-slate-800 hover:border-amber-500/40 bg-slate-950 text-left space-y-1 transition-all">
+        <button data-mock="shopify-order" class="mock-dispatch-btn p-3 rounded-xl border border-slate-800 hover:border-amber-500/40 bg-slate-950 text-left space-y-1 transition-all cursor-pointer">
           <div class="font-bold text-amber-300">Shopify Order</div>
           <div class="text-[10px] text-slate-400">orders/create #1092</div>
         </button>
 
-        <button data-mock="slack-action" class="mock-dispatch-btn p-3 rounded-xl border border-slate-800 hover:border-teal-500/40 bg-slate-950 text-left space-y-1 transition-all">
+        <button data-mock="slack-action" class="mock-dispatch-btn p-3 rounded-xl border border-slate-800 hover:border-teal-500/40 bg-slate-950 text-left space-y-1 transition-all cursor-pointer">
           <div class="font-bold text-teal-300">Slack Interactive</div>
           <div class="text-[10px] text-slate-400">block_actions interactive payload</div>
         </button>
 
-        <button data-mock="inbound-email" class="mock-dispatch-btn p-3 rounded-xl border border-purple-500/40 bg-purple-950/30 text-left space-y-1 transition-all">
+        <button data-mock="inbound-email" class="mock-dispatch-btn p-3 rounded-xl border border-purple-500/40 bg-purple-950/30 text-left space-y-1 transition-all cursor-pointer">
           <div class="font-bold text-purple-300">📧 Inbound Email</div>
           <div class="text-[10px] text-slate-400">Sample customer email message</div>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 7: ENDPOINT MANAGER & SWITCHER                                      -->
+  <!-- ========================================================================= -->
+  <div id="endpoint-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm hidden">
+    <div class="relative w-full max-w-xl rounded-2xl border border-cyan-500/30 bg-slate-900 p-6 shadow-2xl space-y-5 font-sans">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="font-bold text-white text-base">Endpoint Manager &amp; Sessions</h3>
+            <p class="text-xs text-slate-400">Create, switch, label, or share multiple webhook endpoints</p>
+          </div>
+        </div>
+        <button onclick="window.closeAppModal('endpoint-modal')" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+
+      <!-- Create New Endpoint Section -->
+      <div class="p-4 rounded-xl border border-slate-800 bg-slate-950 space-y-3 font-mono text-xs">
+        <span class="text-slate-300 font-bold uppercase text-[11px]">Create New Endpoint</span>
+        <div class="flex gap-2">
+          <input
+            id="new-ep-slug-input"
+            type="text"
+            placeholder="custom-name or leave blank for auto UUID"
+            class="flex-1 h-9 px-3 rounded-lg bg-slate-900 border border-slate-800 text-cyan-300 focus:border-cyan-400 outline-none"
+          />
+          <button
+            id="create-ep-btn"
+            type="button"
+            class="px-4 h-9 rounded-lg bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold transition-all cursor-pointer"
+          >
+            Create
+          </button>
+        </div>
+      </div>
+
+      <!-- Saved Endpoints List -->
+      <div class="space-y-2 font-mono text-xs">
+        <span class="text-slate-400 font-semibold text-[11px] uppercase">Your Saved Endpoints</span>
+        <ul id="saved-endpoints-list" class="divide-y divide-slate-800 rounded-xl border border-slate-800 bg-slate-950 max-h-48 overflow-y-auto">
+          <!-- Dynamically populated -->
+        </ul>
+      </div>
+
+      <div class="flex items-center justify-end border-t border-slate-800 pt-3">
+        <button onclick="window.closeAppModal('endpoint-modal')" type="button" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold cursor-pointer">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 8: MANUAL REQUEST COMPOSER                                          -->
+  <!-- ========================================================================= -->
+  <div id="composer-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm hidden">
+    <div class="relative w-full max-w-2xl rounded-2xl border border-cyan-500/30 bg-slate-900 p-6 shadow-2xl space-y-4 font-sans max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3 flex-shrink-0">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="font-bold text-white text-base">Custom Webhook Request Composer</h3>
+            <p class="text-xs text-slate-400">Craft and dispatch any HTTP request to test webhooks</p>
+          </div>
+        </div>
+        <button onclick="window.closeAppModal('composer-modal')" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+
+      <div class="space-y-3 font-mono text-xs overflow-y-auto flex-1 pr-1">
+        <!-- Preset Selector -->
+        <div>
+          <label class="block text-slate-400 font-semibold mb-1">Load Preset Template</label>
+          <select id="comp-preset-select" class="w-full h-8 px-3 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 focus:border-cyan-400 outline-none">
+            <option value="custom">Custom Empty Payload</option>
+            <option value="stripe_payment">Stripe: payment_intent.succeeded</option>
+            <option value="stripe_sub">Stripe: customer.subscription.created</option>
+            <option value="github_push">GitHub: push event</option>
+            <option value="shopify_order">Shopify: orders/create</option>
+            <option value="slack_interactive">Slack: block_actions</option>
+          </select>
+        </div>
+
+        <!-- Method & URL -->
+        <div class="flex gap-2">
+          <select id="comp-method-select" class="w-24 h-9 px-2 rounded-lg bg-slate-950 border border-slate-800 text-emerald-400 font-bold focus:border-cyan-400 outline-none">
+            <option value="POST">POST</option>
+            <option value="GET">GET</option>
+            <option value="PUT">PUT</option>
+            <option value="PATCH">PATCH</option>
+            <option value="DELETE">DELETE</option>
+          </select>
+          <input
+            id="comp-target-url"
+            type="url"
+            placeholder="Target URL (defaults to active endpoint)"
+            class="flex-1 h-9 px-3 rounded-lg bg-slate-950 border border-slate-800 text-cyan-300 focus:border-cyan-400 outline-none select-all"
+          />
+        </div>
+
+        <!-- Headers Input -->
+        <div>
+          <label class="block text-slate-400 font-semibold mb-1">Custom Headers (JSON Object)</label>
+          <textarea
+            id="comp-headers-input"
+            rows="2"
+            class="w-full p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 font-mono text-xs focus:border-cyan-400 outline-none"
+          >{`{ "Content-Type": "application/json" }`}</textarea>
+        </div>
+
+        <!-- Body Input -->
+        <div>
+          <label class="block text-slate-400 font-semibold mb-1">Request Body</label>
+          <textarea
+            id="comp-body-input"
+            rows="6"
+            class="w-full p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-cyan-300 font-mono text-xs focus:border-cyan-400 outline-none leading-relaxed"
+          >{`{
+  "event": "manual.test",
+  "timestamp": "2026-08-19T00:00:00.000Z",
+  "data": {
+    "user_id": "usr_99182",
+    "status": "active"
+  }
+}`}</textarea>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between border-t border-slate-800 pt-3 flex-shrink-0">
+        <span id="comp-feedback-msg" class="text-xs font-mono text-emerald-400"></span>
+        <div class="flex gap-2">
+          <button onclick="window.closeAppModal('composer-modal')" type="button" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold cursor-pointer">Cancel</button>
+          <button id="dispatch-composer-btn" type="button" class="px-5 py-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 text-xs font-bold shadow-md shadow-cyan-500/20 cursor-pointer">
+            Send Webhook
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 9: LOCALHOST FORWARDER & TUNNELING                                  -->
+  <!-- ========================================================================= -->
+  <div id="forwarder-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm hidden">
+    <div class="relative w-full max-w-2xl rounded-2xl border border-amber-500/30 bg-slate-900 p-6 shadow-2xl space-y-5 font-sans">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="font-bold text-white text-base">Localhost Tunnel &amp; Webhook Forwarder</h3>
+            <p class="text-xs text-slate-400">Receive webhooks directly on localhost:3000 without third-party tunnels</p>
+          </div>
+        </div>
+        <button onclick="window.closeAppModal('forwarder-modal')" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+
+      <div class="space-y-3 font-mono text-xs">
+        <p class="text-slate-300 leading-relaxed">
+          Run this lightweight forwarder on your local development machine. It listens to your real-time SSE stream and instantly POSTs payloads to your local server:
+        </p>
+
+        <div class="p-4 rounded-xl border border-slate-800 bg-slate-950 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-amber-400 font-bold text-[11px]">Node.js 1-Liner Forwarder (Zero Dependencies):</span>
+            <button id="copy-forwarder-script-btn" type="button" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 text-[10px] cursor-pointer">Copy</button>
+          </div>
+          <pre class="overflow-x-auto text-[11px] text-cyan-300 leading-relaxed"><code id="forwarder-node-code"></code></pre>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end border-t border-slate-800 pt-3">
+        <button onclick="window.closeAppModal('forwarder-modal')" type="button" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold cursor-pointer">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 10: IMPORT SESSION                                                  -->
+  <!-- ========================================================================= -->
+  <div id="import-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm hidden">
+    <div class="relative w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl space-y-4 font-sans">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-white text-base">Import Webhook Session JSON</h3>
+        <button onclick="window.closeAppModal('import-modal')" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+
+      <div class="space-y-3 font-mono text-xs">
+        <p class="text-slate-400">Paste an exported JSON array of webhook payloads to inspect them:</p>
+        <textarea id="import-json-textarea" rows="6" placeholder="[ { &quot;id&quot;: &quot;...&quot;, &quot;method&quot;: &quot;POST&quot;, ... } ]" class="w-full p-3 rounded-lg bg-slate-950 border border-slate-800 text-cyan-300 focus:border-cyan-400 outline-none leading-relaxed"></textarea>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 border-t border-slate-800 pt-3">
+        <button onclick="window.closeAppModal('import-modal')" type="button" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold cursor-pointer">Cancel</button>
+        <button id="submit-import-btn" type="button" class="px-5 py-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 text-xs font-bold cursor-pointer">Import Payloads</button>
       </div>
     </div>
   </div>
@@ -997,7 +1301,7 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
 <script is:inline>
   (function () {
     // ═══════════════════════════════════════════
-    // SHARED STATE OBJECT (avoids TDZ with let)
+    // SHARED STATE OBJECT
     // ═══════════════════════════════════════════
     var _state = {
       webhooks: [],
@@ -1006,55 +1310,40 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
       activeFilter: 'ALL',
       currentTab: 'body',
       activeCodeLang: 'curl',
-      pollInterval: null
+      pollInterval: null,
+      isStreamPaused: false,
     };
 
-    // ═══════════════════════════════════════════
-    // HOISTED GLOBAL FUNCTIONS (available everywhere)
-    // ═══════════════════════════════════════════
-
-    function switchInspectorTab(tabId) {
-      _state.currentTab = tabId;
-      document.querySelectorAll('.tab-btn').forEach(function(btn) {
-        if (btn.getAttribute('data-tab') === tabId) {
-          btn.className = 'tab-btn py-3 border-b-2 border-cyan-400 text-cyan-300 font-semibold active-tab flex items-center gap-1.5 cursor-pointer';
-        } else {
-          btn.className = 'tab-btn py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer';
-        }
-      });
-      document.querySelectorAll('.tab-panel').forEach(function(panel) { panel.classList.add('hidden'); });
-      var activePanel = document.getElementById('tab-panel-' + tabId);
-      if (activePanel) activePanel.classList.remove('hidden');
-    }
-    window.switchInspectorTab = switchInspectorTab;
-
-    function openAppModal(modalId) {
-      var modalEl = document.getElementById(modalId);
-      if (modalEl) modalEl.classList.remove('hidden');
-      if (modalId === 'code-modal' && typeof renderExportCode === 'function') renderExportCode();
-    }
-    window.openAppModal = openAppModal;
-
-    function closeAppModal(modalId) {
-      var modalEl = document.getElementById(modalId);
-      if (modalEl) modalEl.classList.add('hidden');
-    }
-    window.closeAppModal = closeAppModal;
-
-    // ═══════════════════════════════════════════
-    // 1. Session Endpoint Identifier Resolution
-    // ═══════════════════════════════════════════
     const STORAGE_KEY_ENDPOINT = 'wh_active_endpoint_id';
     const STORAGE_KEY_PAYLOADS = 'wh_captured_payloads_';
+    const STORAGE_KEY_ENDPOINTS_LIST = 'wh_saved_endpoints_list';
 
+    // 1. Resolve Active Endpoint
     const urlParams = new URLSearchParams(window.location.search);
     let activeEndpointId = urlParams.get('ep') || localStorage.getItem(STORAGE_KEY_ENDPOINT);
-    if (!activeEndpointId || activeEndpointId.length < 4) {
-      activeEndpointId = 'ep_' + Math.random().toString(36).substring(2, 9);
+    if (!activeEndpointId || activeEndpointId.length < 3) {
+      activeEndpointId = 'ep_dev_' + Math.random().toString(36).substring(2, 8);
     }
     localStorage.setItem(STORAGE_KEY_ENDPOINT, activeEndpointId);
 
-    // State Variables (aliases for _state - backwards compat with rest of code)
+    // Save active endpoint into recent list
+    saveEndpointToRecentList(activeEndpointId);
+
+    function saveEndpointToRecentList(epId, label) {
+      try {
+        let list = JSON.parse(localStorage.getItem(STORAGE_KEY_ENDPOINTS_LIST) || '[]');
+        const existingIdx = list.findIndex(item => item.id === epId);
+        if (existingIdx >= 0) {
+          if (label) list[existingIdx].label = label;
+          list[existingIdx].lastUsed = Date.now();
+        } else {
+          list.unshift({ id: epId, label: label || 'Session ' + epId, lastUsed: Date.now() });
+        }
+        localStorage.setItem(STORAGE_KEY_ENDPOINTS_LIST, JSON.stringify(list.slice(0, 15)));
+      } catch (e) {}
+    }
+
+    // State Variables
     let webhooks = _state.webhooks;
     let selectedWebhookId = _state.selectedWebhookId;
     let eventSource = _state.eventSource;
@@ -1084,7 +1373,6 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
     const configModal = document.getElementById('config-modal');
     const workflowModal = document.getElementById('workflow-modal');
     const monitorModal = document.getElementById('monitor-modal');
-    const domainModal = document.getElementById('domain-modal');
     const replayModal = document.getElementById('replay-modal');
     const codeModal = document.getElementById('code-modal');
     const mockModal = document.getElementById('mock-modal');
@@ -1099,142 +1387,89 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
     const zeroStateUrlInput = document.getElementById('zero-state-url-input');
     if (zeroStateUrlInput) zeroStateUrlInput.value = fullWebhookUrl;
 
+    const compTargetUrl = document.getElementById('comp-target-url');
+    if (compTargetUrl) compTargetUrl.value = fullWebhookUrl;
+
     const sampleCurlCommand = `curl -X POST ${fullWebhookUrl} \\\n  -H "Content-Type: application/json" \\\n  -H "Stripe-Signature: t=${Math.floor(Date.now() / 1000)},v1=98a3c4f912e742c..." \\\n  -d '{"event": "payment_intent.succeeded", "amount": 4900, "currency": "usd"}'`;
 
     const zeroStateCurlCode = document.getElementById('zero-state-curl-code');
     if (zeroStateCurlCode) zeroStateCurlCode.textContent = sampleCurlCommand;
 
-    // Clipboard Copy Helper with Visual Feedback
+    // Node forwarder sample script
+    const forwarderNodeCode = document.getElementById('forwarder-node-code');
+    if (forwarderNodeCode) {
+      forwarderNodeCode.textContent = `// node-forwarder.js\nconst es = new EventSource('${origin}/api/stream/${activeEndpointId}');\nes.onmessage = async (e) => {\n  const ev = JSON.parse(e.data);\n  if (ev.type === 'connected' || ev.type === 'ping') return;\n  console.log('Forwarding webhook:', ev.method, ev.id);\n  await fetch('http://localhost:3000/api/webhook', {\n    method: ev.method,\n    headers: ev.headers,\n    body: ['GET','HEAD'].includes(ev.method) ? undefined : ev.body\n  });\n};`;
+    }
+
+    // Clipboard Copy Helper
     async function copyToClipboard(text, labelElement, originalText = 'Copy') {
       try {
         await navigator.clipboard.writeText(text);
         if (labelElement) {
           labelElement.textContent = 'Copied!';
-          setTimeout(() => {
-            labelElement.textContent = originalText;
-          }, 2000);
+          setTimeout(() => { labelElement.textContent = originalText; }, 2000);
         }
       } catch (err) {
         const input = document.createElement('input');
         input.value = text;
         document.body.appendChild(input);
         input.select();
-        document.execCommand('copy');
+        try { document.execCommand('copy'); } catch(e){}
         document.body.removeChild(input);
         if (labelElement) {
           labelElement.textContent = 'Copied!';
-          setTimeout(() => {
-            labelElement.textContent = originalText;
-          }, 2000);
+          setTimeout(() => { labelElement.textContent = originalText; }, 2000);
         }
       }
     }
 
-    const copyLinkText = document.getElementById('copy-link-text');
     if (copyLinkBtn) {
-      copyLinkBtn.addEventListener('click', () => copyToClipboard(fullWebhookUrl, copyLinkText, 'Copy'));
+      copyLinkBtn.addEventListener('click', () => copyToClipboard(fullWebhookUrl, document.getElementById('copy-link-text'), 'Copy'));
     }
-
-    const copyEmailText = copyEmailBtn?.querySelector('span');
     if (copyEmailBtn) {
-      copyEmailBtn.addEventListener('click', () => copyToClipboard(fullEmailAddress, copyEmailText, 'Email'));
+      copyEmailBtn.addEventListener('click', () => copyToClipboard(fullEmailAddress, copyEmailBtn.querySelector('span'), 'Email'));
     }
-
-    const zeroCopyText = document.getElementById('zero-copy-text');
     const zeroStateCopyUrlBtn = document.getElementById('zero-state-copy-url-btn');
     if (zeroStateCopyUrlBtn) {
-      zeroStateCopyUrlBtn.addEventListener('click', () => copyToClipboard(fullWebhookUrl, zeroCopyText, 'Copy URL'));
+      zeroStateCopyUrlBtn.addEventListener('click', () => copyToClipboard(fullWebhookUrl, document.getElementById('zero-copy-text'), 'Copy URL'));
     }
-
-    const zeroCurlCopyText = document.getElementById('zero-curl-copy-text');
     const zeroStateCopyCurlBtn = document.getElementById('zero-state-copy-curl-btn');
     if (zeroStateCopyCurlBtn) {
-      zeroStateCopyCurlBtn.addEventListener('click', () => copyToClipboard(sampleCurlCommand, zeroCurlCopyText, 'Copy cURL'));
+      zeroStateCopyCurlBtn.addEventListener('click', () => copyToClipboard(sampleCurlCommand, document.getElementById('zero-curl-copy-text'), 'Copy cURL'));
     }
 
-    // Direct Quick Mock Triggers (Instant Optimistic UI)
-    function dispatchMockLocallyAndRemotely(type = 'stripe-pay') {
-      let body = {};
-      let headers = {
-        'content-type': 'application/json',
-        'user-agent': 'SafeWebhook-MockEngine/2.0'
-      };
-      let signatureProvider = null;
-
-      if (type === 'stripe-pay' || type === 'stripe-sub') {
-        signatureProvider = 'Stripe';
-        headers['stripe-signature'] = 't=' + Math.floor(Date.now() / 1000) + ',v1=mock_sig_99a8b';
-        body = {
-          id: 'evt_stripe_' + Math.random().toString(36).substring(2, 8),
-          object: 'event',
-          type: type === 'stripe-sub' ? 'customer.subscription.created' : 'payment_intent.succeeded',
-          data: { object: { id: 'pi_live_' + Math.random().toString(36).substring(2, 6), amount: 4900, currency: 'usd', status: 'succeeded' } }
-        };
-      } else if (type === 'github-push') {
-        signatureProvider = 'GitHub';
-        headers['x-hub-signature-256'] = 'sha256=mock_hub_sig_334';
-        body = {
-          ref: 'refs/heads/main',
-          repository: { name: 'safewebhook', full_name: 'safewebhook/app' },
-          pusher: { name: 'alex-developer', email: 'alex@safewebhook.com' }
-        };
-      } else if (type === 'shopify-order') {
-        signatureProvider = 'Shopify';
-        headers['x-shopify-hmac-sha256'] = 'mock_shopify_hmac_66';
-        body = {
-          id: 10928374,
-          email: 'buyer@store.com',
-          total_price: '149.00',
-          currency: 'USD'
-        };
-      } else if (type === 'slack-action') {
-        signatureProvider = 'Slack';
-        headers['x-slack-signature'] = 'v0=mock_slack_sig_44';
-        body = {
-          type: 'block_actions',
-          user: { id: 'U123456', username: 'alex' },
-          actions: [{ action_id: 'approve_button', value: 'approved' }]
-        };
-      }
-
-      const bodyStr = JSON.stringify(body, null, 2);
-      const newEntry = {
-        id: 'evt_' + Math.random().toString(36).substring(2, 9),
-        endpoint_id: activeEndpointId,
-        timestamp: new Date().toISOString(),
-        method: 'POST',
-        query_params: {},
-        headers,
-        body: bodyStr,
-        size_bytes: bodyStr.length,
-        format: 'json',
-        signature_provider: signatureProvider,
-        is_email: false,
-        email: null
-      };
-
-      // 1. Instant local render
-      webhooks.unshift(newEntry);
-      saveToLocalStorage();
-      renderTimeline();
-      selectWebhook(newEntry.id);
-
-      // 2. Fire across edge network in background
-      fetch(fullWebhookUrl, {
-        method: 'POST',
-        headers,
-        body: bodyStr
-      }).catch(() => {});
+    const copyForwarderBtn = document.getElementById('copy-forwarder-script-btn');
+    if (copyForwarderBtn && forwarderNodeCode) {
+      copyForwarderBtn.addEventListener('click', () => copyToClipboard(forwarderNodeCode.textContent, copyForwarderBtn, 'Copy'));
     }
 
-    const zeroStateMockBtn = document.getElementById('zero-state-mock-btn');
-    if (zeroStateMockBtn) {
-      zeroStateMockBtn.addEventListener('click', () => dispatchMockLocallyAndRemotely('stripe-pay'));
-    }
+    // Toggle Stream Pause
+    const togglePauseBtn = document.getElementById('toggle-pause-stream-btn');
+    if (togglePauseBtn) {
+      togglePauseBtn.addEventListener('click', () => {
+        _state.isStreamPaused = !_state.isStreamPaused;
+        const icon = document.getElementById('stream-pause-icon');
+        const txt = document.getElementById('stream-pause-text');
+        const ping = document.getElementById('conn-ping');
+        const dot = document.getElementById('conn-dot');
+        const connTxt = document.getElementById('conn-text');
 
-    const emptyMockTrigger = document.getElementById('empty-mock-trigger');
-    if (emptyMockTrigger) {
-      emptyMockTrigger.addEventListener('click', () => dispatchMockLocallyAndRemotely('stripe-pay'));
+        if (_state.isStreamPaused) {
+          if (icon) icon.textContent = '▶';
+          if (txt) txt.textContent = 'Resume';
+          if (ping) ping.className = 'hidden';
+          if (dot) dot.className = 'relative inline-flex rounded-full h-2 w-2 bg-amber-400';
+          if (connTxt) connTxt.textContent = 'Stream Paused';
+          togglePauseBtn.className = 'h-7 px-2 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-mono flex items-center gap-1 transition-colors cursor-pointer';
+        } else {
+          if (icon) icon.textContent = '⏸';
+          if (txt) txt.textContent = 'Pause';
+          if (ping) ping.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75';
+          if (dot) dot.className = 'relative inline-flex rounded-full h-2 w-2 bg-emerald-500';
+          if (connTxt) connTxt.textContent = 'Live SSE Stream';
+          togglePauseBtn.className = 'h-7 px-2 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-cyan-300 border border-slate-700/80 text-[10px] font-mono flex items-center gap-1 transition-colors cursor-pointer';
+        }
+      });
     }
 
     // Load Local Storage Payloads
@@ -1282,6 +1517,7 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
     function startPolling() {
       if (pollInterval) clearInterval(pollInterval);
       pollInterval = setInterval(async () => {
+        if (_state.isStreamPaused) return;
         try {
           const res = await fetch(`/api/poll/${activeEndpointId}`);
           if (!res.ok) return;
@@ -1323,12 +1559,13 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
         const ping = document.getElementById('conn-ping');
         const dot = document.getElementById('conn-dot');
         const text = document.getElementById('conn-text');
-        if (ping) ping.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75';
-        if (dot) dot.className = 'relative inline-flex rounded-full h-2 w-2 bg-emerald-500';
-        if (text) text.textContent = 'Live SSE Stream';
+        if (ping && !_state.isStreamPaused) ping.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75';
+        if (dot && !_state.isStreamPaused) dot.className = 'relative inline-flex rounded-full h-2 w-2 bg-emerald-500';
+        if (text && !_state.isStreamPaused) text.textContent = 'Live SSE Stream';
       };
 
       eventSource.onmessage = (event) => {
+        if (_state.isStreamPaused) return;
         try {
           const data = JSON.parse(event.data);
           if (data.type === 'connected' || data.type === 'ping') return;
@@ -1345,6 +1582,7 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
             size_bytes: data.size_bytes || (data.body ? data.body.length : 0),
             format: data.format || 'json',
             signature_provider: data.signature_provider || null,
+            client_ip: data.client_ip || '127.0.0.1',
             is_email: data.is_email || false,
             email: data.email || null,
           };
@@ -1353,7 +1591,6 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
           saveToLocalStorage();
           renderTimeline();
 
-          // If first item or none selected, select it
           if (!selectedWebhookId || webhooks.length === 1) {
             selectWebhook(newEntry.id);
           }
@@ -1365,8 +1602,8 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
       eventSource.onerror = () => {
         const dot = document.getElementById('conn-dot');
         const text = document.getElementById('conn-text');
-        if (dot) dot.className = 'relative inline-flex rounded-full h-2 w-2 bg-amber-500';
-        if (text) text.textContent = 'Reconnecting...';
+        if (dot && !_state.isStreamPaused) dot.className = 'relative inline-flex rounded-full h-2 w-2 bg-amber-500';
+        if (text && !_state.isStreamPaused) text.textContent = 'Reconnecting...';
       };
     }
 
@@ -1389,7 +1626,8 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
         const bodyStr = String(wh.body || '').toLowerCase();
         const headerStr = JSON.stringify(wh.headers || {}).toLowerCase();
         const methodStr = String(wh.method || '').toLowerCase();
-        return bodyStr.includes(searchTerm) || headerStr.includes(searchTerm) || methodStr.includes(searchTerm);
+        const ipStr = String(wh.client_ip || '').toLowerCase();
+        return bodyStr.includes(searchTerm) || headerStr.includes(searchTerm) || methodStr.includes(searchTerm) || ipStr.includes(searchTerm);
       });
 
       if (filtered.length === 0) {
@@ -1421,6 +1659,7 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
               if (parsed.type) summary = parsed.type;
               else if (parsed.event) summary = parsed.event;
               else if (parsed.topic) summary = parsed.topic;
+              else if (parsed.action) summary = parsed.action;
             } catch (e) {}
           }
 
@@ -1440,7 +1679,6 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
         })
         .join('');
 
-      // Add click listeners to items
       document.querySelectorAll('.timeline-item').forEach((item) => {
         item.addEventListener('click', () => {
           const id = item.getAttribute('data-id');
@@ -1476,10 +1714,12 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
           const parsed = JSON.parse(wh.body);
           if (parsed.type) summary = parsed.type;
           else if (parsed.event) summary = parsed.event;
+          else if (parsed.topic) summary = parsed.topic;
+          else if (parsed.action) summary = parsed.action;
         } catch (e) {}
       }
       if (summaryText) summaryText.textContent = summary;
-      if (metaText) metaText.textContent = `${(wh.size_bytes / 1024).toFixed(1)} KB • ${wh.headers['cf-connecting-ip'] || '127.0.0.1'} • ${new Date(wh.timestamp).toLocaleTimeString()}`;
+      if (metaText) metaText.textContent = `${(wh.size_bytes / 1024).toFixed(1)} KB • ${wh.client_ip || wh.headers['cf-connecting-ip'] || '127.0.0.1'} • ${new Date(wh.timestamp).toLocaleTimeString()}`;
 
       // Email panel
       const emailPreview = document.getElementById('email-preview-container');
@@ -1542,14 +1782,29 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
         }
       }
 
-      // Security Tab
+      // Telemetry Tab
+      const teleIp = document.getElementById('telemetry-ip');
+      const teleSize = document.getElementById('telemetry-size');
+      const teleFormat = document.getElementById('telemetry-format');
+      if (teleIp) teleIp.textContent = wh.client_ip || wh.headers['cf-connecting-ip'] || '127.0.0.1';
+      if (teleSize) teleSize.textContent = `${wh.size_bytes} Bytes`;
+      if (teleFormat) teleFormat.textContent = (wh.format || 'json').toUpperCase();
+
+      // Security Tab setup
       const sigBadge = document.getElementById('detected-provider-badge');
       const sigCode = document.getElementById('signature-recipe-code');
       const sigDot = document.getElementById('signature-indicator-dot');
+      const sigProviderSelect = document.getElementById('sig-provider-select');
 
       if (wh.signature_provider) {
         if (sigBadge) sigBadge.textContent = `${wh.signature_provider} Signature Detected`;
         if (sigDot) sigDot.classList.remove('hidden');
+        if (sigProviderSelect) {
+          const lower = wh.signature_provider.toLowerCase();
+          if (['stripe', 'github', 'shopify', 'slack', 'svix', 'lemonsqueezy'].includes(lower)) {
+            sigProviderSelect.value = lower;
+          }
+        }
         if (sigCode) {
           sigCode.textContent = `// ${wh.signature_provider} Verification Recipe (Node.js)\nconst crypto = require('crypto');\nconst sig = headers['${wh.signature_provider.toLowerCase()}-signature'];\nconst expected = crypto.createHmac('sha256', SECRET).update(rawBody).digest('hex');\nconst isValid = crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));`;
         }
@@ -1563,55 +1818,44 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
       window.switchInspectorTab(currentTab);
     }
 
-    // Tab buttons event listeners (addEventListener fallback on top of onclick)
-    document.querySelectorAll('.tab-btn').forEach(function(btn) {
-      btn.addEventListener('click', function(e) {
-        var targetBtn = e.target.closest('.tab-btn') || btn;
-        var tab = targetBtn.getAttribute('data-tab');
-        if (tab) switchInspectorTab(tab);
+    // Delete single webhook
+    const deleteSingleBtn = document.getElementById('delete-single-wh-btn');
+    if (deleteSingleBtn) {
+      deleteSingleBtn.addEventListener('click', () => {
+        if (!selectedWebhookId) return;
+        webhooks = webhooks.filter(w => w.id !== selectedWebhookId);
+        selectedWebhookId = webhooks.length > 0 ? webhooks[0].id : null;
+        saveToLocalStorage();
+        renderTimeline();
+        if (selectedWebhookId) {
+          selectWebhook(selectedWebhookId);
+        } else {
+          if (inspectorZeroState) inspectorZeroState.classList.remove('hidden');
+          if (inspectorHeaderBar) inspectorHeaderBar.classList.add('hidden');
+          if (inspectorTabsNav) inspectorTabsNav.classList.add('hidden');
+          document.querySelectorAll('.tab-panel').forEach((p) => p.classList.add('hidden'));
+        }
       });
-    });
+    }
 
     // Method Filter Buttons
     document.querySelectorAll('.method-filter-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         activeFilter = btn.getAttribute('data-filter') || 'ALL';
         document.querySelectorAll('.method-filter-btn').forEach((b) => {
-          b.className = 'method-filter-btn px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700';
+          b.className = 'method-filter-btn px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 cursor-pointer';
         });
-        btn.className = 'method-filter-btn px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold active-filter';
+        btn.className = 'method-filter-btn px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold active-filter cursor-pointer';
         renderTimeline();
       });
     });
-
-    // Copy URL
-    if (copyLinkBtn) {
-      copyLinkBtn.addEventListener('click', () => {
-        navigator.clipboard.writeText(fullWebhookUrl);
-        const linkText = document.getElementById('copy-link-text');
-        if (linkText) linkText.textContent = 'Copied!';
-        setTimeout(() => { if (linkText) linkText.textContent = 'URL'; }, 2000);
-      });
-    }
-
-    // Copy Email
-    if (copyEmailBtn) {
-      copyEmailBtn.addEventListener('click', () => {
-        navigator.clipboard.writeText(fullEmailAddress);
-        const btnSpan = copyEmailBtn.querySelector('span');
-        if (btnSpan) btnSpan.textContent = 'Copied!';
-        setTimeout(() => { if (btnSpan) btnSpan.textContent = 'Email'; }, 2000);
-      });
-    }
 
     // Copy Body
     if (copyBodyBtn) {
       copyBodyBtn.addEventListener('click', () => {
         const wh = webhooks.find((w) => w.id === selectedWebhookId);
         if (wh) {
-          navigator.clipboard.writeText(wh.body || '');
-          copyBodyBtn.textContent = 'Copied!';
-          setTimeout(() => { copyBodyBtn.textContent = 'Copy Body'; }, 2000);
+          copyToClipboard(wh.body || '', copyBodyBtn, 'Copy Body');
         }
       });
     }
@@ -1622,10 +1866,7 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
         const wh = webhooks.find((w) => w.id === selectedWebhookId);
         if (!wh) return;
         const curlCmd = `curl -X ${wh.method} "${fullWebhookUrl}" \\\n  -H "Content-Type: application/json" \\\n  -d '${(wh.body || '').replace(/'/g, "'\\''")}'`;
-        navigator.clipboard.writeText(curlCmd);
-        const curlBtnText = document.getElementById('curl-btn-text');
-        if (curlBtnText) curlBtnText.textContent = 'Copied!';
-        setTimeout(() => { if (curlBtnText) curlBtnText.textContent = 'Copy cURL'; }, 2000);
+        copyToClipboard(curlCmd, document.getElementById('curl-btn-text'), 'Copy cURL');
       });
     }
 
@@ -1644,11 +1885,12 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
 
     // Clear Logs
     if (clearLogsBtn) {
-      clearLogsBtn.addEventListener('click', () => {
-        if (confirm('Clear all captured webhook logs from browser memory?')) {
+      clearLogsBtn.addEventListener('click', async () => {
+        if (confirm('Clear all captured webhook logs for this endpoint?')) {
           webhooks = [];
           selectedWebhookId = null;
           saveToLocalStorage();
+          fetch(`/api/poll/${activeEndpointId}`, { method: 'DELETE' }).catch(() => {});
           renderTimeline();
           if (inspectorZeroState) inspectorZeroState.classList.remove('hidden');
           if (inspectorHeaderBar) inspectorHeaderBar.classList.add('hidden');
@@ -1663,8 +1905,7 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
       searchInput.addEventListener('input', () => renderTimeline());
     }
 
-    // Global Modal Functions (also exposed as window functions above via hoisting)
-    // setupModal keeps addEventListener-based bindings as a belt-and-suspenders approach
+    // Modal Triggers
     function setupModal(triggerId, modalEl, closeBtnId, cancelBtnId) {
       var trigger = document.getElementById(triggerId);
       var closeBtn = document.getElementById(closeBtnId);
@@ -1687,7 +1928,6 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
     setupModal('open-config-btn', configModal, 'close-config-modal-btn', 'cancel-config-btn');
     setupModal('open-workflow-btn', workflowModal, 'close-workflow-modal-btn', 'cancel-workflow-btn');
     setupModal('open-monitor-btn', monitorModal, 'close-monitor-modal-btn', 'close-monitor-btn');
-    setupModal('open-domain-btn', domainModal, 'close-domain-modal-btn', 'close-domain-btn');
     setupModal('open-mock-btn', mockModal, 'close-mock-modal-btn', null);
     setupModal('replay-drawer-btn', replayModal, 'close-replay-modal-btn', 'close-replay-drawer-btn');
     setupModal('open-code-modal-btn', codeModal, 'close-code-modal-btn', null);
@@ -1713,7 +1953,6 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
       });
     }
 
-    // Delay slider label
     const delaySlider = document.getElementById('cfg-delay-slider');
     const delayVal = document.getElementById('cfg-delay-val');
     if (delaySlider && delayVal) {
@@ -1811,19 +2050,19 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
         } catch (e) {
           alert('Replay error: ' + e.message);
         } finally {
-          dispatchReplayBtn.textContent = 'Dispatch Replay';
+          dispatchReplayBtn.textContent = 'Dispatch';
         }
       });
     }
 
-    // Code Generator Languages
+    // Multi-Language Code Generator
     document.querySelectorAll('.code-lang-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         activeCodeLang = btn.getAttribute('data-lang') || 'curl';
         document.querySelectorAll('.code-lang-btn').forEach((b) => {
-          b.className = 'code-lang-btn px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700';
+          b.className = 'code-lang-btn px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700 cursor-pointer';
         });
-        btn.className = 'code-lang-btn px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-bold active-lang';
+        btn.className = 'code-lang-btn px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-bold active-lang cursor-pointer';
         renderExportCode();
       });
     });
@@ -1846,10 +2085,234 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
         display.textContent = `<?php\n$ch = curl_init("${fullWebhookUrl}");\ncurl_setopt($ch, CURLOPT_POSTFIELDS, '${bodyEsc}');\ncurl_exec($ch);\ncurl_close($ch);`;
       } else if (activeCodeLang === 'rust') {
         display.textContent = `let client = reqwest::Client::new();\nlet res = client.post("${fullWebhookUrl}")\n    .body(r#"${wh.body || ''}"#)\n    .send()\n    .await?;`;
+      } else if (activeCodeLang === 'ruby') {
+        display.textContent = `require 'net/http'\nrequire 'uri'\n\nuri = URI.parse("${fullWebhookUrl}")\nres = Net::HTTP.post(uri, '${bodyEsc}', { "Content-Type" => "application/json" })\nputs res.body`;
+      } else if (activeCodeLang === 'csharp') {
+        display.textContent = `using var client = new HttpClient();\nvar content = new StringContent(@"${wh.body || ''}", System.Text.Encoding.UTF8, "application/json");\nvar res = await client.PostAsync("${fullWebhookUrl}", content);`;
       }
     }
-    // Expose to early-script openAppModal
     window.__renderExportCode = renderExportCode;
+
+    const copyLangCodeBtn = document.getElementById('copy-lang-code-btn');
+    if (copyLangCodeBtn) {
+      copyLangCodeBtn.addEventListener('click', () => {
+        const display = document.getElementById('export-code-display');
+        if (display) copyToClipboard(display.textContent, copyLangCodeBtn, 'Copy');
+      });
+    }
+
+    // Interactive HMAC Signature Verification (SubtleCrypto)
+    const runSigVerifyBtn = document.getElementById('run-sig-verify-btn');
+    if (runSigVerifyBtn) {
+      runSigVerifyBtn.addEventListener('click', async () => {
+        const wh = webhooks.find((w) => w.id === selectedWebhookId);
+        if (!wh) return;
+
+        const secret = document.getElementById('sig-secret-input')?.value || '';
+        const provider = document.getElementById('sig-provider-select')?.value || 'auto';
+        const resultBadge = document.getElementById('sig-verify-result-badge');
+        const debugDetails = document.getElementById('sig-debug-details');
+        const extractedSpan = document.getElementById('sig-extracted-val');
+        const computedSpan = document.getElementById('sig-computed-val');
+
+        if (!secret) {
+          alert('Please enter your webhook secret key');
+          return;
+        }
+
+        try {
+          let expectedSig = '';
+          let receivedSig = '';
+          let dataToSign = wh.body || '';
+
+          // Stripe
+          if (provider === 'stripe' || (provider === 'auto' && wh.headers['stripe-signature'])) {
+            const rawHeader = wh.headers['stripe-signature'] || '';
+            const tMatch = rawHeader.match(/t=([0-9]+)/);
+            const v1Match = rawHeader.match(/v1=([a-f0-9]+)/);
+            if (tMatch && v1Match) {
+              receivedSig = v1Match[1];
+              dataToSign = `${tMatch[1]}.${wh.body || ''}`;
+            }
+          }
+          // GitHub
+          else if (provider === 'github' || (provider === 'auto' && (wh.headers['x-hub-signature-256'] || wh.headers['x-hub-signature']))) {
+            const rawHeader = wh.headers['x-hub-signature-256'] || wh.headers['x-hub-signature'] || '';
+            receivedSig = rawHeader.replace(/^sha256=/, '');
+          }
+          // Shopify
+          else if (provider === 'shopify' || (provider === 'auto' && wh.headers['x-shopify-hmac-sha256'])) {
+            receivedSig = wh.headers['x-shopify-hmac-sha256'] || '';
+          }
+          // Slack
+          else if (provider === 'slack' || (provider === 'auto' && wh.headers['x-slack-signature'])) {
+            const ts = wh.headers['x-slack-request-timestamp'] || '';
+            receivedSig = (wh.headers['x-slack-signature'] || '').replace(/^v0=/, '');
+            dataToSign = `v0:${ts}:${wh.body || ''}`;
+          }
+
+          // Compute HMAC-SHA256 via WebCrypto
+          const enc = new TextEncoder();
+          const keyData = enc.encode(secret);
+          const cryptoKey = await window.crypto.subtle.importKey(
+            'raw',
+            keyData,
+            { name: 'HMAC', hash: { name: 'SHA-256' } },
+            false,
+            ['sign']
+          );
+          const sigBuffer = await window.crypto.subtle.sign('HMAC', cryptoKey, enc.encode(dataToSign));
+          const hex = Array.from(new Uint8Array(sigBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+          const b64 = btoa(String.fromCharCode(...new Uint8Array(sigBuffer)));
+
+          expectedSig = provider === 'shopify' ? b64 : hex;
+
+          const isMatch = receivedSig && (receivedSig.toLowerCase() === expectedSig.toLowerCase() || receivedSig === b64);
+
+          if (resultBadge) {
+            resultBadge.classList.remove('hidden');
+            if (isMatch) {
+              resultBadge.textContent = '✅ Valid Signature — Authenticity Confirmed';
+              resultBadge.className = 'px-3 py-1.5 rounded-lg text-xs font-bold font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+            } else {
+              resultBadge.textContent = '❌ Signature Mismatch';
+              resultBadge.className = 'px-3 py-1.5 rounded-lg text-xs font-bold font-mono bg-rose-500/20 text-rose-400 border border-rose-500/30';
+            }
+          }
+
+          if (debugDetails) debugDetails.classList.remove('hidden');
+          if (extractedSpan) extractedSpan.textContent = receivedSig || '(No header signature found)';
+          if (computedSpan) computedSpan.textContent = expectedSig;
+        } catch (e) {
+          alert('Crypto error: ' + e.message);
+        }
+      });
+    }
+
+    // Endpoint Manager: Render list & creation
+    function renderEndpointList() {
+      const listEl = document.getElementById('saved-endpoints-list');
+      if (!listEl) return;
+      try {
+        const list = JSON.parse(localStorage.getItem(STORAGE_KEY_ENDPOINTS_LIST) || '[]');
+        if (list.length === 0) {
+          listEl.innerHTML = `<li class="p-3 text-slate-500 italic">No saved endpoints yet.</li>`;
+          return;
+        }
+        listEl.innerHTML = list.map(item => `
+          <li class="p-3 flex items-center justify-between hover:bg-slate-900 transition-colors">
+            <div class="flex flex-col">
+              <span class="font-bold text-cyan-300">${item.label || item.id}</span>
+              <span class="text-[10px] text-slate-500">ID: ${item.id}</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              ${item.id === activeEndpointId ? `<span class="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-400 text-[10px] font-bold">Active</span>` : `<button data-switch-ep="${item.id}" class="switch-ep-btn px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold transition-all cursor-pointer">Switch</button>`}
+            </div>
+          </li>
+        `).join('');
+
+        document.querySelectorAll('.switch-ep-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const ep = btn.getAttribute('data-switch-ep');
+            if (ep) {
+              window.location.search = `?ep=${encodeURIComponent(ep)}`;
+            }
+          });
+        });
+      } catch (e) {}
+    }
+    window.__renderEndpointList = renderEndpointList;
+
+    const createEpBtn = document.getElementById('create-ep-btn');
+    if (createEpBtn) {
+      createEpBtn.addEventListener('click', () => {
+        const input = document.getElementById('new-ep-slug-input');
+        let slug = (input?.value || '').trim();
+        if (!slug) {
+          slug = 'ep_' + Math.random().toString(36).substring(2, 9);
+        }
+        slug = slug.replace(/[^a-zA-Z0-9_-]/g, '_');
+        saveEndpointToRecentList(slug, slug);
+        window.location.search = `?ep=${encodeURIComponent(slug)}`;
+      });
+    }
+
+    // Request Composer Presets
+    const compPresetSelect = document.getElementById('comp-preset-select');
+    if (compPresetSelect) {
+      compPresetSelect.addEventListener('change', () => {
+        const val = compPresetSelect.value;
+        const bodyInput = document.getElementById('comp-body-input');
+        const headersInput = document.getElementById('comp-headers-input');
+        if (!bodyInput) return;
+
+        if (val === 'stripe_payment') {
+          headersInput.value = JSON.stringify({ "Content-Type": "application/json", "Stripe-Signature": `t=${Math.floor(Date.now()/1000)},v1=mock_v1_sig` }, null, 2);
+          bodyInput.value = JSON.stringify({ id: "evt_stripe_102", type: "payment_intent.succeeded", data: { object: { amount: 5000, currency: "usd" } } }, null, 2);
+        } else if (val === 'github_push') {
+          headersInput.value = JSON.stringify({ "Content-Type": "application/json", "X-GitHub-Event": "push", "X-Hub-Signature-256": "sha256=mock_sha256" }, null, 2);
+          bodyInput.value = JSON.stringify({ ref: "refs/heads/main", repository: { full_name: "org/repo" }, pusher: { name: "developer" } }, null, 2);
+        } else if (val === 'shopify_order') {
+          headersInput.value = JSON.stringify({ "Content-Type": "application/json", "X-Shopify-Topic": "orders/create" }, null, 2);
+          bodyInput.value = JSON.stringify({ id: 109283, email: "customer@example.com", total_price: "99.00" }, null, 2);
+        }
+      });
+    }
+
+    const dispatchComposerBtn = document.getElementById('dispatch-composer-btn');
+    if (dispatchComposerBtn) {
+      dispatchComposerBtn.addEventListener('click', async () => {
+        const method = document.getElementById('comp-method-select')?.value || 'POST';
+        const targetUrl = document.getElementById('comp-target-url')?.value || fullWebhookUrl;
+        const bodyText = document.getElementById('comp-body-input')?.value || '';
+        let headers = { 'Content-Type': 'application/json' };
+        try {
+          headers = JSON.parse(document.getElementById('comp-headers-input')?.value || '{}');
+        } catch (e) {}
+
+        dispatchComposerBtn.textContent = 'Sending...';
+        try {
+          await fetch(targetUrl, {
+            method,
+            headers,
+            body: ['GET', 'HEAD'].includes(method) ? undefined : bodyText
+          });
+          const msg = document.getElementById('comp-feedback-msg');
+          if (msg) {
+            msg.textContent = 'Dispatched successfully!';
+            setTimeout(() => { msg.textContent = ''; }, 3000);
+          }
+          window.closeAppModal('composer-modal');
+        } catch (e) {
+          alert('Dispatch failed: ' + e.message);
+        } finally {
+          dispatchComposerBtn.textContent = 'Send Webhook';
+        }
+      });
+    }
+
+    // Import Session JSON
+    const submitImportBtn = document.getElementById('submit-import-btn');
+    if (submitImportBtn) {
+      submitImportBtn.addEventListener('click', () => {
+        const raw = document.getElementById('import-json-textarea')?.value || '';
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            webhooks = parsed;
+            selectedWebhookId = webhooks[0].id;
+            saveToLocalStorage();
+            renderTimeline();
+            selectWebhook(selectedWebhookId);
+            window.closeAppModal('import-modal');
+          } else {
+            alert('Invalid JSON: Must be an array of webhook objects');
+          }
+        } catch (e) {
+          alert('JSON syntax error: ' + e.message);
+        }
+      });
+    }
 
     // Mock Dispatcher Handlers
     document.querySelectorAll('.mock-dispatch-btn').forEach((btn) => {
@@ -1863,7 +2326,7 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               from: 'alex.developer@example.com',
-              to: `${activeEndpointId}@inbound.tester`,
+              to: `${activeEndpointId}@safewebhook.com`,
               subject: 'Invoice Receipt for Plan Pro #1042',
               text: 'Hi Team,\n\nHere is your receipt for the Pro plan subscription. Thank you for your business!\n\nBest,\nBilling Team',
             })
@@ -1893,7 +2356,7 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
           headers['X-Hub-Signature-256'] = 'sha256=mock_hub_sig_334';
           body = {
             ref: 'refs/heads/main',
-            repository: { name: 'mitool', full_name: 'org/mitool' },
+            repository: { name: 'safewebhook', full_name: 'safewebhook/app' },
             pusher: { name: 'developer', email: 'dev@github.com' }
           };
         } else if (type === 'shopify-order') {
@@ -1920,6 +2383,28 @@ const defaultEmptyCurl = `curl -X POST https://safewebhook.com/api/r/ep_dev_9a7d
         });
       });
     });
+
+    const zeroStateMockBtn = document.getElementById('zero-state-mock-btn');
+    if (zeroStateMockBtn) {
+      zeroStateMockBtn.addEventListener('click', () => {
+        fetch(fullWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Stripe-Signature': `t=${Math.floor(Date.now()/1000)},v1=mock_sig` },
+          body: JSON.stringify({ id: 'evt_stripe_quick', type: 'payment_intent.succeeded', data: { object: { amount: 4900, currency: 'usd' } } })
+        });
+      });
+    }
+
+    const emptyMockTrigger = document.getElementById('empty-mock-trigger');
+    if (emptyMockTrigger) {
+      emptyMockTrigger.addEventListener('click', () => {
+        fetch(fullWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Stripe-Signature': `t=${Math.floor(Date.now()/1000)},v1=mock_sig` },
+          body: JSON.stringify({ id: 'evt_stripe_quick', type: 'payment_intent.succeeded', data: { object: { amount: 4900, currency: 'usd' } } })
+        });
+      });
+    }
 
   })();
 </script>

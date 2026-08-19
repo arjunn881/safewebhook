@@ -16,6 +16,17 @@ export interface CapturedWebhookPayload {
   size_bytes: number;
   format: string;
   signature_provider: string | null;
+  client_ip?: string;
+  url?: string;
+  path?: string;
+  is_email?: boolean;
+  email?: {
+    from: string;
+    to: string;
+    subject: string;
+    text?: string;
+    html?: string;
+  } | null;
 }
 
 // In-memory fallback ring-buffer (up to 50 payloads per endpoint)

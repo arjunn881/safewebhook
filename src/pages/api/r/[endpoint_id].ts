@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { broadcastWebhook, getEndpointConfig, getEndpointWorkflow } from '../../../lib/streams';
 import { saveWebhookPayload } from '../../../lib/kv_store';
+import { safeGetDatabase, insertWebhook } from '../../../lib/db';
 import {
   CORS_HEADERS,
   extractHeaders,
@@ -65,13 +66,27 @@ async function handleInboundWebhook(context: Parameters<APIRoute>[0]): Promise<R
     else if (headersMap['x-shopify-hmac-sha256']) signatureProvider = 'Shopify';
     else if (headersMap['x-slack-signature']) signatureProvider = 'Slack';
     else if (headersMap['x-twilio-signature']) signatureProvider = 'Twilio';
-    else if (headersMap['webhook-signature'] || headersMap['svix-signature']) signatureProvider = 'Svix';
+    else if (headersMap['webhook-signature'] || headersMap['svix-signature'] || headersMap['svix-id']) signatureProvider = 'Svix';
+    else if (headersMap['x-signature-sha256'] || headersMap['x-lemonsqueezy-signature']) signatureProvider = 'LemonSqueezy';
+    else if (headersMap['x-razorpay-signature']) signatureProvider = 'Razorpay';
+    else if (headersMap['paypal-transmission-sig'] || headersMap['paypal-auth-algo']) signatureProvider = 'PayPal';
+    else if (headersMap['linear-signature']) signatureProvider = 'Linear';
+    else if (headersMap['clerk-signature']) signatureProvider = 'Clerk';
+    else if (headersMap['x-supabase-signature']) signatureProvider = 'Supabase';
+
+    const clientIp = headersMap['cf-connecting-ip'] ||
+      headersMap['x-forwarded-for']?.split(',')[0].trim() ||
+      headersMap['x-real-ip'] ||
+      '127.0.0.1';
+
+    const webhookId = crypto.randomUUID();
+    const timestamp = new Date().toISOString();
 
     // 7. Bundle into unified webhook payload envelope
     const payload = {
-      id: crypto.randomUUID(),
+      id: webhookId,
       endpoint_id: endpointId!,
-      timestamp: new Date().toISOString(),
+      timestamp,
       method: request.method.toUpperCase(),
       query_params: queryParams,
       headers: headersMap,
@@ -79,6 +94,11 @@ async function handleInboundWebhook(context: Parameters<APIRoute>[0]): Promise<R
       size_bytes: byteSize,
       format,
       signature_provider: signatureProvider,
+      client_ip: clientIp,
+      url: urlObj.toString(),
+      path: urlObj.pathname,
+      is_email: false,
+      email: null,
     };
 
     // 8. Instantly forward to active in-memory SSE stream listeners
@@ -86,6 +106,19 @@ async function handleInboundWebhook(context: Parameters<APIRoute>[0]): Promise<R
 
     // Save to Cloudflare KV & memory store for multi-isolate synchronization
     await saveWebhookPayload(endpointId!, payload);
+
+    // Save to Cloudflare D1 asynchronously (non-blocking)
+    const db = safeGetDatabase(context);
+    if (db) {
+      insertWebhook(db, {
+        id: webhookId,
+        endpoint_id: endpointId!,
+        timestamp,
+        method: payload.method,
+        headers: JSON.stringify(headersMap),
+        body: bodyText || null,
+      }).catch((err) => console.error('[D1 Async Insert Failed]', err));
+    }
 
     // 9. Execute automated workflows (Auto-forwarding / Slack notifications)
     const workflow = getEndpointWorkflow(endpointId!);

@@ -2,25 +2,39 @@ import type { D1Database } from '@cloudflare/workers-types';
 import type { WebhookRecord, Env } from '../types/database';
 
 /**
- * Safely resolves the Cloudflare D1 Database binding from Astro API context or Cloudflare runtime
+ * Safely resolves the Cloudflare D1 Database binding without throwing unhandled exceptions.
+ * Returns null if D1 is not bound (e.g. during local Astro dev server without D1 proxy).
+ */
+export function safeGetDatabase(context?: { locals?: App.Locals }): D1Database | null {
+  try {
+    // 1. Try resolving from Astro context.locals.runtime.env
+    const localsEnv = context?.locals?.runtime?.env as Env | undefined;
+    if (localsEnv?.DB) {
+      return localsEnv.DB;
+    }
+
+    // 2. Try resolving dynamically from globalThis / cloudflare environment
+    const globalEnv = globalThis as unknown as { env?: Env; DB?: D1Database };
+    if (globalEnv.env?.DB) {
+      return globalEnv.env.DB;
+    }
+    if (globalEnv.DB) {
+      return globalEnv.DB;
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolves D1 Database binding or throws informative error if required
  */
 export function getDatabase(context?: { locals?: App.Locals }): D1Database {
-  // 1. Try resolving from Astro context.locals.runtime.env
-  const localsEnv = context?.locals?.runtime?.env as Env | undefined;
-  if (localsEnv?.DB) {
-    return localsEnv.DB;
-  }
+  const db = safeGetDatabase(context);
+  if (db) return db;
 
-  // 2. Try resolving dynamically from globalThis / cloudflare environment
-  const globalEnv = (globalThis as unknown as { env?: Env; DB?: D1Database });
-  if (globalEnv.env?.DB) {
-    return globalEnv.env.DB;
-  }
-  if (globalEnv.DB) {
-    return globalEnv.DB;
-  }
-
-  // 3. Fallback error with clear instructions
   throw new Error(
     'Cloudflare D1 Database binding "DB" is not available in the current runtime context. ' +
     'Ensure "DB" is bound in wrangler.jsonc or passed in context.locals.runtime.env.'
@@ -28,28 +42,36 @@ export function getDatabase(context?: { locals?: App.Locals }): D1Database {
 }
 
 /**
- * Inserts an incoming webhook payload into the D1 `webhooks` table
+ * Inserts an incoming webhook payload into the D1 `webhooks` table safely
  */
 export async function insertWebhook(
-  db: D1Database,
+  db: D1Database | null,
   record: WebhookRecord
-): Promise<void> {
-  const query = `
-    INSERT INTO webhooks (id, endpoint_id, timestamp, method, headers, body)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `;
+): Promise<boolean> {
+  if (!db || typeof db.prepare !== 'function') return false;
 
-  await db
-    .prepare(query)
-    .bind(
-      record.id,
-      record.endpoint_id,
-      record.timestamp,
-      record.method,
-      record.headers,
-      record.body
-    )
-    .run();
+  try {
+    const query = `
+      INSERT INTO webhooks (id, endpoint_id, timestamp, method, headers, body)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `;
+
+    await db
+      .prepare(query)
+      .bind(
+        record.id,
+        record.endpoint_id,
+        record.timestamp,
+        record.method,
+        record.headers,
+        record.body
+      )
+      .run();
+    return true;
+  } catch (err) {
+    console.error('[D1 Insert Error]', err);
+    return false;
+  }
 }
 
 /**
@@ -57,65 +79,86 @@ export async function insertWebhook(
  * Defaults to 50 entries, capped at 100 max for edge performance
  */
 export async function getWebhookHistory(
-  db: D1Database,
+  db: D1Database | null,
   endpointId: string,
   limit: number = 50
 ): Promise<WebhookRecord[]> {
-  const safeLimit = Math.min(Math.max(1, limit), 100);
+  if (!db || typeof db.prepare !== 'function') return [];
 
-  const query = `
-    SELECT id, endpoint_id, timestamp, method, headers, body
-    FROM webhooks
-    WHERE endpoint_id = ?
-    ORDER BY timestamp DESC
-    LIMIT ?
-  `;
+  try {
+    const safeLimit = Math.min(Math.max(1, limit), 100);
 
-  const result = await db
-    .prepare(query)
-    .bind(endpointId, safeLimit)
-    .all<WebhookRecord>();
+    const query = `
+      SELECT id, endpoint_id, timestamp, method, headers, body
+      FROM webhooks
+      WHERE endpoint_id = ?
+      ORDER BY timestamp DESC
+      LIMIT ?
+    `;
 
-  return result.results || [];
+    const result = await db
+      .prepare(query)
+      .bind(endpointId, safeLimit)
+      .all<WebhookRecord>();
+
+    return result.results || [];
+  } catch (err) {
+    console.error('[D1 History Error]', err);
+    return [];
+  }
 }
 
 /**
  * Purges webhook records older than the specified age in hours (default: 24 hours)
  */
 export async function purgeOldWebhooks(
-  db: D1Database,
+  db: D1Database | null,
   maxAgeHours: number = 24
 ): Promise<{ deletedCount: number; cutoff: string }> {
   const cutoffTime = new Date(Date.now() - maxAgeHours * 60 * 60 * 1000).toISOString();
+  if (!db || typeof db.prepare !== 'function') {
+    return { deletedCount: 0, cutoff: cutoffTime };
+  }
 
-  const query = `
-    DELETE FROM webhooks
-    WHERE timestamp < ?
-  `;
+  try {
+    const query = `
+      DELETE FROM webhooks
+      WHERE timestamp < ?
+    `;
 
-  const result = await db.prepare(query).bind(cutoffTime).run();
-  
-  // D1 meta changes reports the number of affected rows
-  const changes = result.meta?.changes ?? 0;
+    const result = await db.prepare(query).bind(cutoffTime).run();
+    const changes = result.meta?.changes ?? 0;
 
-  return {
-    deletedCount: changes,
-    cutoff: cutoffTime,
-  };
+    return {
+      deletedCount: changes,
+      cutoff: cutoffTime,
+    };
+  } catch (err) {
+    console.error('[D1 Purge Error]', err);
+    return { deletedCount: 0, cutoff: cutoffTime };
+  }
 }
 
 /**
  * Clears all webhook records for a specific endpoint
  */
 export async function deleteEndpointWebhooks(
-  db: D1Database,
+  db: D1Database | null,
   endpointId: string
 ): Promise<number> {
-  const query = `
-    DELETE FROM webhooks
-    WHERE endpoint_id = ?
-  `;
+  if (!db || typeof db.prepare !== 'function') return 0;
 
-  const result = await db.prepare(query).bind(endpointId).run();
-  return result.meta?.changes ?? 0;
+  try {
+    const query = `
+      DELETE FROM webhooks
+      WHERE endpoint_id = ?
+    `;
+
+    const result = await db.prepare(query).bind(endpointId).run();
+    return result.meta?.changes ?? 0;
+  } catch (err) {
+    console.error('[D1 Delete Endpoint Error]', err);
+    return 0;
+  }
 }
+

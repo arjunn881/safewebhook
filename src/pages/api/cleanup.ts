@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getDatabase, purgeOldWebhooks } from '../../lib/db';
+import { safeGetDatabase, purgeOldWebhooks } from '../../lib/db';
 import { jsonResponse, errorResponse, CORS_HEADERS } from '../../lib/http';
 import type { CleanupResponse, Env } from '../../types/database';
 
@@ -47,7 +47,7 @@ async function handleCleanup(context: Parameters<APIRoute>[0]): Promise<Response
     const maxAgeHours = hoursParam ? Math.max(1, parseInt(hoursParam, 10)) : 24;
 
     // 3. Execute purge query
-    const db = getDatabase(context);
+    const db = safeGetDatabase(context);
     const { deletedCount, cutoff } = await purgeOldWebhooks(
       db,
       isNaN(maxAgeHours) ? 24 : maxAgeHours
