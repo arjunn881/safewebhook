@@ -114,3 +114,137 @@ es.onmessage = async (e) => {
 - **Tools**: Response Simulator, Latency Delay, HMAC Verifier, Localhost Replay, Inbound Email, Slack Forwarder, Discord Router, Cron Monitor, JWT Validator, JSON Formatter, Rate Limit Tester, IPN Simulator.
 - **Error Guides**: HTTP 504, 502, 500, 429, 400, 401, 403, 408 troubleshooting.
 - **Framework Guides**: Next.js App Router, Express.js, FastAPI, Flask, Django, Go Gin, Laravel.
+
+---
+
+## Frequently Asked Questions
+
+**Q: What is SafeWebhook?**
+A: SafeWebhook is a free, zero-login webhook testing tool that instantly generates a private HTTPS endpoint. Developers use it to capture, inspect, and replay inbound HTTP webhooks from Stripe, GitHub, Shopify, and 22+ other platforms without any account or server setup.
+
+**Q: How do I test a webhook without exposing my localhost?**
+A: Visit https://safewebhook.com/app — a unique endpoint URL is generated instantly. Paste that URL into your webhook provider's dashboard. When the provider sends a webhook, the payload appears in your browser in real time with full header and body inspection. No Ngrok, no tunnels, no installation.
+
+**Q: Does SafeWebhook store my webhook payloads?**
+A: No. SafeWebhook uses a zero-server-storage architecture. Incoming payloads are streamed via Server-Sent Events (SSE) directly to the developer's browser and stored only in browser localStorage/IndexedDB. Nothing is persisted to server-side databases or disks.
+
+**Q: How do I verify a Stripe webhook signature?**
+A: Use `stripe.webhooks.constructEvent(req.body, req.headers['stripe-signature'], process.env.STRIPE_WEBHOOK_SECRET)` in Node.js, passing the raw request buffer before any JSON parsing. SafeWebhook's `/test/stripe` page includes copy-paste verification code for Node.js and Python.
+
+**Q: What's the difference between SafeWebhook and webhook.site?**
+A: SafeWebhook is 100% client-side with zero server storage (webhook.site stores payloads on their servers). SafeWebhook also supports 1-click localhost replay, HMAC signature verification for 25+ platforms, latency simulation, and inbound email-to-webhook conversion — all for free with no account.
+
+**Q: What signature algorithms does SafeWebhook support?**
+A: HMAC-SHA256 (Stripe, GitHub, Shopify, WooCommerce, HubSpot), HMAC-SHA1 (GitHub legacy, Twilio), Ed25519 (Discord), ECDSA P-256 (SendGrid), and Svix composite signatures (Clerk, Resend).
+
+**Q: How do I replay a captured webhook to my local server?**
+A: In the SafeWebhook workbench, click "Replay to Localhost" on any captured request. Enter your local port (e.g. 3000 or 8000), and the payload is forwarded directly from the browser to your local server without any CLI tools.
+
+**Q: Can I test email webhooks with SafeWebhook?**
+A: Yes. Every SafeWebhook endpoint has a matching inbound email address: `{endpoint_id}@inbound.safewebhook.com`. Send any email to that address and it arrives as a structured JSON webhook with parsed headers, body, and attachments.
+
+---
+
+## Competitive Positioning
+
+| Feature | SafeWebhook | Webhook.site | Ngrok | Beeceptor |
+|---|---|---|---|---|
+| Zero login required | ✅ | ✅ | ❌ (account) | ✅ |
+| Server-side payload storage | ❌ Never | ✅ Stored | N/A | ✅ Stored |
+| HMAC signature verification | ✅ 25+ platforms | ❌ | ❌ | ❌ |
+| Localhost replay | ✅ 1-click | ❌ | ✅ (tunnel) | ❌ |
+| Latency simulation | ✅ 0-5000ms | ❌ | ❌ | ✅ |
+| Inbound email-to-webhook | ✅ | ❌ | ❌ | ❌ |
+| Free tier limits | None | 500 req/day | 40 conn/min | Limited |
+| Infrastructure | Cloudflare Edge | Centralized | Centralized | Centralized |
+
+---
+
+## Additional Code Recipes
+
+### Django Webhook Handler (Python)
+```python
+from django.views.decorators.csrf import csrf_exempt
+from django.http import HttpResponse, HttpResponseForbidden
+import hmac, hashlib
+
+@csrf_exempt
+def github_webhook(request):
+    if request.method != 'POST':
+        return HttpResponse(status=405)
+    
+    secret = b'YOUR_WEBHOOK_SECRET'
+    signature = request.headers.get('X-Hub-Signature-256', '')
+    expected = 'sha256=' + hmac.new(secret, request.body, hashlib.sha256).hexdigest()
+    
+    if not hmac.compare_digest(signature, expected):
+        return HttpResponseForbidden('Invalid signature')
+    
+    # Process event
+    return HttpResponse('OK', status=200)
+```
+
+### Go Gin Webhook Handler
+```go
+package main
+
+import (
+    "crypto/hmac"
+    "crypto/sha256"
+    "encoding/hex"
+    "io"
+    "net/http"
+    "github.com/gin-gonic/gin"
+)
+
+func webhookHandler(c *gin.Context) {
+    body, _ := io.ReadAll(c.Request.Body)
+    secret := []byte("YOUR_WEBHOOK_SECRET")
+    
+    mac := hmac.New(sha256.New, secret)
+    mac.Write(body)
+    expected := "sha256=" + hex.EncodeToString(mac.Sum(nil))
+    
+    received := c.GetHeader("X-Hub-Signature-256")
+    if !hmac.Equal([]byte(expected), []byte(received)) {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid signature"})
+        return
+    }
+    
+    c.JSON(http.StatusOK, gin.H{"received": true})
+}
+
+func main() {
+    r := gin.Default()
+    r.POST("/webhook", webhookHandler)
+    r.Run(":8080")
+}
+```
+
+### Laravel Webhook Controller (PHP)
+```php
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+
+class WebhookController extends Controller
+{
+    public function handle(Request $request)
+    {
+        $secret = config('services.stripe.webhook_secret');
+        $signature = $request->header('Stripe-Signature');
+        $payload = $request->getContent();
+        
+        try {
+            $event = \Stripe\Webhook::constructEvent($payload, $signature, $secret);
+            Log::info('Stripe event received', ['type' => $event->type]);
+            return response()->json(['status' => 'received']);
+        } catch (\Stripe\Exception\SignatureVerificationException $e) {
+            return response()->json(['error' => 'Invalid signature'], 400);
+        }
+    }
+}
+```

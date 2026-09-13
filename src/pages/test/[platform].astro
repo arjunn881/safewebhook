@@ -24,14 +24,33 @@ const structuredSchema = {
       headline: pageTitle,
       description: pageDescription,
       url: Astro.url.href,
+      inLanguage: 'en',
+      datePublished: '2026-08-21',
+      dateModified: '2026-09-13',
       author: {
         '@type': 'Organization',
-        name: 'SafeWebhook'
+        name: 'SafeWebhook',
+        url: 'https://safewebhook.com'
       },
+      publisher: { '@id': 'https://safewebhook.com/#organization' },
       about: {
         '@type': 'SoftwareApplication',
         name: `${platformData.name} Webhook Integration`
       }
+    },
+    {
+      '@type': 'HowTo',
+      name: `How to Test ${platformData.name} Webhooks Online`,
+      description: `Step-by-step guide to capture and inspect ${platformData.name} webhook payloads in real time using SafeWebhook.`,
+      totalTime: 'PT2M',
+      tool: [{ '@type': 'HowToTool', name: 'SafeWebhook' }],
+      step: platformData.setupSteps.map((step, idx) => ({
+        '@type': 'HowToStep',
+        position: idx + 1,
+        name: `Step ${idx + 1}`,
+        text: typeof step === 'string' ? step : String(step),
+        url: Astro.url.href
+      }))
     },
     {
       '@type': 'FAQPage',

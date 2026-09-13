@@ -14,59 +14,64 @@ export const GET: APIRoute = async () => {
   const currentDate = new Date().toISOString().slice(0, 10);
 
   const staticPages = [
-    { loc: `${baseUrl}/`, priority: '1.0', changefreq: 'daily' },
-    { loc: `${baseUrl}/app`, priority: '0.9', changefreq: 'daily' },
-    { loc: `${baseUrl}/about`, priority: '0.7', changefreq: 'monthly' },
-    { loc: `${baseUrl}/contact`, priority: '0.7', changefreq: 'monthly' },
-    { loc: `${baseUrl}/docs`, priority: '0.8', changefreq: 'weekly' },
-    { loc: `${baseUrl}/faq`, priority: '0.8', changefreq: 'weekly' },
-    { loc: `${baseUrl}/privacy`, priority: '0.5', changefreq: 'monthly' },
-    { loc: `${baseUrl}/terms`, priority: '0.5', changefreq: 'monthly' },
-    { loc: `${baseUrl}/disclaimer`, priority: '0.5', changefreq: 'monthly' },
+    { loc: `${baseUrl}/`, priority: '1.0', changefreq: 'daily', lastmod: currentDate },
+    { loc: `${baseUrl}/about`, priority: '0.7', changefreq: 'monthly', lastmod: '2026-08-30' },
+    { loc: `${baseUrl}/contact`, priority: '0.7', changefreq: 'monthly', lastmod: '2026-08-30' },
+    { loc: `${baseUrl}/docs`, priority: '0.8', changefreq: 'weekly', lastmod: currentDate },
+    { loc: `${baseUrl}/faq`, priority: '0.8', changefreq: 'weekly', lastmod: currentDate },
+    { loc: `${baseUrl}/privacy`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-08-22' },
+    { loc: `${baseUrl}/terms`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-08-22' },
+    { loc: `${baseUrl}/disclaimer`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-08-22' },
   ];
 
   const hubPages = [
-    { loc: `${baseUrl}/integrations`, priority: '0.9', changefreq: 'daily' },
-    { loc: `${baseUrl}/tools`, priority: '0.9', changefreq: 'daily' },
-    { loc: `${baseUrl}/vs`, priority: '0.8', changefreq: 'weekly' },
-    { loc: `${baseUrl}/errors`, priority: '0.8', changefreq: 'weekly' },
-    { loc: `${baseUrl}/guides`, priority: '0.8', changefreq: 'weekly' },
+    { loc: `${baseUrl}/integrations`, priority: '0.9', changefreq: 'daily', lastmod: currentDate },
+    { loc: `${baseUrl}/tools`, priority: '0.9', changefreq: 'daily', lastmod: currentDate },
+    { loc: `${baseUrl}/vs`, priority: '0.8', changefreq: 'weekly', lastmod: currentDate },
+    { loc: `${baseUrl}/errors`, priority: '0.8', changefreq: 'weekly', lastmod: currentDate },
+    { loc: `${baseUrl}/guides`, priority: '0.8', changefreq: 'weekly', lastmod: currentDate },
   ];
 
   const platformPages = PLATFORM_SLUGS.map((slug) => ({
     loc: `${baseUrl}/test/${slug}`,
     priority: '0.85',
     changefreq: 'weekly',
+    lastmod: '2026-08-21',
   }));
 
   const competitorPages = COMPETITOR_SLUGS.map((slug) => ({
     loc: `${baseUrl}/vs/${slug}`,
     priority: '0.75',
     changefreq: 'monthly',
+    lastmod: '2026-08-21',
   }));
 
   const useCasePages = USE_CASE_SLUGS.map((slug) => ({
     loc: `${baseUrl}/tools/${slug}`,
     priority: '0.85',
     changefreq: 'weekly',
+    lastmod: '2026-08-21',
   }));
 
   const errorPages = ERROR_GUIDE_SLUGS.map((slug) => ({
     loc: `${baseUrl}/errors/${slug}`,
     priority: '0.8',
     changefreq: 'weekly',
+    lastmod: '2026-08-21',
   }));
 
   const frameworkPages = FRAMEWORK_GUIDE_SLUGS.map((slug) => ({
     loc: `${baseUrl}/guides/${slug}`,
     priority: '0.8',
     changefreq: 'weekly',
+    lastmod: '2026-08-21',
   }));
 
   const faqCategoryPages = FAQ_CATEGORIES.map((cat) => ({
     loc: `${baseUrl}/faq/${cat.slug}`,
     priority: '0.85',
     changefreq: 'weekly',
+    lastmod: '2026-08-28',
   }));
 
   const allUrls = [
@@ -87,7 +92,7 @@ ${allUrls
   .map(
     (page) => `  <url>
     <loc>${page.loc}</loc>
-    <lastmod>${currentDate}</lastmod>
+    <lastmod>${page.lastmod ?? currentDate}</lastmod>
     <changefreq>${page.changefreq}</changefreq>
     <priority>${page.priority}</priority>
   </url>`

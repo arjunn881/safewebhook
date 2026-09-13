@@ -38,10 +38,16 @@ const defaultStructuredData = {
       url: siteUrl,
       name: 'SafeWebhook',
       description: description,
+      inLanguage: 'en',
+      publisher: { '@id': `${siteUrl}/#organization` },
       potentialAction: {
         '@type': 'SearchAction',
         target: `${siteUrl}/integrations?q={search_term_string}`,
         'query-input': 'required name=search_term_string'
+      },
+      speakable: {
+        '@type': 'SpeakableSpecification',
+        cssSelector: ['.speakable-answer', '.speakable-description']
       }
     },
     {
@@ -50,7 +56,29 @@ const defaultStructuredData = {
       name: 'SafeWebhook',
       url: siteUrl,
       logo: `${siteUrl}/favicon.svg`,
-      sameAs: ['https://github.com/safewebhook']
+      foundingDate: '2026',
+      email: 'support@safewebhook.com',
+      description: 'SafeWebhook is the zero-login, privacy-first developer platform for testing, debugging, and simulating inbound HTTP webhooks in real time at the Cloudflare edge.',
+      knowsAbout: [
+        'Webhook Testing',
+        'HMAC Signature Verification',
+        'HTTP Payload Inspection',
+        'Cryptographic Security',
+        'Developer Tools',
+        'Cloudflare Workers',
+        'Server-Sent Events'
+      ],
+      contactPoint: {
+        '@type': 'ContactPoint',
+        contactType: 'technical support',
+        email: 'support@safewebhook.com',
+        availableLanguage: 'English'
+      },
+      sameAs: [
+        'https://github.com/safewebhook',
+        'https://twitter.com/safewebhook',
+        'https://www.linkedin.com/company/safewebhook'
+      ]
     },
     {
       '@type': 'WebApplication',
@@ -119,6 +147,8 @@ const finalStructuredData = schema || defaultStructuredData;
     <link rel="alternate icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
     <link rel="canonical" href={canonical} />
+    <link rel="alternate" hreflang="en" href={canonical} />
+    <link rel="alternate" hreflang="x-default" href={canonical} />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <link rel="alternate" type="application/rss+xml" title="SafeWebhook Feed" href="/feed.xml" />
 
@@ -139,6 +169,7 @@ const finalStructuredData = schema || defaultStructuredData;
     <!-- Mobile & Display Configurations -->
     <meta name="theme-color" content="#070a12" />
     <meta name="color-scheme" content="dark" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 

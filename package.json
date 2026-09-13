@@ -14,6 +14,8 @@
     "check": "astro check",
     "preview": "astro build && wrangler dev",
     "deploy": "astro build && wrangler deploy",
+    "indexnow": "node scripts/submit-indexnow.mjs",
+    "deploy:full": "astro build && wrangler deploy && node scripts/submit-indexnow.mjs",
     "astro": "astro"
   },
   "dependencies": {

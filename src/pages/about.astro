@@ -5,12 +5,71 @@ import Footer from '../components/Footer.astro';
 
 const pageTitle = 'About Us — SafeWebhook';
 const pageDescription = 'Learn about SafeWebhook: our mission, zero-server-storage privacy architecture, and commitment to free, developer-first webhook testing tools.';
+
+const aboutSchema = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'AboutPage',
+      '@id': 'https://safewebhook.com/about',
+      url: 'https://safewebhook.com/about',
+      name: pageTitle,
+      description: pageDescription,
+      inLanguage: 'en',
+      datePublished: '2026-08-30',
+      dateModified: '2026-09-13',
+      isPartOf: { '@id': 'https://safewebhook.com/#website' },
+      about: { '@id': 'https://safewebhook.com/#organization' },
+      publisher: { '@id': 'https://safewebhook.com/#organization' }
+    },
+    {
+      '@type': 'Organization',
+      '@id': 'https://safewebhook.com/#organization',
+      name: 'SafeWebhook',
+      url: 'https://safewebhook.com',
+      logo: 'https://safewebhook.com/favicon.svg',
+      foundingDate: '2026',
+      email: 'support@safewebhook.com',
+      description: 'SafeWebhook is the zero-login, privacy-first developer platform for testing, debugging, and simulating inbound HTTP webhooks in real time at the Cloudflare edge. No server storage, no accounts, no paywalls.',
+      knowsAbout: [
+        'Webhook Testing and Debugging',
+        'HMAC-SHA256 Signature Verification',
+        'HTTP Payload Inspection',
+        'Cryptographic Security',
+        'Cloudflare Workers Edge Computing',
+        'Server-Sent Events (SSE)',
+        'Developer Tools',
+        'API Development',
+        'Webhook Security Best Practices'
+      ],
+      contactPoint: {
+        '@type': 'ContactPoint',
+        contactType: 'technical support',
+        email: 'support@safewebhook.com',
+        availableLanguage: 'English'
+      },
+      sameAs: [
+        'https://github.com/safewebhook',
+        'https://twitter.com/safewebhook',
+        'https://www.linkedin.com/company/safewebhook'
+      ]
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://safewebhook.com/' },
+        { '@type': 'ListItem', position: 2, name: 'About', item: 'https://safewebhook.com/about' }
+      ]
+    }
+  ]
+};
 ---
 
 <Layout
   title={pageTitle}
   description={pageDescription}
   robots="index, follow"
+  schema={aboutSchema}
 >
   <Header subTitle="/ About Us" />
 

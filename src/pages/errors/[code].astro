@@ -24,10 +24,29 @@ const structuredSchema = {
       headline: pageTitle,
       description: pageDescription,
       url: Astro.url.href,
+      inLanguage: 'en',
+      datePublished: '2026-08-21',
+      dateModified: '2026-09-13',
       author: {
         '@type': 'Organization',
-        name: 'SafeWebhook'
-      }
+        name: 'SafeWebhook',
+        url: 'https://safewebhook.com'
+      },
+      publisher: { '@id': 'https://safewebhook.com/#organization' }
+    },
+    {
+      '@type': 'HowTo',
+      name: `How to Fix Webhook HTTP ${errorData.statusCode} Error`,
+      description: `Step-by-step resolution checklist for webhook HTTP ${errorData.statusCode} (${errorData.title}).`,
+      totalTime: 'PT5M',
+      tool: [{ '@type': 'HowToTool', name: 'SafeWebhook' }],
+      step: errorData.troubleshootingChecklist.map((item, idx) => ({
+        '@type': 'HowToStep',
+        position: idx + 1,
+        name: `Step ${idx + 1}`,
+        text: typeof item === 'string' ? item : String(item),
+        url: Astro.url.href
+      }))
     },
     {
       '@type': 'FAQPage',
@@ -36,6 +55,14 @@ const structuredSchema = {
         name: f.q,
         acceptedAnswer: { '@type': 'Answer', text: f.a }
       }))
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://safewebhook.com/' },
+        { '@type': 'ListItem', position: 2, name: 'Errors', item: 'https://safewebhook.com/errors' },
+        { '@type': 'ListItem', position: 3, name: `HTTP ${errorData.statusCode}`, item: Astro.url.href }
+      ]
     }
   ]
 };
