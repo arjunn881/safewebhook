@@ -1,19 +1,20 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import type { WebhookRecord, Env } from '../types/database';
+import { env } from 'cloudflare:workers';
 
 /**
  * Safely resolves the Cloudflare D1 Database binding without throwing unhandled exceptions.
  * Returns null if D1 is not bound (e.g. during local Astro dev server without D1 proxy).
  */
-export function safeGetDatabase(context?: { locals?: App.Locals }): D1Database | null {
+export function safeGetDatabase(_context?: unknown): D1Database | null {
   try {
-    // 1. Try resolving from Astro context.locals.runtime.env
-    const localsEnv = context?.locals?.runtime?.env as Env | undefined;
-    if (localsEnv?.DB) {
-      return localsEnv.DB;
+    // 1. Try resolving from cloudflare:workers env
+    const cfEnv = env as unknown as Env;
+    if (cfEnv?.DB) {
+      return cfEnv.DB;
     }
 
-    // 2. Try resolving dynamically from globalThis / cloudflare environment
+    // 2. Try resolving dynamically from globalThis
     const globalEnv = globalThis as unknown as { env?: Env; DB?: D1Database };
     if (globalEnv.env?.DB) {
       return globalEnv.env.DB;
@@ -31,18 +32,22 @@ export function safeGetDatabase(context?: { locals?: App.Locals }): D1Database |
 /**
  * Resolves D1 Database binding or throws informative error if required
  */
-export function getDatabase(context?: { locals?: App.Locals }): D1Database {
-  const db = safeGetDatabase(context);
+export function getDatabase(_context?: unknown): D1Database {
+  const db = safeGetDatabase(_context);
   if (db) return db;
 
   throw new Error(
     'Cloudflare D1 Database binding "DB" is not available in the current runtime context. ' +
-    'Ensure "DB" is bound in wrangler.jsonc or passed in context.locals.runtime.env.'
+    'Ensure "DB" is bound in wrangler.jsonc.'
   );
 }
 
 /**
- * Inserts an incoming webhook payload into the D1 `webhooks` table safely
+ * Inserts an incoming webhook payload into the D1 `webhooks` table.
+ *
+ * NOTE: The `webhooks` table must already exist. Apply schema once before use:
+ *   - Local dev:   npx wrangler d1 execute DB --local  --file schema.sql
+ *   - Production:  npx wrangler d1 execute DB --remote --file schema.sql
  */
 export async function insertWebhook(
   db: D1Database | null,
@@ -51,13 +56,11 @@ export async function insertWebhook(
   if (!db || typeof db.prepare !== 'function') return false;
 
   try {
-    const query = `
-      INSERT INTO webhooks (id, endpoint_id, timestamp, method, headers, body)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `;
-
     await db
-      .prepare(query)
+      .prepare(
+        `INSERT INTO webhooks (id, endpoint_id, timestamp, method, headers, body)
+         VALUES (?, ?, ?, ?, ?, ?)`
+      )
       .bind(
         record.id,
         record.endpoint_id,
@@ -75,8 +78,8 @@ export async function insertWebhook(
 }
 
 /**
- * Fetches the latest webhook entries for a given endpoint_id, sorted by newest first
- * Defaults to 50 entries, capped at 100 max for edge performance
+ * Fetches the latest webhook entries for a given endpoint_id, sorted by newest first.
+ * Defaults to 50 entries, capped at 100 max for edge performance.
  */
 export async function getWebhookHistory(
   db: D1Database | null,
@@ -88,16 +91,14 @@ export async function getWebhookHistory(
   try {
     const safeLimit = Math.min(Math.max(1, limit), 100);
 
-    const query = `
-      SELECT id, endpoint_id, timestamp, method, headers, body
-      FROM webhooks
-      WHERE endpoint_id = ?
-      ORDER BY timestamp DESC
-      LIMIT ?
-    `;
-
     const result = await db
-      .prepare(query)
+      .prepare(
+        `SELECT id, endpoint_id, timestamp, method, headers, body
+         FROM webhooks
+         WHERE endpoint_id = ?
+         ORDER BY timestamp DESC
+         LIMIT ?`
+      )
       .bind(endpointId, safeLimit)
       .all<WebhookRecord>();
 
@@ -109,7 +110,7 @@ export async function getWebhookHistory(
 }
 
 /**
- * Purges webhook records older than the specified age in hours (default: 24 hours)
+ * Purges webhook records older than the specified age in hours (default: 24 hours).
  */
 export async function purgeOldWebhooks(
   db: D1Database | null,
@@ -121,18 +122,13 @@ export async function purgeOldWebhooks(
   }
 
   try {
-    const query = `
-      DELETE FROM webhooks
-      WHERE timestamp < ?
-    `;
-
-    const result = await db.prepare(query).bind(cutoffTime).run();
+    const result = await db
+      .prepare(`DELETE FROM webhooks WHERE timestamp < ?`)
+      .bind(cutoffTime)
+      .run();
     const changes = result.meta?.changes ?? 0;
 
-    return {
-      deletedCount: changes,
-      cutoff: cutoffTime,
-    };
+    return { deletedCount: changes, cutoff: cutoffTime };
   } catch (err) {
     console.error('[D1 Purge Error]', err);
     return { deletedCount: 0, cutoff: cutoffTime };
@@ -140,7 +136,7 @@ export async function purgeOldWebhooks(
 }
 
 /**
- * Clears all webhook records for a specific endpoint
+ * Clears all webhook records for a specific endpoint.
  */
 export async function deleteEndpointWebhooks(
   db: D1Database | null,
@@ -149,16 +145,13 @@ export async function deleteEndpointWebhooks(
   if (!db || typeof db.prepare !== 'function') return 0;
 
   try {
-    const query = `
-      DELETE FROM webhooks
-      WHERE endpoint_id = ?
-    `;
-
-    const result = await db.prepare(query).bind(endpointId).run();
+    const result = await db
+      .prepare(`DELETE FROM webhooks WHERE endpoint_id = ?`)
+      .bind(endpointId)
+      .run();
     return result.meta?.changes ?? 0;
   } catch (err) {
     console.error('[D1 Delete Endpoint Error]', err);
     return 0;
   }
 }
-

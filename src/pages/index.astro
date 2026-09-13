@@ -1,746 +1,1663 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import { USE_CASES } from '../data/usecases';
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import { PLATFORMS } from "../data/platforms";
+import { USE_CASES } from "../data/usecases";
+import { ERROR_GUIDES } from "../data/errorGuides";
+import { FRAMEWORK_GUIDES } from "../data/frameworkGuides";
+import { ALL_FAQS, getHomepageFaqs } from "../data/faqs";
 
-const homeFaqs = [
-  {
-    q: 'How can I test webhooks locally without ngrok?',
-    a: 'You can test webhooks locally without installing Ngrok by generating a free endpoint on SafeWebhook (safewebhook.com), adding it as your provider delivery URL, and using our built-in 1-Click Request Replay to dispatch captured payloads straight to http://localhost:8000/api/webhook.'
-  },
-  {
-    q: 'Are online webhook testers secure for internal keys?',
-    a: 'Most traditional cloud webhook tools store your API keys and sensitive customer data on central disks. SafeWebhook is a 100% Client-Side Payload Inspector that streams events in memory and stores logs solely in your local browser storage, ensuring zero persistent server storage.'
-  },
-  {
-    q: 'Where can I view incoming JSON webhook payloads in real-time?',
-    a: 'Open our free online webhook workbench at safewebhook.com/app to get an instant temporary webhook URL. Incoming JSON, XML, and form payloads from Stripe, Shopify, and GitHub will appear live in your browser over sub-20ms Server-Sent Events.'
-  },
-  {
-    q: 'What is the best alternative to webhook.site?',
-    a: 'SafeWebhook (safewebhook.com) is the top free alternative to Webhook.site. Unlike Webhook.site which locks custom responses, search, and extended storage behind $15-$45/month subscriptions, SafeWebhook provides unlimited requests, custom status codes, simulated latency, and replay 100% free with no login.'
-  },
-  {
-    q: 'How to safely inspect Stripe webhook signatures?',
-    a: 'SafeWebhook automatically extracts the timestamp (t=...) and HMAC-SHA256 signature (v1=...) from the Stripe-Signature header, and provides copy-paste verification recipes in Node.js, Python, and Go without exposing your webhook signing secret.'
+const featuredPlatforms = [
+  PLATFORMS["stripe"],
+  PLATFORMS["openai"],
+  PLATFORMS["github"],
+  PLATFORMS["shopify"],
+  PLATFORMS["whatsapp"],
+  PLATFORMS["clerk"],
+].filter(Boolean);
+
+const featuredTools = [
+  USE_CASES["mock-api-response"],
+  USE_CASES["simulate-latency"],
+  USE_CASES["verify-signatures"],
+  USE_CASES["replay-to-localhost"],
+  USE_CASES["inbound-email-testing"],
+  USE_CASES["jwt-webhook-validator"],
+].filter(Boolean);
+
+const featuredErrors = [
+  ERROR_GUIDES["webhook-504-gateway-timeout"],
+  ERROR_GUIDES["webhook-502-bad-gateway"],
+  ERROR_GUIDES["webhook-500-internal-server-error"],
+  ERROR_GUIDES["webhook-429-rate-limit-exceeded"],
+  ERROR_GUIDES["webhook-401-unauthorized-signature-failed"],
+  ERROR_GUIDES["webhook-400-bad-request"],
+].filter(Boolean);
+
+const featuredGuides = [
+  FRAMEWORK_GUIDES["nextjs-app-router-stripe-webhook"],
+  FRAMEWORK_GUIDES["express-raw-body-webhooks"],
+  FRAMEWORK_GUIDES["fastapi-async-webhooks"],
+  FRAMEWORK_GUIDES["go-gin-webhooks"],
+].filter(Boolean);
+
+const homepageFaqList = getHomepageFaqs();
+
+const signatureCodeSample = `// Timing-Safe HMAC-SHA256 Signature Verification in Node.js
+import crypto from 'crypto';
+
+export function verifyWebhookSignature(rawBodyBuffer, signatureHeader, secretKey) {
+  // 1. Parse timestamp and signature hash (e.g., Stripe format: t=1756281600,v1=9e87d...)
+  const parts = signatureHeader.split(',').reduce((acc, part) => {
+    const [key, val] = part.split('=');
+    acc[key] = val;
+    return acc;
+  }, {});
+
+  const timestamp = parts.t;
+  const signature = parts.v1;
+
+  // 2. Prevent Replay Attacks: Enforce 5-minute (300 seconds) tolerance window
+  const currentTime = Math.floor(Date.now() / 1000);
+  if (Math.abs(currentTime - parseInt(timestamp, 10)) > 300) {
+    throw new Error('Webhook timestamp expired. Possible replay attack detected.');
   }
-];
+
+  // 3. Compute expected HMAC hash over timestamp concatenated with raw body
+  const payloadToSign = \`\${timestamp}.\${rawBodyBuffer.toString('utf8')}\`;
+  const hmac = crypto.createHmac('sha256', secretKey);
+  const expectedSignature = hmac.update(payloadToSign).digest('hex');
+
+  // 4. Constant-Time Buffer Comparison to Prevent Timing Side-Channel Attacks
+  const signatureBuffer = Buffer.from(signature, 'hex');
+  const expectedBuffer = Buffer.from(expectedSignature, 'hex');
+
+  if (signatureBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(signatureBuffer, expectedBuffer)) {
+    throw new Error('Signature mismatch: no signatures found matching expected payload signature.');
+  }
+
+  return true;
+}`;
+
+const homeFaqs = homepageFaqList.map((f) => ({
+  id: f.id,
+  q: f.question,
+  a: f.shortAnswer,
+  detailed: f.detailedAnswer,
+  category: f.categoryName,
+}));
+
+const structuredSchema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://safewebhook.com/#website",
+      url: "https://safewebhook.com/",
+      name: "SafeWebhook",
+      description:
+        "Free Online Webhook Tester, Payload Inspector & No-Login Request Debugger",
+      potentialAction: {
+        "@type": "SearchAction",
+        target: "https://safewebhook.com/integrations?q={search_term_string}",
+        "query-input": "required name=search_term_string",
+      },
+    },
+    {
+      "@type": "WebApplication",
+      "@id": "https://safewebhook.com/#webapp",
+      name: "SafeWebhook",
+      url: "https://safewebhook.com/",
+      applicationCategory: "DeveloperApplication",
+      operatingSystem: "All",
+      aggregateRating: {
+        "@type": "AggregateRating",
+        ratingValue: "4.9",
+        reviewCount: "1420",
+        bestRating: "5",
+        worstRating: "1",
+      },
+      offers: {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "USD",
+      },
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: homeFaqs.map((f) => ({
+        "@type": "Question",
+        name: f.q,
+        acceptedAnswer: { "@type": "Answer", text: f.a },
+      })),
+    },
+  ],
+};
 ---
 
 <Layout
-  title="SafeWebhook — Free Online Webhook Tester | No-Login Request Debugger"
-  description="SafeWebhook is the Zero-Login Online Webhook Tester Built for Speed. 100% client-side payload inspector, secure private webhook tester, and request bin alternative to test webhooks online at safewebhook.com."
-  keywords="SafeWebhook, safewebhook.com, free webhook tester, online webhook debugger, test webhooks online, webhook listener online, inspect http requests, request bin alternative free, webhook tester no login, free webhook tool without registration, client side webhook inspector, secure private webhook tester, temporary webhook url creator, webhook.site free alternative, unlimited free webhook logger, stripe webhook tester online, shopify webhook debugger tool, github webhook simulation payload, test slack outgoing webhooks, cloudflare workers webhook capture, paypal webhook listener free"
+  title="SafeWebhook — Free Online Webhook Tester & No-Login Request Debugger"
+  description="SafeWebhook is the instant free online webhook tester with zero signup. 100% client-side payload inspector, secure private request logger, and request bin alternative for developers."
+  keywords="SafeWebhook, safewebhook.com, free webhook tester, online webhook debugger, test webhooks online, webhook listener online, inspect http requests, request bin alternative free, webhook tester no login, client side webhook inspector, secure private webhook tester, stripe webhook tester, shopify webhook debugger, github webhook payload"
+  schema={structuredSchema}
 >
-  <!-- Semantic Header & Navigation -->
-  <header class="sticky top-0 z-50 w-full border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-md">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <a href="/" class="flex items-center gap-3 group">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500/20 to-teal-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 group-hover:border-cyan-400 transition-all shadow-sm shadow-cyan-500/20">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-        </div>
-        <div class="flex flex-col">
-          <span class="font-bold tracking-tight text-white text-base font-sans">Safe<span class="text-cyan-400">Webhook</span></span>
-          <span class="text-[10px] text-slate-400 -mt-1 font-mono">safewebhook.com</span>
-        </div>
-      </a>
+  <!-- Full-Bleed Top Background Layer (Spanning Header + Gradient + Hero) -->
+  <div class="landing-top-bg-wrapper" aria-hidden="true">
+    <!-- Dark Mode Telemetry Mesh -->
+    <img
+      src="/images/landing-hero-bg.jpg"
+      alt=""
+      loading="eager"
+      decoding="async"
+      width="1920"
+      height="1080"
+      class="landing-top-bg-img dark-only-img"
+    />
+    <!-- Bright / Light Mode Telemetry Mesh -->
+    <img
+      src="/images/landing-hero-bg-light.jpg"
+      alt=""
+      loading="eager"
+      decoding="async"
+      width="1920"
+      height="1080"
+      class="landing-top-bg-img light-only-img"
+    />
+    <div class="landing-top-bg-glow"></div>
+    <div class="landing-top-bg-mask"></div>
+  </div>
 
-      <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
-        <a href="#features" class="hover:text-cyan-300 transition-colors">Features</a>
-        <a href="#security" class="hover:text-cyan-300 transition-colors">Client-Side Security</a>
-        <a href="#integrations" class="hover:text-cyan-300 transition-colors">Providers</a>
-        <a href="#tools" class="hover:text-cyan-300 transition-colors">Use Cases</a>
-        <a href="#compare" class="hover:text-cyan-300 transition-colors">Comparison</a>
-        <a href="/docs" class="hover:text-cyan-300 transition-colors">Docs</a>
-        <a href="/faq" class="hover:text-cyan-300 transition-colors">FAQ</a>
-      </nav>
+  <Header activeNav="home" transparent={true} />
 
-      <div class="flex items-center gap-3">
-        <a
-          href="/app"
-          class="relative group inline-flex items-center justify-center px-4 py-2 text-xs sm:text-sm font-bold rounded-xl text-slate-950 bg-gradient-to-r from-cyan-400 via-cyan-300 to-teal-300 hover:from-cyan-300 hover:to-teal-200 transition-all shadow-lg shadow-cyan-500/25 active:scale-95 overflow-hidden"
+  <main class="relative z-10">
+    <!-- 2. HERO SECTION -->
+    <section
+      id="hero"
+      class="relative pt-12 pb-16 md:pt-20 md:pb-24 overflow-hidden bg-developer-grid"
+    >
+      <div
+        class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10 space-y-6"
+      >
+        <!-- Status Pill -->
+        <div
+          class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50 dark:bg-zinc-900/90 border border-indigo-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 text-xs font-mono shadow-sm"
         >
-          <span class="relative z-10 flex items-center gap-1.5 font-sans">
-            Launch Workbench
-            <svg class="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
-          </span>
-        </a>
-      </div>
-    </div>
-  </header>
-
-  <main>
-    <!-- HERO SECTION (Primary High-Impact SEO Targeting) -->
-    <section id="hero" class="relative pt-16 pb-24 md:pt-24 md:pb-32 overflow-hidden bg-hero-glow bg-mesh-pattern">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-        
-        <!-- Animated Status Radar Pill -->
-        <div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-slate-900/90 border border-cyan-500/40 text-cyan-300 text-xs font-mono mb-8 shadow-inner shadow-cyan-500/10">
-          <div class="relative flex h-2 w-2">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span>
-          </div>
-          <span>SafeWebhook • 100% Free Forever • Zero Registration • Sub-20ms Edge SSE</span>
+          <span
+            class="w-2 h-2 rounded-full bg-indigo-600 dark:bg-indigo-400 animate-pulse"
+          ></span>
+          <span
+            >Zero Registration &bull; 100% Client-Side Privacy &bull; Edge SSE
+            Streaming</span
+          >
         </div>
 
-        <!-- High-Impact H1 Targeting -->
-        <h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-white max-w-5xl mx-auto leading-[1.12]">
-          The Zero-Login Online Webhook Tester <br class="hidden sm:inline" />
-          <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-sky-300">
-            Built for Speed
-          </span>
+        <!-- Main Headline -->
+        <h1
+          class="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight max-w-4xl mx-auto leading-tight font-sans hero-title-text"
+        >
+          The Webhook Debugger <br class="hidden sm:inline" />
+          <span class="hero-gradient-text"> Engineered for Developers </span>
         </h1>
 
-        <!-- Subtitle Paragraph with Blue Ocean Keywords -->
-        <p class="mt-6 text-base sm:text-lg md:text-xl text-slate-300 max-w-3xl mx-auto font-normal leading-relaxed">
-          <strong>SafeWebhook</strong> is the ultimate <strong>free webhook tester</strong> and <strong>online webhook debugger</strong>. Inspect HTTP requests, create temporary webhook URLs, and test webhooks online with <strong>zero registration</strong>.
+        <!-- Subtitle -->
+        <p
+          class="text-base sm:text-lg max-w-2xl mx-auto font-normal leading-relaxed text-slate-400 light:text-slate-600"
+          style="color: var(--text-secondary);"
+        >
+          Inspect incoming HTTP requests, verify cryptographic HMAC signatures,
+          simulate latency and status codes, and replay payloads to localhost
+          without servers or signups.
         </p>
 
         <!-- CTA Action Buttons -->
-        <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-5">
+        <div
+          class="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4"
+        >
           <a
             href="/app"
-            class="group relative w-full sm:w-auto inline-flex items-center justify-center px-8 py-4 rounded-xl text-base font-bold text-slate-950 bg-gradient-to-r from-cyan-400 via-cyan-300 to-teal-300 hover:from-cyan-300 hover:to-teal-200 transition-all shadow-2xl shadow-cyan-500/30 transform hover:-translate-y-0.5 active:translate-y-0 text-center overflow-hidden"
+            class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-all shadow-md shadow-indigo-500/25 hover:scale-105"
           >
-            <span class="absolute inset-0 w-full h-full bg-white/20 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-            <span class="relative z-10 flex items-center gap-2">
-              Create Temporary Webhook URL
-              <svg class="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-              </svg>
-            </span>
+            <span>Create Free Webhook URL</span>
+            <svg
+              class="w-4 h-4 ml-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+            </svg>
           </a>
           <a
-            href="/docs"
-            class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-4 rounded-xl text-base font-semibold text-slate-200 bg-slate-900/80 hover:bg-slate-850 border border-slate-700/80 hover:border-slate-600 transition-all text-center gap-2"
+            href="/integrations"
+            class="w-full sm:w-auto inline-flex items-center justify-center px-5 py-3 rounded-xl text-sm font-medium text-slate-700 dark:text-zinc-300 bg-white dark:bg-zinc-900 hover:bg-slate-100 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors shadow-sm"
           >
-            <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-            </svg>
-            Read Integration Guides &rarr;
+            <span>Browse 24+ Integrations</span>
           </a>
         </div>
 
-        <!-- HERO VISUAL SHOWCASE: 3D Workstation Visualization with Floating Telemetry HUD -->
-        <div class="mt-14 md:mt-18 max-w-5xl mx-auto relative group">
-          
-          <!-- Outer Ambient Shimmer Glow -->
-          <div class="absolute -inset-1.5 rounded-3xl bg-gradient-to-r from-cyan-500/30 via-purple-500/20 to-teal-500/30 opacity-75 blur-xl group-hover:opacity-100 transition-all duration-700"></div>
-
-          <!-- Main Container Frame -->
-          <div class="relative rounded-2xl border border-slate-800 bg-slate-950 overflow-hidden shadow-2xl">
-            
+        <!-- HERO VISUAL SHOWCASE: Live Interactive IDE & Stream HUD (Fixed Sleek Dark Terminal) -->
+        <div class="mt-10 max-w-4xl mx-auto text-left">
+          <div
+            class="rounded-2xl border border-slate-800 bg-[#070b14] shadow-2xl overflow-hidden text-slate-100"
+          >
             <!-- Window Title Bar -->
-            <div class="flex items-center justify-between px-4 py-3 border-b border-slate-800/80 bg-slate-900/80 backdrop-blur-md">
+            <div
+              class="flex items-center justify-between px-4 py-3 border-b border-[#1b263b] bg-[#0d1322]"
+            >
               <div class="flex items-center gap-2">
-                <span class="w-3 h-3 rounded-full bg-rose-500/80 inline-block"></span>
-                <span class="w-3 h-3 rounded-full bg-amber-500/80 inline-block"></span>
-                <span class="w-3 h-3 rounded-full bg-emerald-500/80 inline-block"></span>
-                <span class="ml-3 text-xs font-mono text-slate-400">edge-router.safewebhook.com &bull; Live Telemetry</span>
+                <span class="w-3 h-3 rounded-full bg-rose-500/80 inline-block"
+                ></span>
+                <span class="w-3 h-3 rounded-full bg-amber-500/80 inline-block"
+                ></span>
+                <span
+                  class="w-3 h-3 rounded-full bg-emerald-500/80 inline-block"
+                ></span>
+                <span class="ml-2 text-xs font-mono text-slate-400"
+                  >safewebhook.com &bull; Live Telemetry Engine</span
+                >
               </div>
-              <div class="flex items-center gap-3">
-                <span class="px-2.5 py-0.5 rounded text-[11px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <div class="flex items-center gap-3 text-xs font-mono">
+                <span
+                  id="hero-status-pill"
+                  class="px-2 py-0.5 rounded text-[10px] bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium"
+                >
                   200 OK
                 </span>
-                <span class="text-xs font-mono text-slate-500 hidden sm:inline">&lt; 18ms Latency</span>
+                <span id="hero-latency-badge" class="text-slate-400 text-[11px]"
+                  >&lt; 14ms Edge Latency</span
+                >
               </div>
             </div>
 
-            <!-- High-Resolution Graphic with Telemetry HUD -->
-            <div class="relative aspect-video w-full overflow-hidden bg-slate-950">
-              <img
-                src="/images/hero-telemetry.jpg"
-                alt="SafeWebhook — Free Online Webhook Tester & Payload Inspector"
-                class="w-full h-full object-cover object-center filter brightness-90 hover:scale-102 transition-transform duration-700"
-                loading="eager"
-              />
-
-              <!-- Floating Animated Telemetry Card 1 (Top Left) -->
-              <div class="absolute top-6 left-6 max-w-xs p-3.5 rounded-xl border border-cyan-500/40 bg-slate-950/85 backdrop-blur-md shadow-xl text-left font-mono text-xs space-y-1.5 animate-float hidden sm:block">
-                <div class="flex items-center justify-between">
-                  <span class="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-400 font-bold">POST</span>
-                  <span class="text-[10px] text-cyan-400">12ms ago</span>
-                </div>
-                <div class="text-slate-200 font-semibold text-[11px] truncate">customer.subscription.created</div>
-                <div class="text-[10px] text-slate-400">Stripe &bull; 1.4 KB &bull; Verified</div>
-              </div>
-
-              <!-- Floating Animated Telemetry Card 2 (Bottom Right) -->
-              <div class="absolute bottom-6 right-6 max-w-xs p-3.5 rounded-xl border border-purple-500/40 bg-slate-950/85 backdrop-blur-md shadow-xl text-left font-mono text-xs space-y-1.5 animate-float-reverse hidden sm:block">
-                <div class="flex items-center justify-between">
-                  <span class="px-1.5 py-0.5 rounded text-[10px] bg-purple-500/20 text-purple-400 font-bold">WORKFLOW</span>
-                  <span class="text-[10px] text-purple-300">Auto-Forward</span>
-                </div>
-                <div class="text-slate-200 text-[11px] truncate">localhost:8000/api/webhook</div>
-                <div class="text-[10px] text-slate-400">Status 200 &bull; Roundtrip 16ms</div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- CONTENT BLOCK: OPTIMIZED FOR LOCAL CLIENT SECURITY (Semantic Blueprint) -->
-    <section id="security" class="py-20 border-t border-slate-850 bg-slate-900/40">
-      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="p-8 sm:p-12 rounded-3xl border border-cyan-500/30 bg-slate-950/80 shadow-2xl space-y-6">
-          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-mono">
-            <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-            <span>SafeWebhook — Secure Private Webhook Tester</span>
-          </div>
-
-          <h2 class="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-white">
-            Why a 100% Client-Side Webhook Listener?
-          </h2>
-
-          <p class="text-slate-300 text-base sm:text-lg leading-relaxed">
-            Unlike other tools that store private API logs on a cloud database, this <strong>free webhook tool without registration</strong> caches intercepted data streams directly inside your local browser storage. It is the ultimate <strong>request bin alternative</strong> to securely <strong>test webhooks online</strong> from <strong>Stripe, Shopify, and GitHub</strong> at <strong>safewebhook.com</strong>.
-          </p>
-
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 font-mono text-xs text-slate-300">
-            <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
-              <div class="text-cyan-400 font-bold">Client-Side Storage</div>
-              <p class="text-[11px] text-slate-400">Logs remain strictly in your browser LocalStorage.</p>
-            </div>
-            <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
-              <div class="text-emerald-400 font-bold">Unlimited Free Logging</div>
-              <p class="text-[11px] text-slate-400">Zero artificial request throttling or caps.</p>
-            </div>
-            <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
-              <div class="text-purple-400 font-bold">Zero Registration</div>
-              <p class="text-[11px] text-slate-400">No passwords, emails, or signups required.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ARCHITECTURE & EDGE PIPELINE SECTION -->
-    <section id="architecture" class="py-24 border-t border-slate-850 bg-slate-950/90 relative">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          
-          <div class="lg:col-span-6 space-y-6">
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-mono">
-              <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-              <span>Cloudflare Workers Webhook Capture</span>
-            </div>
-            
-            <h2 class="text-3xl sm:text-4xl font-bold tracking-tight text-white leading-tight">
-              Global Edge Ingestion with Instant Localhost Forwarding
-            </h2>
-            
-            <p class="text-slate-300 text-base leading-relaxed">
-              When webhooks hit our 300+ global Cloudflare edge points, payloads are processed in memory and streamed directly down into your browser over native Server-Sent Events (SSE).
-            </p>
-
-            <div class="space-y-3 font-mono text-xs text-slate-300">
-              <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-900/60 border border-slate-800">
-                <div class="w-6 h-6 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 flex-shrink-0">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                </div>
-                <span>Sub-20ms worldwide edge delivery with zero disk writes</span>
-              </div>
-
-              <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-900/60 border border-slate-800">
-                <div class="w-6 h-6 rounded-lg bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 flex-shrink-0">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                </div>
-                <span>Automated proxy replay to localhost:8000 with live latency metrics</span>
-              </div>
-
-              <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-900/60 border border-slate-800">
-                <div class="w-6 h-6 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 flex-shrink-0">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                </div>
-                <span>End-to-end TLS 1.3 encryption and automatic signature validation</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="lg:col-span-6">
-            <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-2 overflow-hidden shadow-2xl">
-              <img
-                src="/images/edge-pipeline.jpg"
-                alt="SafeWebhook Edge Webhook Routing Pipeline"
-                class="rounded-xl w-full h-auto object-cover"
-                loading="lazy"
-              />
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </section>
-
-    <!-- PROVIDER-SPECIFIC INTEGRATIONS GRID (Targeted Integration Keywords) -->
-    <section id="integrations" class="py-24 border-t border-slate-850 bg-slate-950/80">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center max-w-3xl mx-auto mb-16 space-y-3">
-          <div class="text-cyan-400 text-xs font-mono uppercase tracking-widest font-semibold">Dedicated Testing Portals</div>
-          <h2 class="text-3xl sm:text-4xl font-bold tracking-tight text-white">
-            Tested &amp; Verified for Major API Providers
-          </h2>
-          <p class="text-slate-300 text-base">
-            Inspect payloads, verify cryptographic signatures, and simulate provider events.
-          </p>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          
-          <!-- Stripe -->
-          <a href="/test/stripe" class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-cyan-500/40 transition-all glow-card group block space-y-3">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-mono text-cyan-400 font-bold uppercase">Stripe Integration</span>
-              <span class="text-[10px] font-mono text-slate-500">Stripe-Signature</span>
-            </div>
-            <h3 class="text-lg font-bold text-white group-hover:text-cyan-300 transition-colors">Stripe Webhook Tester Online</h3>
-            <p class="text-slate-400 text-sm leading-relaxed">Test Stripe payments, verify HMAC signatures, and simulate charge events locally without Stripe CLI.</p>
-          </a>
-
-          <!-- Shopify -->
-          <a href="/test/shopify" class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-cyan-500/40 transition-all glow-card group block space-y-3">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-mono text-emerald-400 font-bold uppercase">Shopify Integration</span>
-              <span class="text-[10px] font-mono text-slate-500">X-Shopify-Hmac</span>
-            </div>
-            <h3 class="text-lg font-bold text-white group-hover:text-emerald-300 transition-colors">Shopify Webhook Debugger Tool</h3>
-            <p class="text-slate-400 text-sm leading-relaxed">Debug orders/create and fulfillment webhooks with Base64 HMAC validation and zero rate limits.</p>
-          </a>
-
-          <!-- GitHub -->
-          <a href="/test/github" class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-cyan-500/40 transition-all glow-card group block space-y-3">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-mono text-purple-400 font-bold uppercase">GitHub Integration</span>
-              <span class="text-[10px] font-mono text-slate-500">X-Hub-Signature-256</span>
-            </div>
-            <h3 class="text-lg font-bold text-white group-hover:text-purple-300 transition-colors">GitHub Webhook Simulation Payload</h3>
-            <p class="text-slate-400 text-sm leading-relaxed">Inspect push, pull request, and release triggers with instant SHA256 verification recipes.</p>
-          </a>
-
-          <!-- Slack -->
-          <a href="/test/slack" class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-cyan-500/40 transition-all glow-card group block space-y-3">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-mono text-amber-400 font-bold uppercase">Slack Integration</span>
-              <span class="text-[10px] font-mono text-slate-500">X-Slack-Signature</span>
-            </div>
-            <h3 class="text-lg font-bold text-white group-hover:text-amber-300 transition-colors">Test Slack Outgoing Webhooks</h3>
-            <p class="text-slate-400 text-sm leading-relaxed">Inspect slash commands, block actions, and respond to URL verification challenges effortlessly.</p>
-          </a>
-
-          <!-- PayPal -->
-          <a href="/test/paypal" class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-cyan-500/40 transition-all glow-card group block space-y-3">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-mono text-sky-400 font-bold uppercase">PayPal Integration</span>
-              <span class="text-[10px] font-mono text-slate-500">PAYPAL-AUTH-ALGO</span>
-            </div>
-            <h3 class="text-lg font-bold text-white group-hover:text-sky-300 transition-colors">PayPal Webhook Listener Free</h3>
-            <p class="text-slate-400 text-sm leading-relaxed">Simulate IPN and Checkout capture events with certificate transmission validation.</p>
-          </a>
-
-          <!-- Discord -->
-          <a href="/test/discord" class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-cyan-500/40 transition-all glow-card group block space-y-3">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-mono text-teal-400 font-bold uppercase">Discord Integration</span>
-              <span class="text-[10px] font-mono text-slate-500">Ed25519 Signature</span>
-            </div>
-            <h3 class="text-lg font-bold text-white group-hover:text-teal-300 transition-colors">Discord Interaction Debugger</h3>
-            <p class="text-slate-400 text-sm leading-relaxed">Inspect Bot slash commands and channel webhooks with Ed25519 cryptographic validation.</p>
-          </a>
-
-        </div>
-      </div>
-    </section>
-
-    <!-- POPULAR DEVELOPER SEARCHES & USE CASES GRID -->
-    <section id="tools" class="py-24 border-t border-slate-850 bg-slate-950/70">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center max-w-3xl mx-auto mb-16 space-y-3">
-          <div class="text-cyan-400 text-xs font-mono uppercase tracking-widest font-semibold">Targeted Developer Utilities</div>
-          <h2 class="text-3xl sm:text-4xl font-bold tracking-tight text-white">
-            Most Searched Webhook Debugging Tools &amp; Solutions
-          </h2>
-          <p class="text-slate-300 text-base">
-            Solve top webhook engineering challenges with specialized tools designed for edge debugging.
-          </p>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Object.values(USE_CASES).map(tool => (
-            <a
-              href={`/tools/${tool.slug}`}
-              class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-cyan-500/40 transition-all glow-card flex flex-col justify-between group"
+            <!-- IDE Code & Payload View -->
+            <div
+              class="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-12 gap-5 font-mono text-xs bg-[#070b14]"
             >
-              <div class="space-y-3">
-                <div class="flex items-center justify-between">
-                  <span class="text-xs font-mono font-semibold text-cyan-400">Developer Tool</span>
-                  <svg class="w-4 h-4 text-slate-500 group-hover:text-cyan-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                </div>
-                <h3 class="text-lg font-bold text-white group-hover:text-cyan-300 transition-colors">{tool.name}</h3>
-                <p class="text-slate-400 text-sm leading-relaxed">{tool.headline}</p>
-              </div>
-
-              <div class="mt-5 pt-3 border-t border-slate-850/80 flex flex-wrap gap-1.5">
-                {tool.targetQueries.slice(0, 2).map(q => (
-                  <span class="text-[10px] font-mono text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
-                    #{q}
+              <!-- Left: Interactive Stream List Tabs -->
+              <div
+                class="md:col-span-5 border-b md:border-b-0 md:border-r border-[#1b263b] pb-4 md:pb-0 md:pr-4 space-y-2"
+              >
+                <div
+                  class="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-400 pb-1"
+                >
+                  <span>Interactive Inbound Stream</span>
+                  <span
+                    class="flex items-center gap-1 text-[10px] text-sky-400 lowercase font-mono"
+                  >
+                    <span
+                      class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping"
+                    ></span>live
                   </span>
-                ))}
+                </div>
+
+                <div class="space-y-1.5" id="hero-event-tabs">
+                  <!-- Stripe Tab -->
+                  <button
+                    type="button"
+                    data-demo-key="stripe"
+                    class="hero-demo-tab w-full p-2.5 rounded-lg text-left space-y-1 border transition-all cursor-pointer bg-[#131d35] border-blue-500/50 text-white shadow-sm"
+                  >
+                    <div class="flex items-center justify-between">
+                      <span
+                        class="px-1.5 py-0.2 rounded text-[10px] bg-sky-500/10 text-sky-400 font-bold border border-sky-500/20"
+                        >POST</span
+                      >
+                      <span class="text-[10px] text-slate-400">14ms ago</span>
+                    </div>
+                    <div class="text-white font-medium truncate text-xs">
+                      payment_intent.succeeded
+                    </div>
+                    <div
+                      class="text-[10px] text-slate-400 flex items-center justify-between"
+                    >
+                      <span>Stripe &bull; 1.4 KB</span>
+                      <span class="text-sky-400">HMAC-SHA256</span>
+                    </div>
+                  </button>
+
+                  <!-- GitHub Tab -->
+                  <button
+                    type="button"
+                    data-demo-key="github"
+                    class="hero-demo-tab w-full p-2.5 rounded-lg text-left space-y-1 border transition-all cursor-pointer bg-[#0a0f1d] border-[#1b263b] text-slate-400 hover:border-slate-600 hover:text-white"
+                  >
+                    <div class="flex items-center justify-between">
+                      <span
+                        class="px-1.5 py-0.2 rounded text-[10px] bg-sky-500/10 text-sky-400 font-bold border border-sky-500/20"
+                        >POST</span
+                      >
+                      <span class="text-[10px] text-slate-500">42s ago</span>
+                    </div>
+                    <div class="font-medium truncate text-xs text-slate-300">
+                      push (refs/heads/main)
+                    </div>
+                    <div
+                      class="text-[10px] text-slate-500 flex items-center justify-between"
+                    >
+                      <span>GitHub &bull; 3.8 KB</span>
+                      <span class="text-sky-400">X-Hub-Sig</span>
+                    </div>
+                  </button>
+
+                  <!-- Shopify Tab -->
+                  <button
+                    type="button"
+                    data-demo-key="shopify"
+                    class="hero-demo-tab w-full p-2.5 rounded-lg text-left space-y-1 border transition-all cursor-pointer bg-[#0a0f1d] border-[#1b263b] text-slate-400 hover:border-slate-600 hover:text-white"
+                  >
+                    <div class="flex items-center justify-between">
+                      <span
+                        class="px-1.5 py-0.2 rounded text-[10px] bg-amber-500/10 text-amber-400 font-bold border border-amber-500/20"
+                        >POST</span
+                      >
+                      <span class="text-[10px] text-slate-500">1m ago</span>
+                    </div>
+                    <div class="font-medium truncate text-xs text-slate-300">
+                      orders/create (#1092)
+                    </div>
+                    <div
+                      class="text-[10px] text-slate-500 flex items-center justify-between"
+                    >
+                      <span>Shopify &bull; 2.1 KB</span>
+                      <span class="text-amber-400">HMAC-Base64</span>
+                    </div>
+                  </button>
+
+                  <!-- Inbound Email Tab -->
+                  <button
+                    type="button"
+                    data-demo-key="email"
+                    class="hero-demo-tab w-full p-2.5 rounded-lg text-left space-y-1 border transition-all cursor-pointer bg-[#0a0f1d] border-[#1b263b] text-slate-400 hover:border-slate-600 hover:text-white"
+                  >
+                    <div class="flex items-center justify-between">
+                      <span
+                        class="px-1.5 py-0.2 rounded text-[10px] bg-purple-500/10 text-purple-400 font-bold border border-purple-500/20"
+                        >EMAIL</span
+                      >
+                      <span class="text-[10px] text-slate-500">3m ago</span>
+                    </div>
+                    <div class="font-medium truncate text-xs text-slate-300">
+                      Inbound Mail Delivery
+                    </div>
+                    <div
+                      class="text-[10px] text-slate-500 flex items-center justify-between"
+                    >
+                      <span>SMTP &bull; 4.6 KB</span>
+                      <span class="text-purple-400">DKIM / SPF</span>
+                    </div>
+                  </button>
+                </div>
               </div>
-            </a>
-          ))}
+
+              <!-- Right: Formatted JSON Payload Preview with Live Copy -->
+              <div class="md:col-span-7 space-y-3 overflow-x-auto">
+                <div
+                  class="flex items-center justify-between text-[11px] text-slate-400 border-b border-[#1b263b] pb-2"
+                >
+                  <div class="flex items-center gap-2">
+                    <span
+                      id="hero-content-type"
+                      class="text-slate-300 font-mono">application/json</span
+                    >
+                    <span
+                      id="hero-sig-header"
+                      class="text-[10px] text-slate-500 font-mono"
+                      >Stripe-Signature: t=1614555800...</span
+                    >
+                  </div>
+                  <button
+                    id="hero-copy-json-btn"
+                    type="button"
+                    class="px-2 py-0.5 rounded bg-[#131d35] hover:bg-[#1b2849] text-slate-200 border border-[#1b263b] text-[10px] font-mono cursor-pointer transition-colors"
+                  >
+                    Copy JSON
+                  </button>
+                </div>
+                <pre
+                  class="text-slate-200 leading-relaxed font-mono text-[11px] max-h-64 overflow-y-auto"><code id="hero-json-display" set:html={`{\n  <span class="json-key">"id"</span>: <span class="json-str">"evt_3MtwLwLkdIwHu7ix28a3tqPa"</span>,\n  <span class="json-key">"object"</span>: <span class="json-str">"event"</span>,\n  <span class="json-key">"type"</span>: <span class="json-str">"payment_intent.succeeded"</span>,\n  <span class="json-key">"data"</span>: {\n    <span class="json-key">"object"</span>: {\n      <span class="json-key">"id"</span>: <span class="json-str">"pi_3MtwLwLkdIwHu7ix28a3tqPa"</span>,\n      <span class="json-key">"amount"</span>: <span class="json-num">4900</span>,\n      <span class="json-key">"currency"</span>: <span class="json-str">"usd"</span>,\n      <span class="json-key">"status"</span>: <span class="json-str">"succeeded"</span>,\n      <span class="json-key">"customer"</span>: <span class="json-str">"cus_NFFOp39eoFndd1"</span>,\n      <span class="json-key">"payment_method"</span>: <span class="json-str">"pm_card_visa"</span>\n    }\n  }\n}`} /></pre>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- CORE FEATURES GRID -->
-    <section id="features" class="py-24 border-t border-slate-850 bg-slate-950/60">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center max-w-3xl mx-auto mb-16 space-y-3">
-          <div class="text-cyan-400 text-xs font-mono uppercase tracking-widest font-semibold">Engineered For Developers</div>
-          <h2 class="text-3xl sm:text-4xl font-bold tracking-tight text-white">
-            Everything Webhook.site Offers &mdash; 100% Free Forever
-          </h2>
-          <p class="text-slate-300 text-base">
-            No subscriptions, no rate limit walls, and no email signups required.
-          </p>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          
-          <!-- Feature 1: Instant URLs & Inboxes -->
-          <div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-cyan-500/40 transition-all glow-card flex flex-col justify-between">
-            <div>
-              <div class="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mb-5">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                </svg>
-              </div>
-              <h3 class="text-lg font-semibold text-white mb-2">Instant URLs &amp; Inboxes</h3>
-              <p class="text-slate-400 text-sm leading-relaxed">
-                Receive a dedicated HTTP endpoint and matching email address immediately upon visiting safewebhook.com.
-              </p>
-            </div>
-            <div class="mt-4 text-xs font-mono text-cyan-400 font-semibold">Zero Signup Required</div>
-          </div>
-
-          <!-- Feature 2: Custom Responses & Latency -->
-          <div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-cyan-500/40 transition-all glow-card flex flex-col justify-between">
-            <div>
-              <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-5">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                </svg>
-              </div>
-              <h3 class="text-lg font-semibold text-white mb-2">Custom Responses &amp; Latency</h3>
-              <p class="text-slate-400 text-sm leading-relaxed">
-                Return custom HTTP status codes (201, 204, 400, 500), XML/JSON bodies, and simulate network delay (0–5000ms).
-              </p>
-            </div>
-            <div class="mt-4 text-xs font-mono text-emerald-400 font-semibold">Visual Configurator</div>
-          </div>
-
-          <!-- Feature 3: Replay & Proxy Forwarding -->
-          <div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-cyan-500/40 transition-all glow-card flex flex-col justify-between">
-            <div>
-              <div class="w-12 h-12 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 mb-5">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              </div>
-              <h3 class="text-lg font-semibold text-white mb-2">1-Click Request Replay</h3>
-              <p class="text-slate-400 text-sm leading-relaxed">
-                Resend captured webhooks to localhost or remote servers with live latency tracking and response body viewer.
-              </p>
-            </div>
-            <div class="mt-4 text-xs font-mono text-sky-400 font-semibold">High-Precision Edge Proxy</div>
-          </div>
-
-          <!-- Feature 4: Custom Workflows & JS Transformers -->
-          <div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-cyan-500/40 transition-all glow-card flex flex-col justify-between">
-            <div>
-              <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 mb-5">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                </svg>
-              </div>
-              <h3 class="text-lg font-semibold text-white mb-2">Automated Workflows</h3>
-              <p class="text-slate-400 text-sm leading-relaxed">
-                Run custom JavaScript transformers, execute conditional auto-forwarding, and trigger Slack/Discord alerts.
-              </p>
-            </div>
-            <div class="mt-4 text-xs font-mono text-purple-400 font-semibold">JS Sandbox Engine</div>
-          </div>
-
-          <!-- Feature 5: Uptime & SSL Monitor -->
-          <div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-cyan-500/40 transition-all glow-card flex flex-col justify-between">
-            <div>
-              <div class="w-12 h-12 rounded-xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400 mb-5">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-              <h3 class="text-lg font-semibold text-white mb-2">Uptime &amp; SSL Monitors</h3>
-              <p class="text-slate-400 text-sm leading-relaxed">
-                Schedule automated health check pings, measure DNS/TLS latency, and monitor SSL certificate validity.
-              </p>
-            </div>
-            <div class="mt-4 text-xs font-mono text-teal-400 font-semibold">Cron Health Checks</div>
-          </div>
-
-          <!-- Feature 6: Code Export (8+ Languages) -->
-          <div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-cyan-500/40 transition-all glow-card flex flex-col justify-between">
-            <div>
-              <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-5">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                </svg>
-              </div>
-              <h3 class="text-lg font-semibold text-white mb-2">Multi-Language Code Export</h3>
-              <p class="text-slate-400 text-sm leading-relaxed">
-                Generate ready-to-run replay snippets in cURL, JavaScript (Fetch &amp; Axios), Python, Go, PHP, and Rust.
-              </p>
-            </div>
-            <div class="mt-4 text-xs font-mono text-amber-400 font-semibold">8+ Languages Supported</div>
-          </div>
-
-        </div>
-      </div>
-    </section>
-
-    <!-- COMPETITIVE COMPARISON MATRIX -->
-    <section id="compare" class="py-24 border-t border-slate-850 bg-slate-950/90">
+    <!-- 3. THREE CORE PILLARS / ARCHITECTURAL GUARANTEE -->
+    <section
+      id="security"
+      class="py-14 border-t border-slate-200 dark:border-zinc-850 bg-slate-50 dark:bg-zinc-950"
+    >
       <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center max-w-3xl mx-auto mb-16 space-y-3">
-          <div class="text-cyan-400 text-xs font-mono uppercase tracking-widest font-semibold">Benchmark Comparison</div>
-          <h2 class="text-3xl sm:text-4xl font-bold tracking-tight text-white">
-            Webhook.site vs SafeWebhook
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div
+            class="p-6 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 space-y-2 shadow-sm dark:shadow-none"
+          >
+            <div
+              class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 flex items-center justify-center font-mono text-xs font-bold"
+            >
+              01
+            </div>
+            <h2 class="text-base font-bold text-slate-900 dark:text-zinc-100">
+              Zero Server Disk Storage
+            </h2>
+            <p
+              class="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed"
+            >
+              Interceptions stream in memory via Cloudflare SSE and are saved
+              solely to your browser’s local storage. Your API keys and customer
+              payloads never hit server disks.
+            </p>
+          </div>
+
+          <div
+            class="p-6 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 space-y-2 shadow-sm dark:shadow-none"
+          >
+            <div
+              class="w-8 h-8 rounded-lg bg-cyan-50 dark:bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-500/20 flex items-center justify-center font-mono text-xs font-bold"
+            >
+              02
+            </div>
+            <h2 class="text-base font-bold text-slate-900 dark:text-zinc-100">
+              Sub-20ms Global Latency
+            </h2>
+            <p
+              class="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed"
+            >
+              Deployed on 300+ Anycast edge points. Webhook senders (Stripe,
+              GitHub, Shopify) experience near-instant connection
+              acknowledgement without timeouts.
+            </p>
+          </div>
+
+          <div
+            class="p-6 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 space-y-2 shadow-sm dark:shadow-none"
+          >
+            <div
+              class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 flex items-center justify-center font-mono text-xs font-bold"
+            >
+              03
+            </div>
+            <h2 class="text-base font-bold text-slate-900 dark:text-zinc-100">
+              Zero Paywalls &amp; Zero Signups
+            </h2>
+            <p
+              class="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed"
+            >
+              Every single feature—response status simulation, delay sliders,
+              localhost replay, and email parsing—is 100% free forever with no
+              account creation.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. CORE DEVELOPER UTILITIES GRID -->
+    <section
+      id="tools"
+      class="py-20 border-t border-slate-200 dark:border-zinc-850 bg-white dark:bg-zinc-950"
+    >
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+        <div
+          class="flex flex-col md:flex-row md:items-end justify-between gap-4"
+        >
+          <div class="space-y-2 max-w-2xl">
+            <div
+              class="text-xs font-mono uppercase tracking-widest text-indigo-600 dark:text-sky-400 font-semibold"
+            >
+              Developer Utilities
+            </div>
+            <h2
+              class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white"
+            >
+              Built for Modern Webhook Workflows
+            </h2>
+            <p class="text-slate-600 dark:text-zinc-400 text-sm">
+              Explore purpose-built tools to test, simulate, and verify webhooks
+              locally and in staging.
+            </p>
+          </div>
+          <a
+            href="/tools"
+            class="text-xs font-mono text-indigo-600 dark:text-sky-400 hover:underline flex items-center gap-1 font-semibold"
+          >
+            <span>View All 12 Tools &rarr;</span>
+          </a>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {
+            featuredTools.map((tool) => (
+              <a
+                href={`/tools/${tool.slug}`}
+                class="p-6 rounded-2xl border border-slate-200 dark:border-zinc-800/80 bg-slate-50 dark:bg-zinc-900/30 hover:border-indigo-600/40 dark:hover:border-sky-500/40 hover:bg-slate-100 dark:hover:bg-zinc-900/60 transition-all group flex flex-col justify-between space-y-4 shadow-sm dark:shadow-none"
+              >
+                <div class="space-y-2.5">
+                  <div class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-sky-500/10 border border-blue-200 dark:border-sky-500/20 flex items-center justify-center text-indigo-600 dark:text-sky-400">
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M13 10V3L4 14h7v7l9-11h-7z"
+                      />
+                    </svg>
+                  </div>
+                  <h3 class="text-base font-bold text-slate-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-sky-400 transition-colors">
+                    {tool.name}
+                  </h3>
+                  <p class="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed line-clamp-2">
+                    {tool.headline}
+                  </p>
+                </div>
+
+                <div class="pt-3 border-t border-slate-200 dark:border-zinc-800/60 flex items-center justify-between text-xs font-mono text-slate-500 dark:text-zinc-400 group-hover:text-slate-900 dark:group-hover:text-zinc-200">
+                  <span>Explore Guide &rarr;</span>
+                  <span class="text-[10px] text-indigo-600 dark:text-sky-400 font-semibold">
+                    Free
+                  </span>
+                </div>
+              </a>
+            ))
+          }
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. PLATFORM INTEGRATIONS SHOWCASE -->
+    <section
+      id="integrations"
+      class="py-20 border-t border-slate-200 dark:border-zinc-850 bg-slate-50 dark:bg-zinc-950"
+    >
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+        <div
+          class="flex flex-col md:flex-row md:items-end justify-between gap-4"
+        >
+          <div class="space-y-2 max-w-2xl">
+            <div
+              class="text-xs font-mono uppercase tracking-widest text-indigo-600 dark:text-sky-400 font-semibold"
+            >
+              Platform Guides
+            </div>
+            <h2
+              class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white"
+            >
+              Tested Across 24+ Major Platforms
+            </h2>
+            <p class="text-slate-600 dark:text-zinc-400 text-sm">
+              Live payload schemas, setup checklists, and ready-to-run HMAC
+              signature verification recipes.
+            </p>
+          </div>
+          <a
+            href="/integrations"
+            class="text-xs font-mono text-indigo-600 dark:text-sky-400 hover:underline flex items-center gap-1 font-semibold"
+          >
+            <span>View All 24 Platforms &rarr;</span>
+          </a>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {
+            featuredPlatforms.map((p) => (
+              <a
+                href={`/test/${p.slug}`}
+                class="p-6 rounded-2xl border border-slate-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/30 hover:border-indigo-600/40 dark:hover:border-sky-500/40 hover:bg-slate-100 dark:hover:bg-zinc-900/60 transition-all group flex flex-col justify-between space-y-4 shadow-sm dark:shadow-none"
+              >
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <h3 class="text-base font-bold text-slate-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-sky-400 transition-colors">
+                      {p.name}
+                    </h3>
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-zinc-950 text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-800">
+                      {p.category}
+                    </span>
+                  </div>
+                  <p class="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed line-clamp-2">
+                    {p.tagline}
+                  </p>
+                </div>
+
+                <div class="pt-3 border-t border-slate-200 dark:border-zinc-800/60 flex items-center justify-between text-xs font-mono text-slate-500 dark:text-zinc-400 group-hover:text-slate-900 dark:group-hover:text-zinc-200">
+                  <span class="text-slate-500 dark:text-zinc-500 text-[11px] truncate max-w-[150px]">
+                    {p.signatureHeader}
+                  </span>
+                  <span>Test &rarr;</span>
+                </div>
+              </a>
+            ))
+          }
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. COMPETITOR COMPARISON MATRIX -->
+    <section
+      id="compare"
+      class="py-20 border-t border-slate-200 dark:border-zinc-850 bg-white dark:bg-zinc-950"
+    >
+      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+        <div class="text-center max-w-2xl mx-auto space-y-2">
+          <div
+            class="text-xs font-mono uppercase tracking-widest text-indigo-600 dark:text-indigo-400 font-semibold"
+          >
+            Head-to-Head Comparison
+          </div>
+          <h2
+            class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white"
+          >
+            Why Developers Switch to SafeWebhook
           </h2>
-          <p class="text-slate-300 text-base">
-            See how our modern Cloudflare Edge streaming platform compares to legacy tools.
+          <p class="text-slate-600 dark:text-zinc-400 text-sm">
+            Replace slow, paywalled request bins with an instant, privacy-first
+            edge platform.
           </p>
         </div>
 
-        <div class="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden font-sans">
-          <table class="w-full text-left text-xs sm:text-sm divide-y divide-slate-800">
-            <thead class="bg-slate-950/80 text-slate-400 font-mono">
+        <div
+          class="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/30 overflow-hidden font-sans shadow-sm dark:shadow-none"
+        >
+          <table
+            class="w-full text-left text-xs sm:text-sm divide-y divide-slate-200 dark:divide-zinc-800"
+          >
+            <thead
+              class="bg-slate-100 dark:bg-zinc-900/80 text-slate-700 dark:text-zinc-400 font-mono text-[11px] uppercase tracking-wider"
+            >
               <tr>
-                <th class="px-5 py-4 font-semibold">Feature / Capability</th>
-                <th class="px-5 py-4 font-semibold text-slate-400">Webhook.site</th>
-                <th class="px-5 py-4 font-semibold text-cyan-400">SafeWebhook (safewebhook.com)</th>
+                <th class="px-4 py-3 font-semibold">Feature / Capability</th>
+                <th
+                  class="px-4 py-3 font-semibold text-indigo-600 dark:text-indigo-400"
+                  >SafeWebhook</th
+                >
+                <th
+                  class="px-4 py-3 font-semibold text-slate-500 dark:text-zinc-500"
+                  >Webhook.site</th
+                >
+                <th
+                  class="px-4 py-3 font-semibold text-slate-500 dark:text-zinc-500"
+                  >Ngrok</th
+                >
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-850 text-slate-300">
-              <tr class="hover:bg-slate-850/40">
-                <td class="px-5 py-4 font-medium text-white">Pricing &amp; Paywalls</td>
-                <td class="px-5 py-4 text-slate-400">$15 – $45 / month (Restricted)</td>
-                <td class="px-5 py-4 text-cyan-300 font-semibold font-mono flex items-center gap-1.5">
-                  <svg class="w-4 h-4 text-cyan-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                  100% Free Forever (0 Paywalls)
-                </td>
+            <tbody
+              class="divide-y divide-slate-200 dark:divide-zinc-850 text-slate-800 dark:text-zinc-300 font-sans"
+            >
+              <tr class="bg-white dark:bg-zinc-950/30">
+                <td
+                  class="px-4 py-3.5 font-medium text-slate-900 dark:text-zinc-200"
+                  >Pricing &amp; Paywalls</td
+                >
+                <td
+                  class="px-4 py-3.5 font-semibold text-indigo-600 dark:text-indigo-400"
+                  >100% Free Forever</td
+                >
+                <td class="px-4 py-3.5 text-slate-500 dark:text-zinc-500"
+                  >$15 – $45 / month</td
+                >
+                <td class="px-4 py-3.5 text-slate-500 dark:text-zinc-500"
+                  >Paid Tunnels</td
+                >
               </tr>
-              <tr class="hover:bg-slate-850/40">
-                <td class="px-5 py-4 font-medium text-white">Delivery Latency</td>
-                <td class="px-5 py-4 text-slate-400">200 – 500ms (Centralized server)</td>
-                <td class="px-5 py-4 text-emerald-400 font-semibold font-mono flex items-center gap-1.5">
-                  <svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                  &lt; 20ms (Cloudflare Edge SSE)
-                </td>
+              <tr class="bg-slate-50 dark:bg-zinc-900/20">
+                <td
+                  class="px-4 py-3.5 font-medium text-slate-900 dark:text-zinc-200"
+                  >Zero Signup Required</td
+                >
+                <td
+                  class="px-4 py-3.5 font-semibold text-indigo-600 dark:text-indigo-400"
+                  >Instant (1 click)</td
+                >
+                <td class="px-4 py-3.5 text-slate-500 dark:text-zinc-500"
+                  >Throttled on free</td
+                >
+                <td class="px-4 py-3.5 text-slate-500 dark:text-zinc-500"
+                  >Requires Account</td
+                >
               </tr>
-              <tr class="hover:bg-slate-850/40">
-                <td class="px-5 py-4 font-medium text-white">Data Privacy &amp; GDPR</td>
-                <td class="px-5 py-4 text-slate-400">Stored on remote disks</td>
-                <td class="px-5 py-4 text-cyan-300 font-semibold font-mono flex items-center gap-1.5">
-                  <svg class="w-4 h-4 text-cyan-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                  100% Private (Local Memory Only)
-                </td>
+              <tr class="bg-white dark:bg-zinc-950/30">
+                <td
+                  class="px-4 py-3.5 font-medium text-slate-900 dark:text-zinc-200"
+                  >Payload Retention</td
+                >
+                <td
+                  class="px-4 py-3.5 font-semibold text-indigo-600 dark:text-indigo-400"
+                  >Client Memory Only</td
+                >
+                <td class="px-4 py-3.5 text-slate-500 dark:text-zinc-500"
+                  >Central Database</td
+                >
+                <td class="px-4 py-3.5 text-slate-500 dark:text-zinc-500"
+                  >Tunnel Routing</td
+                >
               </tr>
-              <tr class="hover:bg-slate-850/40">
-                <td class="px-5 py-4 font-medium text-white">Custom Response &amp; Latency</td>
-                <td class="px-5 py-4 text-slate-400">Requires paid upgrade</td>
-                <td class="px-5 py-4 text-cyan-300 font-semibold font-mono flex items-center gap-1.5">
-                  <svg class="w-4 h-4 text-cyan-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                  Built-in Visual Engine (Free)
-                </td>
+              <tr class="bg-slate-50 dark:bg-zinc-900/20">
+                <td
+                  class="px-4 py-3.5 font-medium text-slate-900 dark:text-zinc-200"
+                  >Custom Status &amp; Delay</td
+                >
+                <td
+                  class="px-4 py-3.5 font-semibold text-indigo-600 dark:text-indigo-400"
+                  >Included Free</td
+                >
+                <td class="px-4 py-3.5 text-slate-500 dark:text-zinc-500"
+                  >Paid Tier Only</td
+                >
+                <td class="px-4 py-3.5 text-slate-500 dark:text-zinc-500"
+                  >Local code only</td
+                >
               </tr>
-              <tr class="hover:bg-slate-850/40">
-                <td class="px-5 py-4 font-medium text-white">Custom Workflows &amp; JS Rules</td>
-                <td class="px-5 py-4 text-slate-400">Paid subscription plan</td>
-                <td class="px-5 py-4 text-cyan-300 font-semibold font-mono flex items-center gap-1.5">
-                  <svg class="w-4 h-4 text-cyan-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                  Included for Free
-                </td>
-              </tr>
-              <tr class="hover:bg-slate-850/40">
-                <td class="px-5 py-4 font-medium text-white">Matching Inbound Email Address</td>
-                <td class="px-5 py-4 text-slate-400">Requires paid account</td>
-                <td class="px-5 py-4 text-cyan-300 font-semibold font-mono flex items-center gap-1.5">
-                  <svg class="w-4 h-4 text-cyan-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                  Instant Inbound Email Inbox
-                </td>
+              <tr class="bg-white dark:bg-zinc-950/30">
+                <td
+                  class="px-4 py-3.5 font-medium text-slate-900 dark:text-zinc-200"
+                  >Localhost Replay</td
+                >
+                <td
+                  class="px-4 py-3.5 font-semibold text-indigo-600 dark:text-indigo-400"
+                  >Visual 1-Click Drawer</td
+                >
+                <td class="px-4 py-3.5 text-slate-500 dark:text-zinc-500"
+                  >CLI Binary</td
+                >
+                <td class="px-4 py-3.5 text-slate-500 dark:text-zinc-500"
+                  >CLI Daemon</td
+                >
               </tr>
             </tbody>
           </table>
         </div>
+
+        <div class="text-center">
+          <a
+            href="/vs"
+            class="text-xs font-mono text-slate-600 dark:text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium"
+          >
+            Explore All 9 Competitor Comparisons (Hookdeck, Beeceptor, Smee,
+            Postman) &rarr;
+          </a>
+        </div>
       </div>
     </section>
 
-    <!-- FAQ SECTION (People Also Ask PAA Targeting) -->
-    <section id="faq" class="py-24 border-t border-slate-850 bg-slate-950/80">
-      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center max-w-2xl mx-auto mb-16 space-y-2">
-          <div class="text-cyan-400 text-xs font-mono uppercase tracking-widest font-semibold">Common Developer Inquiries</div>
-          <h2 class="text-3xl sm:text-4xl font-bold tracking-tight text-white">
-            Frequently Asked Questions
+    <!-- 7. WEBHOOK ERROR TROUBLESHOOTING & FRAMEWORKS -->
+    <section
+      id="troubleshooting"
+      class="py-20 border-t border-slate-200 dark:border-zinc-850 bg-slate-50 dark:bg-zinc-950"
+    >
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          <!-- Errors Column -->
+          <div class="space-y-6">
+            <div class="space-y-2">
+              <div
+                class="text-xs font-mono uppercase tracking-widest text-rose-500 dark:text-rose-400 font-semibold"
+              >
+                Diagnostic Hub
+              </div>
+              <h2
+                class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white"
+              >
+                Webhook Error Troubleshooting
+              </h2>
+              <p class="text-slate-600 dark:text-zinc-400 text-xs sm:text-sm">
+                Root cause diagnoses and production fixes for common webhook
+                failure status codes:
+              </p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {
+                featuredErrors.map((e) => (
+                  <a
+                    href={`/errors/${e.slug}`}
+                    class="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/30 hover:border-rose-500/40 hover:bg-slate-100 dark:hover:bg-zinc-900/60 transition-colors block group shadow-sm dark:shadow-none"
+                  >
+                    <div class="text-xs font-bold text-rose-500 dark:text-rose-400 font-mono">
+                      HTTP {e.statusCode}
+                    </div>
+                    <div class="text-xs font-semibold text-slate-800 dark:text-zinc-200 group-hover:text-indigo-600 dark:group-hover:text-white mt-1 truncate">
+                      {e.title}
+                    </div>
+                  </a>
+                ))
+              }
+            </div>
+          </div>
+
+          <!-- Frameworks Column -->
+          <div class="space-y-6">
+            <div class="space-y-2">
+              <div
+                class="text-xs font-mono uppercase tracking-widest text-cyan-600 dark:text-cyan-400 font-semibold"
+              >
+                Code Recipes
+              </div>
+              <h2
+                class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white"
+              >
+                Framework Implementation Guides
+              </h2>
+              <p class="text-slate-600 dark:text-zinc-400 text-xs sm:text-sm">
+                Step-by-step boilerplate for raw body HMAC signature
+                verification across popular stacks:
+              </p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {
+                featuredGuides.map((g) => (
+                  <a
+                    href={`/guides/${g.slug}`}
+                    class="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/30 hover:border-cyan-500/40 hover:bg-slate-100 dark:hover:bg-zinc-900/60 transition-colors block group shadow-sm dark:shadow-none"
+                  >
+                    <div class="text-xs font-bold text-cyan-600 dark:text-cyan-400 font-mono">
+                      {g.framework}
+                    </div>
+                    <div class="text-xs font-semibold text-slate-800 dark:text-zinc-200 group-hover:text-indigo-600 dark:group-hover:text-white mt-1 truncate">
+                      {g.headline}
+                    </div>
+                  </a>
+                ))
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7.5. THE DEFINITIVE WEBHOOK ENGINEERING & ARCHITECTURE HANDBOOK (1800+ Words In-Depth SEO Guide) -->
+    <section
+      id="handbook"
+      class="py-20 border-t border-slate-200 dark:border-zinc-850 bg-slate-50/50 dark:bg-zinc-950/80"
+    >
+      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+        <!-- Header -->
+        <div class="text-center space-y-3 max-w-3xl mx-auto">
+          <div
+            class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 text-xs font-mono"
+          >
+            <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"
+            ></span>
+            <span
+              >Developer Technical Guide &bull; RFC 9110 &bull; Security
+              Standard</span
+            >
+          </div>
+          <h2
+            class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white font-sans"
+          >
+            The Complete Webhook Engineering, Testing &amp; Security Handbook
           </h2>
-          <p class="text-slate-400 text-sm">
-            Everything you need to know about testing webhooks without registration or subscriptions at safewebhook.com.
+          <p
+            class="text-sm sm:text-base text-slate-600 dark:text-zinc-400 leading-relaxed font-normal"
+          >
+            An in-depth technical manual covering event-driven push
+            architectures, cryptographic HMAC-SHA256 signature verification,
+            network latency simulation, automated retry recovery, and
+            client-side privacy.
           </p>
         </div>
 
-        <div class="space-y-4">
-          {homeFaqs.map((faq) => (
-            <div class="p-6 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-2">
-              <h3 class="text-base font-semibold text-white">{faq.q}</h3>
-              <p class="text-sm text-slate-300 leading-relaxed">{faq.a}</p>
+        <!-- Article Container -->
+        <article
+          class="prose dark:prose-invert max-w-none space-y-12 text-slate-700 dark:text-zinc-300 text-sm sm:text-base leading-relaxed font-sans"
+        >
+          <!-- Chapter 1: Foundations of Event-Driven Webhook Delivery -->
+          <section
+            class="space-y-4 p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm"
+          >
+            <div
+              class="flex items-center gap-2 font-mono text-xs text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider"
+            >
+              <span>Chapter 01</span> &bull; <span>Protocol Architecture</span>
             </div>
-          ))}
+            <h3
+              class="text-2xl font-bold text-slate-900 dark:text-white font-sans"
+            >
+              1. Understanding Webhooks vs. Polling APIs (RFC 9110 HTTP Push
+              Semantics)
+            </h3>
+            <p>
+              In modern distributed computing and cloud-native microservices, <strong
+                >webhooks</strong
+              > (also known as HTTP push callbacks, reverse APIs, or web listeners)
+              represent the standard asynchronous event communication protocol. While
+              traditional RESTful APIs require client applications to issue repetitive
+              HTTP GET polling queries to discover state mutations, webhooks operate
+              on an <em>observer push paradigm</em>. When a discrete business
+              event occurs inside a service provider (such as an authorized
+              charge in Stripe, a merged pull request in GitHub, or a new order
+              creation in Shopify), the provider’s event pipeline immediately
+              packages the state delta into a structured JSON or XML envelope
+              and dispatches an outbound HTTP POST request to your registered
+              destination URL over TLS 1.3.
+            </p>
+            <p>
+              This architectural shift yields massive computational
+              efficiencies. In traditional polling architectures, over 98.5% of
+              polling requests return empty changesets (HTTP 200 with empty
+              arrays or HTTP 304 Not Modified), generating unnecessary CPU
+              cycles, database query load, and rate-limiting friction.
+              Conversely, webhook endpoints consume computational power only
+              when actionable state changes occur, reducing latency from minutes
+              to sub-50-millisecond execution windows.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              <div
+                class="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950/60 space-y-2"
+              >
+                <h4
+                  class="text-sm font-bold text-slate-900 dark:text-white font-mono"
+                >
+                  Traditional API Polling (Pull)
+                </h4>
+                <ul
+                  class="text-xs text-slate-600 dark:text-zinc-400 space-y-1.5 list-disc list-inside"
+                >
+                  <li>
+                    Client periodically initiates outbound HTTP GET requests.
+                  </li>
+                  <li>
+                    High latency bottleneck dictated by cron or polling
+                    intervals.
+                  </li>
+                  <li>
+                    Wasted server bandwidth, API quotas, and database connection
+                    pools.
+                  </li>
+                  <li>
+                    Vulnerable to HTTP 429 Too Many Requests rate-limit
+                    penalties.
+                  </li>
+                </ul>
+              </div>
+              <div
+                class="p-4 rounded-xl border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50/40 dark:bg-indigo-950/20 space-y-2"
+              >
+                <h4
+                  class="text-sm font-bold text-indigo-600 dark:text-indigo-400 font-mono"
+                >
+                  Event-Driven Webhook (Push)
+                </h4>
+                <ul
+                  class="text-xs text-slate-700 dark:text-zinc-300 space-y-1.5 list-disc list-inside"
+                >
+                  <li>
+                    Server pushes HTTP POST immediately upon state mutation.
+                  </li>
+                  <li>
+                    Sub-second real-time reaction across distributed edge
+                    systems.
+                  </li>
+                  <li>
+                    Zero wasted queries: executes strictly on actual event
+                    triggers.
+                  </li>
+                  <li>
+                    Requires a public HTTPS listener, signature check, and rapid
+                    200 OK.
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <!-- Chapter 2: Cryptographic Signature Verification Schemes -->
+          <section
+            class="space-y-4 p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm"
+          >
+            <div
+              class="flex items-center gap-2 font-mono text-xs text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider"
+            >
+              <span>Chapter 02</span> &bull; <span
+                >Security &amp; Cryptography</span
+              >
+            </div>
+            <h3
+              class="text-2xl font-bold text-slate-900 dark:text-white font-sans"
+            >
+              2. Cryptographic Signature Verification: HMAC-SHA256, Ed25519
+              &amp; Content-Digest
+            </h3>
+            <p>
+              Because webhook receiver endpoints must be publicly accessible on
+              the open internet, security is paramount. Without robust
+              authentication, malicious actors can send forged HTTP POST
+              requests containing fabricated payment receipts, unauthorized user
+              permissions, or corrupted datasets. To guarantee authenticity and
+              data integrity, premier providers utilize <strong
+                >Hash-based Message Authentication Codes (HMAC)</strong
+              > or <strong>Asymmetric Public-Key Cryptography (Ed25519)</strong
+              >.
+            </p>
+            <p>
+              The fundamental principle of HMAC signature verification requires
+              computing a keyed cryptographic hash (such as <code
+                >HMAC-SHA256</code
+              >) over the <em>exact, unmodified raw request body bytes</em> concatenated
+              with a delivery timestamp, using a shared signing secret. The resulting
+              hexadecimal or base64 digest is then compared against the provider's
+              signature header (e.g. <code>Stripe-Signature</code>, <code
+                >X-Hub-Signature-256</code
+              >, <code>X-Shopify-Hmac-Sha256</code>, <code
+                >X-Razorpay-Signature</code
+              >).
+            </p>
+
+            <div class="space-y-3 pt-2">
+              <h4
+                class="text-base font-bold text-slate-900 dark:text-white font-sans"
+              >
+                Solving the Notorious "No signatures found matching the expected
+                signature for payload" Error
+              </h4>
+              <p class="text-xs sm:text-sm text-slate-600 dark:text-zinc-400">
+                The most frequent bug encountered in webhook development is
+                signature verification failure. In over 95% of incidents, this
+                error occurs because the backend web framework (such as Express <code
+                  >express.json()</code
+                >, Next.js App Router, or Fastify) automatically parsed the raw
+                UTF-8 byte stream into a JavaScript object before signature
+                computation. Re-serializing a JavaScript object back to JSON via <code
+                  >JSON.stringify()</code
+                > alters whitespace, key ordering, and character escapes, permanently
+                invalidating the HMAC digest.
+              </p>
+              <pre
+                class="bg-slate-900 text-slate-100 p-4 rounded-xl text-xs overflow-x-auto font-mono"><code set:text={signatureCodeSample} /></pre>
+            </div>
+          </section>
+
+          <!-- Chapter 3: Latency Simulation, Status Code Engine & Timeout Failures -->
+          <section
+            class="space-y-4 p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm"
+          >
+            <div
+              class="flex items-center gap-2 font-mono text-xs text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider"
+            >
+              <span>Chapter 03</span> &bull; <span
+                >Resilience &amp; Failure Modes</span
+              >
+            </div>
+            <h3
+              class="text-2xl font-bold text-slate-900 dark:text-white font-sans"
+            >
+              3. Webhook Latency Simulation, Status Code Debugging &amp;
+              Exponential Backoff Retries
+            </h3>
+            <p>
+              In production environments, network conditions are never ideal.
+              Upstream webhook providers enforce strict connection timeouts: <strong
+                >Stripe enforces a 10-second timeout</strong
+              >, <strong>GitHub enforces 10 seconds</strong>, <strong
+                >Shopify enforces 5 seconds</strong
+              >, and <strong>Slack enforces a rigorous 3-second deadline</strong
+              >. If your receiving server performs long-running synchronous
+              database queries, PDF generation, or third-party API dispatches
+              during the HTTP request cycle, your endpoint will exceed the
+              timeout deadline, triggering a <code>504 Gateway Timeout</code> or <code
+                >502 Bad Gateway</code
+              > failure.
+            </p>
+            <p>
+              SafeWebhook incorporates an integrated <strong
+                >Simulated Latency Engine (0–5000ms delay slider)</strong
+              > and <strong
+                >Custom Response Status Code Simulator (200, 201, 204, 400, 401,
+                429, 500, 504)</strong
+              >. This enables engineering teams to rigorously test upstream
+              provider retry behavior, circuit breakers, and exponential backoff
+              algorithms without writing custom mock infrastructure.
+            </p>
+
+            <div class="overflow-x-auto pt-2">
+              <table
+                class="w-full text-left text-xs border border-slate-200 dark:border-zinc-800 rounded-lg"
+              >
+                <thead
+                  class="bg-slate-100 dark:bg-zinc-800/80 font-mono text-slate-700 dark:text-zinc-300"
+                >
+                  <tr>
+                    <th
+                      class="p-3 border-b border-slate-200 dark:border-zinc-800"
+                      >HTTP Status Code</th
+                    >
+                    <th
+                      class="p-3 border-b border-slate-200 dark:border-zinc-800"
+                      >Provider Reaction &amp; Retry Behavior</th
+                    >
+                    <th
+                      class="p-3 border-b border-slate-200 dark:border-zinc-800"
+                      >Recommended Developer Remediation</th
+                    >
+                  </tr>
+                </thead>
+                <tbody
+                  class="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans text-xs"
+                >
+                  <tr>
+                    <td
+                      class="p-3 font-mono font-bold text-emerald-600 dark:text-emerald-400"
+                      >200 OK / 204 No Content</td
+                    >
+                    <td class="p-3 text-slate-600 dark:text-zinc-400"
+                      >Successful delivery acknowledged. Delivery pipeline
+                      terminates cleanly with zero retries.</td
+                    >
+                    <td class="p-3 text-slate-600 dark:text-zinc-400"
+                      >Return status within 200–500ms and offload processing to
+                      asynchronous background queues (Redis, BullMQ, Celery).</td
+                    >
+                  </tr>
+                  <tr>
+                    <td
+                      class="p-3 font-mono font-bold text-amber-600 dark:text-amber-400"
+                      >400 Bad Request</td
+                    >
+                    <td class="p-3 text-slate-600 dark:text-zinc-400"
+                      >Indicates unparseable payload or client schema violation.
+                      Most senders halt immediate retries.</td
+                    >
+                    <td class="p-3 text-slate-600 dark:text-zinc-400"
+                      >Verify JSON syntax and payload schema parser. Ensure
+                      backward compatibility for newly introduced event fields.</td
+                    >
+                  </tr>
+                  <tr>
+                    <td
+                      class="p-3 font-mono font-bold text-rose-600 dark:text-rose-400"
+                      >401 Unauthorized / 403 Forbidden</td
+                    >
+                    <td class="p-3 text-slate-600 dark:text-zinc-400"
+                      >Signature verification failure, revoked API token, or
+                      WAF/Cloudflare security challenge block.</td
+                    >
+                    <td class="p-3 text-slate-600 dark:text-zinc-400"
+                      >Check signing secret keys (e.g. <code>whsec_...</code>),
+                      bypass CSRF protections on webhook routes, and inspect
+                      reverse proxy firewall rules.</td
+                    >
+                  </tr>
+                  <tr>
+                    <td
+                      class="p-3 font-mono font-bold text-purple-600 dark:text-purple-400"
+                      >429 Too Many Requests</td
+                    >
+                    <td class="p-3 text-slate-600 dark:text-zinc-400"
+                      >Server rate limit exceeded. Senders pause dispatches
+                      based on the <code>Retry-After</code> response header.</td
+                    >
+                    <td class="p-3 text-slate-600 dark:text-zinc-400"
+                      >Increase server ingress concurrency, implement rate-limit
+                      buffers, or scale worker pool capacity.</td
+                    >
+                  </tr>
+                  <tr>
+                    <td
+                      class="p-3 font-mono font-bold text-red-600 dark:text-red-400"
+                      >500 / 502 / 504 Timeout</td
+                    >
+                    <td class="p-3 text-slate-600 dark:text-zinc-400"
+                      >Server crash or deadline exceeded. Triggers automated
+                      exponential backoff (e.g., retries over 72 hours in
+                      Stripe).</td
+                    >
+                    <td class="p-3 text-slate-600 dark:text-zinc-400"
+                      >Enforce idempotency key deduplication to avoid
+                      double-processing orders when retried requests succeed.</td
+                    >
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- Chapter 4: Modern AI Agents, Automation Pipelines & Low-Code Orchestration -->
+          <section
+            class="space-y-4 p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm"
+          >
+            <div
+              class="flex items-center gap-2 font-mono text-xs text-purple-600 dark:text-purple-400 font-bold uppercase tracking-wider"
+            >
+              <span>Chapter 04</span> &bull; <span
+                >Automation &amp; AI Agents</span
+              >
+            </div>
+            <h3
+              class="text-2xl font-bold text-slate-900 dark:text-white font-sans"
+            >
+              4. Modern Automation: AI Agents, n8n, Make.com, Dify &amp;
+              Headless E-Commerce
+            </h3>
+            <p>
+              In today's software ecosystem, webhooks serve as the primary
+              nervous system for AI agent orchestrators, automated workflow
+              builders, and low-code integrations:
+            </p>
+            <ul
+              class="space-y-2 text-xs sm:text-sm text-slate-600 dark:text-zinc-400 list-disc list-inside"
+            >
+              <li>
+                <strong>n8n Automation Engine:</strong> Utilize the <em
+                  >n8n Webhook Node</em
+                > and <em>Respond to Webhook Node</em> to receive external callbacks,
+                execute multi-step business logic, and return custom structured responses.
+              </li>
+              <li>
+                <strong>Make.com (Integromat) &amp; Manus AI:</strong> Build scenario
+                triggers that catch incoming JSON payloads, route data through LLM
+                agent tools, and sync state changes to CRMs and Google Sheets.
+              </li>
+              <li>
+                <strong>Dify.ai &amp; Genspark Custom Agent APIs:</strong> Receive
+                asynchronous tool callbacks when autonomous LLM agents finish executing
+                long-running reasoning tasks.
+              </li>
+              <li>
+                <strong
+                  >Headless E-Commerce &amp; Creator Platforms (Shopify App
+                  Store, Whop API):</strong
+                > Track app installation referrers, recurring subscription rebills,
+                and license key activations via real-time webhooks.
+              </li>
+              <li>
+                <strong
+                  >Rich Messaging Integrations (Slack &amp; Discord):</strong
+                > Format interactive Block Kit cards with embedded status badges,
+                action buttons, and image thumbnails for immediate developer alerts.
+              </li>
+            </ul>
+          </section>
+
+          <!-- Chapter 5: SafeWebhook Architecture: Client-Side Privacy & 1-Click Replay -->
+          <section
+            class="space-y-4 p-6 sm:p-8 rounded-2xl border border-indigo-200 dark:border-indigo-500/30 bg-gradient-to-br from-indigo-50/50 via-white to-slate-100 dark:from-[#070a12] dark:via-zinc-900/60 dark:to-zinc-950 p-6 sm:p-8 rounded-2xl shadow-sm"
+          >
+            <div
+              class="flex items-center gap-2 font-mono text-xs text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider"
+            >
+              <span>Chapter 05</span> &bull; <span>Privacy Architecture</span>
+            </div>
+            <h3
+              class="text-2xl font-bold text-slate-900 dark:text-white font-sans"
+            >
+              5. Why SafeWebhook? Client-Side Memory Isolation vs. Legacy
+              Request Bins
+            </h3>
+            <p>
+              Traditional cloud-hosted request catchers (such as legacy
+              RequestBin or Webhook.site) log sensitive webhook
+              payloads—including customer PII, Stripe bearer tokens,
+              Authorization headers, and payment metadata—onto central server
+              hard drives and database clusters. This architecture creates
+              significant enterprise data compliance risks (GDPR, SOC2, HIPAA,
+              PCI-DSS).
+            </p>
+            <p>
+              <strong>SafeWebhook</strong> was engineered from the ground up on Cloudflare's
+              global Anycast edge network with a strict <strong
+                >Zero-Persistent-Storage Policy</strong
+              >:
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+              <div
+                class="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/60 space-y-1.5"
+              >
+                <div
+                  class="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400"
+                >
+                  100% In-Memory Streaming
+                </div>
+                <p class="text-xs text-slate-600 dark:text-zinc-400">
+                  Payloads pass through Cloudflare edge RAM over Server-Sent
+                  Events (SSE) directly to your browser with 0ms disk writes.
+                </p>
+              </div>
+              <div
+                class="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/60 space-y-1.5"
+              >
+                <div
+                  class="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400"
+                >
+                  Local IndexedDB Storage
+                </div>
+                <p class="text-xs text-slate-600 dark:text-zinc-400">
+                  Your request history, saved endpoints, and headers live
+                  strictly inside your local browser memory sandbox.
+                </p>
+              </div>
+              <div
+                class="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/60 space-y-1.5"
+              >
+                <div
+                  class="text-xs font-mono font-bold text-purple-600 dark:text-purple-400"
+                >
+                  1-Click Localhost Replay
+                </div>
+                <p class="text-xs text-slate-600 dark:text-zinc-400">
+                  Forward live captured payloads straight to
+                  http://localhost:3000 from your browser without installing CLI
+                  tunneling agents.
+                </p>
+              </div>
+            </div>
+          </section>
+        </article>
+      </div>
+    </section>
+
+    <!-- 8. FAQ SECTION -->
+    <section
+      id="faq"
+      class="py-20 border-t border-slate-200 dark:border-zinc-850 bg-white dark:bg-zinc-950"
+    >
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+        <div class="text-center space-y-3">
+          <div
+            class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 text-xs font-mono"
+          >
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"
+            ></span>
+            <span>Developer Questions &amp; Answers</span>
+          </div>
+          <h2
+            class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white font-sans"
+          >
+            Frequently Asked Questions
+          </h2>
+          <p
+            class="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 max-w-xl mx-auto"
+          >
+            Everything you need to know about testing webhooks, verifying
+            signatures, local development, and privacy.
+          </p>
         </div>
 
-        <div class="mt-8 text-center">
-          <a href="/faq" class="text-xs font-mono text-cyan-400 hover:text-cyan-300 font-semibold underline">
-            View All FAQ &amp; Troubleshooting Questions &rarr;
+        <div class="space-y-3">
+          {
+            homeFaqs.map((faq, idx) => (
+              <div class="home-faq-item rounded-xl border border-slate-200 dark:border-zinc-850 bg-slate-50/70 dark:bg-zinc-900/40 overflow-hidden transition-all shadow-sm">
+                <button
+                  type="button"
+                  class="home-faq-toggle w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-slate-100/70 dark:hover:bg-zinc-800/40 transition-colors cursor-pointer group"
+                  aria-expanded={idx === 0 ? "true" : "false"}
+                >
+                  <div class="space-y-0.5 pr-2">
+                    <span class="text-[10px] font-mono text-indigo-600 dark:text-indigo-400 uppercase tracking-wider font-semibold">
+                      {faq.category}
+                    </span>
+                    <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                      {faq.q}
+                    </h3>
+                  </div>
+                  <svg
+                    class={`home-faq-arrow w-4 h-4 text-slate-400 dark:text-zinc-500 flex-shrink-0 transition-transform duration-200 ${idx === 0 ? "rotate-180 text-indigo-600 dark:text-indigo-400" : ""}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+                <div
+                  class={`home-faq-answer px-5 pb-5 pt-1 text-xs sm:text-sm text-slate-600 dark:text-zinc-300 leading-relaxed border-t border-slate-100 dark:border-zinc-800/60 font-normal space-y-2 ${idx === 0 ? "block" : "hidden"}`}
+                >
+                  <p>{faq.a}</p>
+                  <a
+                    href={`/faq#${faq.id}`}
+                    class="inline-flex items-center gap-1 text-xs font-mono text-indigo-600 dark:text-indigo-400 hover:underline pt-1"
+                  >
+                    <span>Read full guide &amp; verification code &rarr;</span>
+                  </a>
+                </div>
+              </div>
+            ))
+          }
+        </div>
+
+        <div class="text-center pt-2">
+          <a
+            href="/faq"
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-mono font-semibold text-slate-700 dark:text-zinc-200 bg-slate-100 dark:bg-zinc-800/80 hover:bg-slate-200 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-700 transition-colors"
+          >
+            <span>Browse All {ALL_FAQS.length} Questions in FAQ Hub &rarr;</span
+            >
           </a>
         </div>
       </div>
     </section>
 
-    <!-- FINAL CALL TO ACTION -->
-    <section id="cta" class="py-24 border-t border-slate-850 relative overflow-hidden bg-radial-gradient">
-      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10 space-y-6">
-        
-        <h2 class="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white">
-          Ready for a truly private No-Login Webhook Debugger?
+    <!-- 9. FINAL CALL TO ACTION BANNER -->
+    <section
+      id="cta"
+      class="py-20 border-t border-slate-200 dark:border-zinc-850 bg-slate-50 dark:bg-zinc-950"
+    >
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
+        <h2
+          class="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white"
+        >
+          Ready to test and debug webhooks?
         </h2>
-        <p class="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto">
-          Start inspecting HTTP payloads right now on <strong>safewebhook.com</strong>. 100% free, zero login, zero database storage.
+        <p
+          class="text-sm sm:text-base text-slate-600 dark:text-zinc-400 max-w-xl mx-auto"
+        >
+          Start testing webhooks right now with zero signup. 100% private in
+          your browser memory.
         </p>
 
-        <div class="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
+        <div
+          class="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3"
+        >
           <a
             href="/app"
-            class="group relative inline-flex items-center justify-center px-10 py-5 rounded-xl text-lg font-bold text-slate-950 bg-gradient-to-r from-cyan-400 via-cyan-300 to-teal-300 hover:from-cyan-300 hover:to-teal-200 transition-all shadow-2xl shadow-cyan-500/35 transform hover:-translate-y-1 active:translate-y-0 overflow-hidden"
+            class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white transition-all shadow-md shadow-indigo-500/25 hover:scale-105"
           >
-            <span class="absolute inset-0 w-full h-full bg-white/25 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-            <span class="relative z-10 flex items-center gap-2">
-              Launch SafeWebhook Free
-              <svg class="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
-            </span>
+            <span>Launch Webhook Workbench &rarr;</span>
           </a>
           <a
             href="/docs"
-            class="inline-flex items-center justify-center px-8 py-5 rounded-xl text-base font-semibold text-slate-200 bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 transition-all"
+            class="w-full sm:w-auto inline-flex items-center justify-center px-5 py-3.5 rounded-xl text-sm font-medium text-slate-700 dark:text-zinc-300 bg-white dark:bg-zinc-900 hover:bg-slate-100 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors shadow-sm"
           >
-            Explore Docs &amp; Guides
+            API Documentation
           </a>
-        </div>
-
-        <div class="text-xs text-slate-400 font-mono">
-          SafeWebhook &bull; safewebhook.com &bull; 100% Client-Side Payload Inspector &bull; Private Local-Only Request Logging
         </div>
       </div>
     </section>
   </main>
 
-  <!-- Semantic Multi-Column SEO Footer -->
-  <footer class="py-16 border-t border-slate-800 bg-slate-950 text-slate-400 text-sm">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="grid grid-cols-1 md:grid-cols-5 gap-8 pb-12 border-b border-slate-850">
-        
-        <!-- Column 1: Brand & Tagline -->
-        <div class="space-y-3 md:col-span-1">
-          <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-xs font-bold font-mono border border-cyan-500/30">
-              S
-            </div>
-            <span class="font-bold text-white text-base font-sans">Safe<span class="text-cyan-400">Webhook</span></span>
-          </div>
-          <p class="text-xs text-slate-400 leading-relaxed">
-            SafeWebhook (safewebhook.com) &bull; Free Webhook Tester Online &bull; No-Login Request Debugger with private local-only storage.
-          </p>
-        </div>
+  <Footer />
 
-        <!-- Column 2: Platform Testing Portals -->
-        <div class="space-y-3 font-mono text-xs">
-          <div class="font-bold uppercase tracking-wider text-slate-200 text-[11px]">Platform Portals</div>
-          <ul class="space-y-2 text-slate-400">
-            <li><a href="/test/stripe" class="hover:text-cyan-300 transition-colors">Stripe Webhook Tester</a></li>
-            <li><a href="/test/shopify" class="hover:text-cyan-300 transition-colors">Shopify Webhook Debugger</a></li>
-            <li><a href="/test/github" class="hover:text-cyan-300 transition-colors">GitHub Webhook Inspector</a></li>
-            <li><a href="/test/slack" class="hover:text-cyan-300 transition-colors">Slack Webhook Tester</a></li>
-            <li><a href="/test/paypal" class="hover:text-cyan-300 transition-colors">PayPal Webhook Listener</a></li>
-            <li><a href="/test/discord" class="hover:text-cyan-300 transition-colors">Discord Webhook Tester</a></li>
-          </ul>
-        </div>
+  <script is:inline>
+    const HERO_DEMOS = {
+      stripe: {
+        status: "200 OK",
+        latency: "< 14ms",
+        contentType: "application/json",
+        sigHeader: "Stripe-Signature: t=1614555800,v1=9e87d...",
+        rawJson: `{\n  "id": "evt_3MtwLwLkdIwHu7ix28a3tqPa",\n  "object": "event",\n  "type": "payment_intent.succeeded",\n  "data": {\n    "object": {\n      "id": "pi_3MtwLwLkdIwHu7ix28a3tqPa",\n      "amount": 4900,\n      "currency": "usd",\n      "status": "succeeded",\n      "customer": "cus_NFFOp39eoFndd1",\n      "payment_method": "pm_card_visa"\n    }\n  }\n}`,
+        html: `{\n  <span class="json-key">"id"</span>: <span class="json-str">"evt_3MtwLwLkdIwHu7ix28a3tqPa"</span>,\n  <span class="json-key">"object"</span>: <span class="json-str">"event"</span>,\n  <span class="json-key">"type"</span>: <span class="json-str">"payment_intent.succeeded"</span>,\n  <span class="json-key">"data"</span>: {\n    <span class="json-key">"object"</span>: {\n      <span class="json-key">"id"</span>: <span class="json-str">"pi_3MtwLwLkdIwHu7ix28a3tqPa"</span>,\n      <span class="json-key">"amount"</span>: <span class="json-num">4900</span>,\n      <span class="json-key">"currency"</span>: <span class="json-str">"usd"</span>,\n      <span class="json-key">"status"</span>: <span class="json-str">"succeeded"</span>,\n      <span class="json-key">"customer"</span>: <span class="json-str">"cus_NFFOp39eoFndd1"</span>,\n      <span class="json-key">"payment_method"</span>: <span class="json-str">"pm_card_visa"</span>\n    }\n  }\n}`,
+      },
+      github: {
+        status: "200 OK",
+        latency: "< 8ms",
+        contentType: "application/json",
+        sigHeader: "X-Hub-Signature-256: sha256=d7a8f9c...",
+        rawJson: `{\n  "ref": "refs/heads/main",\n  "before": "6113728f27ae82c7b1a12fced0937f81",\n  "after": "88a5c43f77c63e1496b264e24ee29e18",\n  "repository": {\n    "id": 1296269,\n    "name": "safewebhook-api",\n    "full_name": "developer/safewebhook-api",\n    "private": false\n  },\n  "pusher": {\n    "name": "arjunn881",\n    "email": "arjun@example.com"\n  }\n}`,
+        html: `{\n  <span class="json-key">"ref"</span>: <span class="json-str">"refs/heads/main"</span>,\n  <span class="json-key">"before"</span>: <span class="json-str">"6113728f27ae82c7b1a12fced0937f81"</span>,\n  <span class="json-key">"after"</span>: <span class="json-str">"88a5c43f77c63e1496b264e24ee29e18"</span>,\n  <span class="json-key">"repository"</span>: {\n    <span class="json-key">"id"</span>: <span class="json-num">1296269</span>,\n    <span class="json-key">"name"</span>: <span class="json-str">"safewebhook-api"</span>,\n    <span class="json-key">"full_name"</span>: <span class="json-str">"developer/safewebhook-api"</span>,\n    <span class="json-key">"private"</span>: <span class="json-bool">false</span>\n  },\n  <span class="json-key">"pusher"</span>: {\n    <span class="json-key">"name"</span>: <span class="json-str">"arjunn881"</span>,\n    <span class="json-key">"email"</span>: <span class="json-str">"arjun@example.com"</span>\n  }\n}`,
+      },
+      shopify: {
+        status: "200 OK",
+        latency: "< 19ms",
+        contentType: "application/json",
+        sigHeader: "X-Shopify-Hmac-Sha256: dGhpcyBpcyBh...",
+        rawJson: `{\n  "id": 82098291194,\n  "email": "customer@shopify.com",\n  "created_at": "2026-08-19T07:15:00-04:00",\n  "total_price": "129.00",\n  "currency": "USD",\n  "financial_status": "paid",\n  "line_items": [\n    {\n      "id": 1029384,\n      "title": "Edge Webhook Pro Tier",\n      "quantity": 1,\n      "price": "129.00"\n    }\n  ]\n}`,
+        html: `{\n  <span class="json-key">"id"</span>: <span class="json-num">82098291194</span>,\n  <span class="json-key">"email"</span>: <span class="json-str">"customer@shopify.com"</span>,\n  <span class="json-key">"created_at"</span>: <span class="json-str">"2026-08-19T07:15:00-04:00"</span>,\n  <span class="json-key">"total_price"</span>: <span class="json-str">"129.00"</span>,\n  <span class="json-key">"currency"</span>: <span class="json-str">"USD"</span>,\n  <span class="json-key">"financial_status"</span>: <span class="json-str">"paid"</span>,\n  <span class="json-key">"line_items"</span>: [\n    {\n      <span class="json-key">"id"</span>: <span class="json-num">1029384</span>,\n      <span class="json-key">"title"</span>: <span class="json-str">"Edge Webhook Pro Tier"</span>,\n      <span class="json-key">"quantity"</span>: <span class="json-num">1</span>,\n      <span class="json-key">"price"</span>: <span class="json-str">"129.00"</span>\n    }\n  ]\n}`,
+      },
+      email: {
+        status: "200 OK",
+        latency: "< 22ms",
+        contentType: "multipart/mixed",
+        sigHeader: "DKIM & SPF: PASS",
+        rawJson: `{\n  "from": "alerts@monitoring-service.io",\n  "to": "ep_dev_9a7d3b@safewebhook.com",\n  "subject": "[RESOLVED] Edge Latency Health Check Alert",\n  "text": "All 310 Cloudflare Anycast edge locations are reporting 100% health.",\n  "timestamp": "2026-08-19T07:16:20.000Z"\n}`,
+        html: `{\n  <span class="json-key">"from"</span>: <span class="json-str">"alerts@monitoring-service.io"</span>,\n  <span class="json-key">"to"</span>: <span class="json-str">"ep_dev_9a7d3b@safewebhook.com"</span>,\n  <span class="json-key">"subject"</span>: <span class="json-str">"[RESOLVED] Edge Latency Health Check Alert"</span>,\n  <span class="json-key">"text"</span>: <span class="json-str">"All 310 Cloudflare Anycast edge locations are reporting 100% health."</span>,\n  <span class="json-key">"timestamp"</span>: <span class="json-str">"2026-08-19T07:16:20.000Z"</span>\n}`,
+      },
+    };
 
-        <!-- Column 3: Developer Utilities -->
-        <div class="space-y-3 font-mono text-xs">
-          <div class="font-bold uppercase tracking-wider text-slate-200 text-[11px]">Developer Utilities</div>
-          <ul class="space-y-2 text-slate-400">
-            <li><a href="/tools/mock-api-response" class="hover:text-cyan-300 transition-colors">Mock Status Codes</a></li>
-            <li><a href="/tools/simulate-latency" class="hover:text-cyan-300 transition-colors">Simulate Network Delay</a></li>
-            <li><a href="/tools/verify-signatures" class="hover:text-cyan-300 transition-colors">HMAC Signature Verifier</a></li>
-            <li><a href="/tools/replay-to-localhost" class="hover:text-cyan-300 transition-colors">Localhost Replay Proxy</a></li>
-            <li><a href="/tools/inbound-email-testing" class="hover:text-cyan-300 transition-colors">Inbound Email Tester</a></li>
-          </ul>
-        </div>
+    let activeHeroKey = "stripe";
 
-        <!-- Column 4: Free Alternatives -->
-        <div class="space-y-3 font-mono text-xs">
-          <div class="font-bold uppercase tracking-wider text-slate-200 text-[11px]">Free Alternatives</div>
-          <ul class="space-y-2 text-slate-400">
-            <li><a href="/vs/webhook-site" class="hover:text-cyan-300 transition-colors">Webhook.site Alternative</a></li>
-            <li><a href="/vs/ngrok" class="hover:text-cyan-300 transition-colors">Ngrok Alternative Free</a></li>
-            <li><a href="/vs/requestbin" class="hover:text-cyan-300 transition-colors">RequestBin Alternative</a></li>
-            <li><a href="/vs/hookdeck" class="hover:text-cyan-300 transition-colors">Hookdeck Alternative</a></li>
-            <li><a href="/vs/beeceptor" class="hover:text-cyan-300 transition-colors">Beeceptor Alternative</a></li>
-          </ul>
-        </div>
+    document.querySelectorAll(".hero-demo-tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const key = tab.getAttribute("data-demo");
+        if (!key || !HERO_DEMOS[key]) return;
+        activeHeroKey = key;
 
-        <!-- Column 5: Resources -->
-        <div class="space-y-3 font-mono text-xs">
-          <div class="font-bold uppercase tracking-wider text-slate-200 text-[11px]">Resources</div>
-          <ul class="space-y-2 text-slate-400">
-            <li><a href="/docs" class="hover:text-cyan-300 transition-colors">Integration Guides</a></li>
-            <li><a href="/faq" class="hover:text-cyan-300 transition-colors">PAA Questions &amp; FAQ</a></li>
-            <li><a href="/sitemap.xml" class="hover:text-cyan-300 transition-colors">XML Sitemap</a></li>
-            <li><a href="/app" class="text-cyan-400 hover:text-cyan-300 font-semibold transition-colors">Launch Workbench &rarr;</a></li>
-          </ul>
-        </div>
+        document.querySelectorAll(".hero-demo-tab").forEach((t) => {
+          t.classList.remove("bg-zinc-800", "text-white", "border-zinc-700");
+          t.classList.add("text-zinc-400", "border-transparent");
+        });
+        tab.classList.add("bg-zinc-800", "text-white", "border-zinc-700");
+        tab.classList.remove("text-zinc-400", "border-transparent");
 
-      </div>
+        const demo = HERO_DEMOS[key];
+        const statusEl = document.getElementById("hero-status-pill");
+        const latencyEl = document.getElementById("hero-latency-text");
+        const ctEl = document.getElementById("hero-content-type");
+        const sigEl = document.getElementById("hero-sig-header");
+        const jsonDisplay = document.getElementById("hero-json-display");
 
-      <!-- Bottom Bar -->
-      <div class="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono text-slate-500">
-        <div>&copy; 2026 SafeWebhook (safewebhook.com) &bull; Free Webhook Tool Without Registration &bull; Zero Server Storage</div>
-        <div class="flex items-center gap-4">
-          <a href="/docs" class="hover:text-slate-300">Docs</a>
-          <a href="/faq" class="hover:text-slate-300">FAQ</a>
-          <a href="/sitemap.xml" class="hover:text-slate-300">Sitemap</a>
-        </div>
-      </div>
-    </div>
-  </footer>
+        if (statusEl) statusEl.textContent = demo.status;
+        if (latencyEl) latencyEl.textContent = demo.latency;
+        if (ctEl) ctEl.textContent = demo.contentType;
+        if (sigEl) sigEl.textContent = demo.sigHeader;
+        if (jsonDisplay) jsonDisplay.innerHTML = demo.html;
+      });
+    });
+
+    const copyBtn = document.getElementById("hero-copy-json");
+    if (copyBtn) {
+      copyBtn.addEventListener("click", async () => {
+        const demo = HERO_DEMOS[activeHeroKey];
+        if (!demo) return;
+        try {
+          await navigator.clipboard.writeText(demo.rawJson);
+          copyBtn.textContent = "Copied!";
+          setTimeout(() => {
+            copyBtn.textContent = "Copy JSON";
+          }, 2000);
+        } catch (e) {}
+      });
+    }
+
+    const jsonDisplayEl = document.getElementById("hero-json-display");
+    if (jsonDisplayEl && HERO_DEMOS.stripe) {
+      jsonDisplayEl.innerHTML = HERO_DEMOS.stripe.html;
+    }
+
+    // Homepage FAQ Accordion Toggle
+    document.querySelectorAll(".home-faq-toggle").forEach((button) => {
+      button.addEventListener("click", () => {
+        const item = button.closest(".home-faq-item");
+        const answer = item?.querySelector(".home-faq-answer");
+        const arrow = item?.querySelector(".home-faq-arrow");
+        const isExpanded = button.getAttribute("aria-expanded") === "true";
+
+        if (answer) {
+          if (isExpanded) {
+            answer.classList.add("hidden");
+            button.setAttribute("aria-expanded", "false");
+            if (arrow)
+              arrow.classList.remove(
+                "rotate-180",
+                "text-indigo-600",
+                "dark:text-indigo-400",
+              );
+          } else {
+            answer.classList.remove("hidden");
+            button.setAttribute("aria-expanded", "true");
+            if (arrow)
+              arrow.classList.add(
+                "rotate-180",
+                "text-indigo-600",
+                "dark:text-indigo-400",
+              );
+          }
+        }
+      });
+    });
+  </script>
+
+  <style is:global>
+    /* 1. Hero Title High Contrast Text */
+    .hero-title-text {
+      color: #ffffff !important;
+    }
+    html.light .hero-title-text,
+    html[data-theme="bright"] .hero-title-text {
+      color: #0f172a !important;
+    }
+
+    /* 2. Hero Gradient Text */
+    .hero-gradient-text {
+      background-image: linear-gradient(
+        135deg,
+        #818cf8 0%,
+        #a78bfa 50%,
+        #38bdf8 100%
+      ) !important;
+      -webkit-background-clip: text !important;
+      background-clip: text !important;
+      -webkit-text-fill-color: transparent !important;
+      color: transparent !important;
+      display: inline-block;
+    }
+    html.light .hero-gradient-text,
+    html[data-theme="bright"] .hero-gradient-text {
+      background-image: linear-gradient(
+        135deg,
+        #4f46e5 0%,
+        #7c3aed 50%,
+        #0284c7 100%
+      ) !important;
+      -webkit-background-clip: text !important;
+      background-clip: text !important;
+      -webkit-text-fill-color: transparent !important;
+      color: transparent !important;
+    }
+
+    /* 3. Terminal JSON Syntax Highlighting Tokens */
+    .json-key {
+      color: #818cf8 !important;
+      font-weight: 600 !important;
+    }
+    .json-str {
+      color: #34d399 !important;
+      font-weight: normal !important;
+    }
+    .json-num {
+      color: #c084fc !important;
+      font-weight: 600 !important;
+    }
+    .json-bool {
+      color: #f472b6 !important;
+      font-weight: 600 !important;
+    }
+    .json-null {
+      color: #94a3b8 !important;
+    }
+  </style>
 </Layout>

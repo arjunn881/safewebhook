@@ -1,148 +1,289 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
 @import "tailwindcss";
 
-@layer base {
-  :root {
-    color-scheme: dark;
-    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
-  }
+@custom-variant dark (&:where([data-theme="obsidian"], [data-theme="dark"], [data-theme="midnight"], .dark, .dark *));
 
-  html {
-    scroll-behavior: smooth;
-    background-color: #020617; /* slate-950 */
-    color: #f8fafc; /* slate-50 */
-    font-family: var(--font-sans);
-    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
-  }
+/* ═══════════════════════════════════════════════════════════════════════
+   1. GLOBAL THEME DESIGN TOKENS
+   ═══════════════════════════════════════════════════════════════════════ */
 
-  body {
-    background-color: #020617;
-    color: #f8fafc;
-    min-height: 100vh;
-    overflow-x: hidden;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    font-family: var(--font-sans);
-  }
-
-  code, pre, kbd, samp {
-    font-family: var(--font-mono);
-  }
+/* DEFAULT DARK (Obsidian) - Linear / Vercel Deep Indigo & Obsidian */
+:root {
+  color-scheme: dark;
+  --font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  
+  --bg-base: #080b11;
+  --bg-surface: #0f1523;
+  --bg-elevated: #161f33;
+  --border-subtle: #1e293b;
+  --border-muted: #334155;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-primary: #6366f1;
+  --accent-secondary: #06b6d4;
+  --brand-blue: #6366f1;
+  --hero-title-color: #ffffff;
+  --hero-gradient: linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #38bdf8 100%);
+  --hero-glow: radial-gradient(1100px circle at 50% -10%, rgba(99, 102, 241, 0.18), rgba(6, 182, 212, 0.08), transparent 70%);
 }
 
-/* Custom scrollbars */
+/* BRIGHT (LIGHT) MODE - Ultra-Clean Slate with Deep Indigo & Violet Accents (Linear/Vercel style) */
+html[data-theme="bright"], html[data-theme="light"], html.light {
+  color-scheme: light;
+  --bg-base: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f1f5f9;
+  --border-subtle: #e2e8f0;
+  --border-muted: #cbd5e1;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --accent-primary: #4f46e5;
+  --accent-secondary: #0284c7;
+  --brand-blue: #4f46e5;
+  --hero-title-color: #0f172a;
+  --hero-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #0284c7 100%);
+  --hero-glow: radial-gradient(1100px circle at 50% -10%, rgba(79, 70, 229, 0.08), rgba(2, 132, 199, 0.04), transparent 70%);
+}
+
+/* MIDNIGHT (Deep Indigo & Violet) */
+html[data-theme="midnight"] {
+  color-scheme: dark;
+  --bg-base: #05070e;
+  --bg-surface: #0b0e1a;
+  --bg-elevated: #11162a;
+  --border-subtle: #1c223c;
+  --border-muted: #2d375e;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-primary: #818cf8;
+  --accent-secondary: #c084fc;
+  --brand-blue: #818cf8;
+  --hero-title-color: #ffffff;
+  --hero-gradient: linear-gradient(135deg, #818cf8 0%, #c084fc 50%, #e879f9 100%);
+  --hero-glow: radial-gradient(1100px circle at 50% -10%, rgba(129, 140, 248, 0.18), rgba(192, 132, 252, 0.1), transparent 70%);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   2. BASE STYLES & TRANSITIONS
+   ═══════════════════════════════════════════════════════════════════════ */
+html {
+  scroll-behavior: smooth;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  letter-spacing: -0.015em;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-family: var(--font-sans);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+code, pre, kbd, samp {
+  font-family: var(--font-mono);
+}
+
+/* Custom Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #020617;
+  background: var(--bg-base);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: var(--border-subtle);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: var(--border-muted);
 }
 
-/* Futuristic Gradients & Ambient Lighting */
-.bg-radial-gradient {
-  background-image: radial-gradient(circle at 50% 0%, rgba(6, 182, 212, 0.15), transparent 70%);
+/* ═══════════════════════════════════════════════════════════════════════
+   3. DEVELOPER CARDS & GRIDS
+   ═══════════════════════════════════════════════════════════════════════ */
+.bg-developer-grid {
+  background-image: 
+    linear-gradient(to right, rgba(99, 102, 241, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(99, 102, 241, 0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
 }
 
-.bg-hero-glow {
-  background: radial-gradient(800px circle at 50% 15%, rgba(6, 182, 212, 0.14), rgba(168, 85, 247, 0.08), transparent 70%);
+html:not(.light) .bg-developer-grid {
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
 }
 
-.bg-mesh-pattern {
-  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-  background-size: 24px 24px;
+.bg-developer-radial {
+  background: var(--hero-glow);
 }
 
-.glow-cyan {
-  box-shadow: 0 0 50px -10px rgba(6, 182, 212, 0.35);
+/* ═══════════════════════════════════════════════════════════════════════
+   FULL-BLEED RESPONSIVE LANDING BACKGROUND WITH HEADER & GRADIENT
+   ═══════════════════════════════════════════════════════════════════════ */
+.landing-top-bg-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1050px;
+  max-height: 130vh;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
 }
 
-.glow-card:hover {
-  box-shadow: 0 0 40px -5px rgba(6, 182, 212, 0.2);
+.landing-top-bg-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  transition: opacity 0.3s ease;
 }
 
-/* High-Impact Micro-Animations */
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-8px);
-  }
+/* Dark Mode Background Mesh Image */
+.dark-only-img {
+  display: block;
+  opacity: 0.85;
+  filter: contrast(1.15) brightness(0.95);
 }
 
-@keyframes float-reverse {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(8px);
-  }
+.light-only-img {
+  display: none;
 }
 
-@keyframes pulse-subtle {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.85;
-    transform: scale(1.02);
-  }
+/* Bright / Light Mode Background Mesh Image */
+html.light .dark-only-img, html[data-theme="bright"] .dark-only-img {
+  display: none;
 }
 
-@keyframes radar-ripple {
-  0% {
-    transform: scale(0.8);
-    opacity: 0.8;
-  }
-  100% {
-    transform: scale(2.2);
-    opacity: 0;
-  }
+html.light .light-only-img, html[data-theme="bright"] .light-only-img {
+  display: block;
+  opacity: 1;
+  filter: contrast(1.05) saturate(1.1);
 }
 
-@keyframes border-shimmer {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
+.landing-top-bg-glow {
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(1200px circle at 50% 0%, rgba(99, 102, 241, 0.22), rgba(6, 182, 212, 0.12), transparent 75%),
+    linear-gradient(180deg, rgba(99, 102, 241, 0.12) 0%, rgba(6, 182, 212, 0.04) 25%, transparent 60%);
 }
 
-.animate-float {
-  animation: float 5s ease-in-out infinite;
+html.light .landing-top-bg-glow, html[data-theme="bright"] .landing-top-bg-glow {
+  background: 
+    radial-gradient(1200px circle at 50% 0%, rgba(79, 70, 229, 0.08), rgba(6, 182, 212, 0.04), transparent 75%),
+    linear-gradient(180deg, rgba(79, 70, 229, 0.05) 0%, rgba(6, 182, 212, 0.02) 25%, transparent 60%);
 }
 
-.animate-float-reverse {
-  animation: float-reverse 6s ease-in-out infinite;
+.landing-top-bg-mask {
+  position: absolute;
+  inset: 0;
+  background: 
+    linear-gradient(180deg, rgba(8, 11, 17, 0.2) 0%, rgba(8, 11, 17, 0.05) 25%, rgba(8, 11, 17, 0.6) 60%, var(--bg-base) 100%),
+    radial-gradient(ellipse 95% 75% at 50% 30%, transparent 0%, rgba(8, 11, 17, 0.35) 55%, var(--bg-base) 95%);
 }
 
-.animate-pulse-subtle {
-  animation: pulse-subtle 4s ease-in-out infinite;
+html.light .landing-top-bg-mask, html[data-theme="bright"] .landing-top-bg-mask {
+  background: 
+    linear-gradient(180deg, transparent 0%, transparent 50%, rgba(248, 250, 252, 0.5) 80%, var(--bg-base) 100%),
+    radial-gradient(ellipse 95% 75% at 50% 30%, transparent 0%, rgba(248, 250, 252, 0.1) 65%, var(--bg-base) 95%);
 }
 
-.animate-radar {
-  animation: radar-ripple 2.5s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+.dev-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.875rem;
+  transition: all 0.2s ease;
 }
 
-.border-gradient-shimmer {
-  background: linear-gradient(60deg, #06b6d4, #3b82f6, #a855f7, #06b6d4);
-  background-size: 300% 300%;
-  animation: border-shimmer 4s ease infinite;
+.dev-card:hover {
+  border-color: var(--border-muted);
+  background: var(--bg-elevated);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
 }
+
+html:not(.light) .dev-card:hover {
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1), 0 14px 35px -10px rgba(0, 0, 0, 0.5);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   4. HERO TYPOGRAPHY & GRADIENT CLASSES
+   ═══════════════════════════════════════════════════════════════════════ */
+.hero-title-text {
+  color: #ffffff !important;
+}
+
+html.light .hero-title-text, html[data-theme="bright"] .hero-title-text {
+  color: #0f172a !important;
+}
+
+.hero-gradient-text {
+  background-image: linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #38bdf8 100%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+  display: inline-block;
+}
+
+html.light .hero-gradient-text, html[data-theme="bright"] .hero-gradient-text {
+  background-image: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #0284c7 100%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   5. SYNTAX HIGHLIGHTING (TERMINAL CODE BLOCKS)
+   ═══════════════════════════════════════════════════════════════════════ */
+.json-key { color: #38bdf8 !important; font-weight: 600 !important; }
+.json-str { color: #34d399 !important; font-weight: normal !important; }
+.json-num { color: #c084fc !important; font-weight: 600 !important; }
+.json-bool { color: #f472b6 !important; font-weight: 600 !important; }
+.json-null { color: #94a3b8 !important; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   6. EXPERT SEGMENTED THEME SWITCHER
+   ═══════════════════════════════════════════════════════════════════════ */
+.theme-seg-btn {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.theme-seg-btn:hover {
+  transform: translateY(-0.5px);
+}
+
+.theme-seg-btn:active {
+  transform: scale(0.92);
+}
+
+.theme-seg-btn[aria-checked="true"] {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+

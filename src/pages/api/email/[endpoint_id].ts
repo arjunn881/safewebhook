@@ -1,7 +1,10 @@
 import type { APIRoute } from 'astro';
 import { broadcastWebhook } from '../../../lib/streams';
 import { saveWebhookPayload } from '../../../lib/kv_store';
+import { safeGetDatabase, insertWebhook } from '../../../lib/db';
 import { isValidEndpointId, CORS_HEADERS, jsonResponse, errorResponse } from '../../../lib/http';
+import { checkRateLimit, rateLimitResponse, rateLimitHeaders } from '../../../lib/rate_limit';
+import { env } from 'cloudflare:workers';
 
 export const prerender = false;
 
@@ -31,10 +34,23 @@ export const OPTIONS: APIRoute = async () => {
  */
 export const POST: APIRoute = async (context) => {
   const { params, request } = context;
+  const ctx = (context.locals as { cfContext?: ExecutionContext }).cfContext;
   const endpointId = params.endpoint_id;
 
   if (!isValidEndpointId(endpointId)) {
     return errorResponse('Invalid endpoint_id parameter', 400);
+  }
+
+  // Rate Limiting: 60 emails/min per endpoint
+  const kv = (env as unknown as Record<string, KVNamespace | undefined>)?.SESSION ?? null;
+  const rlResult = await checkRateLimit(kv, `rl:email:${endpointId}`, 60, 60_000);
+  if (!rlResult.allowed) {
+    try {
+      if (!request.bodyUsed) {
+        await request.text();
+      }
+    } catch {}
+    return rateLimitResponse(rlResult);
   }
 
   try {
@@ -42,7 +58,34 @@ export const POST: APIRoute = async (context) => {
     const contentType = request.headers.get('content-type') || '';
 
     if (contentType.includes('application/json')) {
-      emailData = (await request.json()) as EmailPayload;
+      const rawText = await request.text();
+      try {
+        emailData = (rawText ? JSON.parse(rawText) : {}) as EmailPayload;
+      } catch {
+        // Fallback for relaxed or PowerShell unquoted JSON: {from:alice@example.com,subject:Payment Received,text:Invoice paid}
+        const extracted: EmailPayload = {};
+        const fromMatch = rawText.match(/from\s*:\s*([^,}\n]+)/i);
+        const toMatch = rawText.match(/to\s*:\s*([^,}\n]+)/i);
+        const subjectMatch = rawText.match(/subject\s*:\s*([^,}\n]+)/i);
+        const textMatch = rawText.match(/text\s*:\s*([^,}\n]+)/i);
+        const htmlMatch = rawText.match(/html\s*:\s*([^,}\n]+)/i);
+
+        if (fromMatch || subjectMatch || textMatch) {
+          if (fromMatch) extracted.from = fromMatch[1].trim().replace(/^['"]|['"]$/g, '');
+          if (toMatch) extracted.to = toMatch[1].trim().replace(/^['"]|['"]$/g, '');
+          if (subjectMatch) extracted.subject = subjectMatch[1].trim().replace(/^['"]|['"]$/g, '');
+          if (textMatch) extracted.text = textMatch[1].trim().replace(/^['"]|['"]$/g, '');
+          if (htmlMatch) extracted.html = htmlMatch[1].trim().replace(/^['"]|['"]$/g, '');
+          emailData = extracted;
+        } else {
+          emailData = {
+            from: 'sender@example.com',
+            to: `${endpointId}@inbound.tester`,
+            subject: 'Raw Inbound Message',
+            text: rawText,
+          };
+        }
+      }
     } else if (contentType.includes('application/x-www-form-urlencoded') || contentType.includes('multipart/form-data')) {
       const formData = await request.formData();
       emailData = {
@@ -95,15 +138,39 @@ export const POST: APIRoute = async (context) => {
     };
 
     const deliveryResult = broadcastWebhook(endpointId!, broadcastEvent);
-    await saveWebhookPayload(endpointId!, broadcastEvent as any);
+    const kvWrite = saveWebhookPayload(endpointId!, broadcastEvent as any);
+    if (ctx?.waitUntil) {
+      ctx.waitUntil(kvWrite);
+    }
 
-    return jsonResponse({
-      success: true,
-      message: 'Email ingested and broadcast to stream',
-      delivered: deliveryResult.delivered,
-      recipients: deliveryResult.recipientCount,
-      event_id: broadcastEvent.id,
-    });
+    // Persist to Cloudflare D1 Database
+    const db = safeGetDatabase(context);
+    if (db) {
+      const d1Promise = insertWebhook(db, {
+        id: broadcastEvent.id,
+        endpoint_id: endpointId!,
+        timestamp: broadcastEvent.timestamp,
+        method: 'EMAIL',
+        headers: JSON.stringify(broadcastEvent.headers),
+        body: broadcastEvent.body,
+      }).catch((err) => console.error('[D1 Email Insert Error]', err));
+
+      if (ctx?.waitUntil) {
+        ctx.waitUntil(d1Promise);
+      }
+    }
+
+    return jsonResponse(
+      {
+        success: true,
+        message: 'Email ingested and broadcast to stream',
+        delivered: deliveryResult.delivered,
+        recipients: deliveryResult.recipientCount,
+        event_id: broadcastEvent.id,
+      },
+      200,
+      rateLimitHeaders(rlResult)
+    );
   } catch (err: unknown) {
     const error = err as Error;
     return errorResponse(`Failed to process email webhook: ${error.message}`, 400);

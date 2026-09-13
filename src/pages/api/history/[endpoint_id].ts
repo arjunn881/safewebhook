@@ -25,8 +25,14 @@ export const OPTIONS: APIRoute = async () => {
 };
 
 /**
- * GET Handler to retrieve the latest webhook entries for an endpoint
- * Seamlessly merges D1 persistent history and KV/in-memory edge events with deduplication
+ * GET Handler to retrieve webhook entries for an endpoint with pagination and filtering
+ * Query Params:
+ *  - page: number (default: 1)
+ *  - limit: number (default: 50, max: 100)
+ *  - method: string (e.g. "POST", "GET", "ALL")
+ *  - search: string (substring search across headers and body)
+ *  - from: string (ISO timestamp start)
+ *  - to: string (ISO timestamp end)
  */
 export const GET: APIRoute = async (context) => {
   const { params, url } = context;
@@ -42,8 +48,16 @@ export const GET: APIRoute = async (context) => {
   try {
     const urlObj = new URL(url);
     const limitParam = urlObj.searchParams.get('limit');
+    const pageParam = urlObj.searchParams.get('page');
+    const methodParam = urlObj.searchParams.get('method')?.toUpperCase();
+    const searchParam = urlObj.searchParams.get('search')?.toLowerCase();
+    const fromParam = urlObj.searchParams.get('from');
+    const toParam = urlObj.searchParams.get('to');
+
     const limit = limitParam ? parseInt(limitParam, 10) : 50;
     const safeLimit = Math.min(Math.max(1, isNaN(limit) ? 50 : limit), 100);
+    const page = pageParam ? parseInt(pageParam, 10) : 1;
+    const safePage = Math.max(1, isNaN(page) ? 1 : page);
 
     const itemsMap = new Map<string, WebhookHistoryItem>();
 
@@ -61,10 +75,10 @@ export const GET: APIRoute = async (context) => {
       });
     }
 
-    // 2. Fetch D1 Database records if bound
+    // 2. Fetch D1 Database records if bound (fetch up to 100 for merging/filtering)
     const db = safeGetDatabase(context);
     if (db) {
-      const rawRows = await getWebhookHistory(db, endpointId!, safeLimit);
+      const rawRows = await getWebhookHistory(db, endpointId!, 100);
       for (const row of rawRows) {
         if (!itemsMap.has(row.id)) {
           let parsedHeaders: Record<string, string> = {};
@@ -87,16 +101,51 @@ export const GET: APIRoute = async (context) => {
       }
     }
 
-    // Sort newest first and apply limit
-    const allItems = Array.from(itemsMap.values())
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      .slice(0, safeLimit);
+    // Filter items
+    let allItems = Array.from(itemsMap.values())
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-    const responseData: WebhookHistoryResponse = {
+    if (methodParam && methodParam !== 'ALL') {
+      allItems = allItems.filter((item) => item.method.toUpperCase() === methodParam);
+    }
+
+    if (fromParam) {
+      allItems = allItems.filter((item) => item.timestamp >= fromParam);
+    }
+
+    if (toParam) {
+      allItems = allItems.filter((item) => item.timestamp <= toParam);
+    }
+
+    if (searchParam) {
+      allItems = allItems.filter((item) => {
+        const bodyMatch = item.body?.toLowerCase().includes(searchParam) ?? false;
+        const headerMatch = Object.entries(item.headers).some(([k, v]) =>
+          k.toLowerCase().includes(searchParam) || String(v).toLowerCase().includes(searchParam)
+        );
+        const methodMatch = item.method.toLowerCase().includes(searchParam);
+        return bodyMatch || headerMatch || methodMatch;
+      });
+    }
+
+    const totalFiltered = allItems.length;
+    const startIndex = (safePage - 1) * safeLimit;
+    const paginatedItems = allItems.slice(startIndex, startIndex + safeLimit);
+
+    const responseData: WebhookHistoryResponse & {
+      page: number;
+      limit: number;
+      total: number;
+      total_pages: number;
+    } = {
       success: true,
       endpoint_id: endpointId!,
-      count: allItems.length,
-      webhooks: allItems,
+      count: paginatedItems.length,
+      total: totalFiltered,
+      page: safePage,
+      limit: safeLimit,
+      total_pages: Math.ceil(totalFiltered / safeLimit) || 1,
+      webhooks: paginatedItems,
     };
 
     return jsonResponse(responseData, 200);
@@ -145,5 +194,25 @@ export const DELETE: APIRoute = async (context) => {
       500
     );
   }
+};
+
+/**
+ * POST Handler fallback for clients/proxies that cannot issue cross-origin DELETE
+ */
+export const POST: APIRoute = async (context) => {
+  const urlObj = new URL(context.url);
+  const action = urlObj.searchParams.get('action');
+  if (action === 'clear' || action === 'delete') {
+    return DELETE(context);
+  }
+
+  try {
+    const body = await context.request.json() as Record<string, any>;
+    if (body?.action === 'clear' || body?.action === 'delete') {
+      return DELETE(context);
+    }
+  } catch {}
+
+  return errorResponse('Method Not Allowed. Use DELETE to clear history, or POST with ?action=clear.', 405);
 };
 

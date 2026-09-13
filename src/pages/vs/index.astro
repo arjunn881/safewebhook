@@ -1,0 +1,101 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { COMPETITORS } from '../../data/competitors';
+
+export const prerender = false;
+
+const competitors = Object.values(COMPETITORS);
+
+const pageTitle = 'SafeWebhook Alternatives & Competitor Comparisons (2026) | SafeWebhook';
+const pageDescription = 'Compare SafeWebhook vs Webhook.site, Ngrok, RequestBin, Hookdeck, Beeceptor, Smee.io, Pipedream, Postman Mock Server, and Cloudflare Tunnel.';
+
+const structuredSchema = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'CollectionPage',
+      name: pageTitle,
+      description: pageDescription,
+      url: Astro.url.href,
+      mainEntity: {
+        '@type': 'ItemList',
+        itemListElement: competitors.map((c, idx) => ({
+          '@type': 'ListItem',
+          position: idx + 1,
+          name: `SafeWebhook vs ${c.name}`,
+          url: `https://safewebhook.com/vs/${c.slug}`
+        }))
+      }
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://safewebhook.com/' },
+        { '@type': 'ListItem', position: 2, name: 'Alternatives', item: Astro.url.href }
+      ]
+    }
+  ]
+};
+---
+
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  canonicalURL={Astro.url.href}
+  keywords="webhook site alternative, ngrok alternative, requestbin alternative, hookdeck alternative, beeceptor free alternative, best webhook tester"
+  schema={structuredSchema}
+>
+  <Header activeNav="vs" subTitle="/ Compare" />
+
+  <main class="py-12 sm:py-16 flex-1 bg-developer-grid">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+      
+      <!-- Hero -->
+      <div class="text-center max-w-3xl mx-auto space-y-4">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 font-mono">
+          <span>Architectural Comparisons</span>
+        </div>
+        <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white font-sans">
+          SafeWebhook vs Alternatives
+        </h1>
+        <p class="text-base sm:text-lg text-slate-600 dark:text-zinc-400 leading-relaxed font-normal">
+          Detailed head-to-head comparisons of SafeWebhook against popular webhook inspection tools, local tunneling CLIs, and enterprise event gateways.
+        </p>
+      </div>
+
+      <!-- Competitors Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+        {competitors.map(comp => (
+          <a
+            href={`/vs/${comp.slug}`}
+            class="p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 hover:border-indigo-600 dark:hover:border-sky-500/50 hover:shadow-md transition-all group flex flex-col justify-between space-y-4"
+          >
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-sky-400 transition-colors font-sans">
+                  vs {comp.name}
+                </h2>
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 font-semibold">
+                  100% Free
+                </span>
+              </div>
+              <p class="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed line-clamp-3 font-normal">
+                {comp.summary}
+              </p>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 dark:border-zinc-800/60 flex items-center justify-between text-xs font-mono text-slate-500 dark:text-zinc-400 group-hover:text-slate-900 dark:group-hover:text-zinc-200">
+              <span>View Comparison Matrix &rarr;</span>
+              <span class="text-[10px] text-slate-400 dark:text-zinc-500">2026 Analysis</span>
+            </div>
+          </a>
+        ))}
+      </div>
+
+    </div>
+  </main>
+
+  <Footer />
+</Layout>

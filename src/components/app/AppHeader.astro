@@ -1,0 +1,86 @@
+---
+import { ic } from '../../scripts/app/icons.js';
+---
+
+<header id="swh-top">
+  <a class="swh-brand" href="/" aria-label="SafeWebhook home">
+    <span class="swh-logo">SW</span>
+    <span class="swh-hide-md">
+      <span class="swh-brand-name">SafeWebhook</span>
+      <span class="swh-brand-sub">Workspace</span>
+    </span>
+  </a>
+
+  <div class="swh-urlbar">
+    <span class="swh-urlbar-tag" title="Every HTTP method is accepted">ANY</span>
+    <input id="swh-url" readonly value="Preparing endpoint…" aria-label="Your unique webhook URL" spellcheck="false" />
+    <button id="swh-copy-url" class="swh-b swh-b--sm" title="Copy webhook URL — u">
+      <Fragment set:html={ic('copy', 13)} />
+      <span class="swh-hide-md">Copy</span>
+    </button>
+    <div class="swh-pop">
+      <button id="swh-url-more" class="swh-b swh-b--ico swh-b--sm" aria-haspopup="menu" aria-expanded="false" aria-label="More copy options">
+        <Fragment set:html={ic('chevronDown', 13)} />
+      </button>
+      <div id="swh-url-menu" class="swh-menu swh-menu--r hidden" role="menu">
+        <p class="swh-menu-label">Copy target</p>
+        <button class="swh-menu-item" role="menuitem" data-copy="url"><Fragment set:html={ic('link')} />Webhook URL<kbd>u</kbd></button>
+        <button class="swh-menu-item" role="menuitem" data-copy="id"><Fragment set:html={ic('hash')} />Endpoint ID only</button>
+        <button class="swh-menu-item" role="menuitem" data-copy="email"><Fragment set:html={ic('mail')} />Inbound email address</button>
+        <button class="swh-menu-item" role="menuitem" data-copy="curl"><Fragment set:html={ic('terminal')} />Sample cURL command</button>
+        <button class="swh-menu-item" role="menuitem" data-copy="fetch"><Fragment set:html={ic('code')} />fetch() snippet</button>
+        <div class="swh-menu-sep"></div>
+        <button class="swh-menu-item" role="menuitem" data-open="endpoints"><Fragment set:html={ic('server')} />Switch endpoint</button>
+        <button class="swh-menu-item" role="menuitem" id="swh-new-ep"><Fragment set:html={ic('plus')} />New random endpoint<kbd>n</kbd></button>
+      </div>
+    </div>
+  </div>
+
+  <span id="swh-conn" class="swh-pill" title="Live delivery channel">
+    <i id="swh-conn-dot" class="swh-dot"></i>
+    <span id="swh-conn-text">Connecting</span>
+  </span>
+  <span id="swh-rate" class="swh-pill swh-hide-lg" title="Requests received in the last 60 seconds">0/min</span>
+
+  <button id="swh-pause" class="swh-b swh-b--line" aria-pressed="false" title="Pause or resume the live feed — space">
+    <Fragment set:html={ic('pause')} />
+    <span id="swh-pause-text" class="swh-hide-md">Pause</span>
+  </button>
+
+  <button id="swh-cmd" class="swh-b swh-b--line swh-hide-md" title="Open the command palette">
+    <Fragment set:html={ic('command', 13)} />K
+  </button>
+
+  <div class="swh-pop">
+    <button id="swh-tools" class="swh-b swh-b--line" aria-haspopup="menu" aria-expanded="false">
+      <Fragment set:html={ic('sliders')} />
+      <span class="swh-hide-md">Tools</span>
+    </button>
+    <div id="swh-tools-menu" class="swh-menu swh-menu--r hidden" role="menu">
+      <p class="swh-menu-label">Endpoint behaviour</p>
+      <button class="swh-menu-item" role="menuitem" data-open="respond"><Fragment set:html={ic('zap')} />Response builder</button>
+      <button class="swh-menu-item" role="menuitem" data-open="workflow"><Fragment set:html={ic('workflow')} />Forwarding &amp; alerts</button>
+      <p class="swh-menu-label">Send &amp; inspect</p>
+      <button class="swh-menu-item" role="menuitem" data-open="compose"><Fragment set:html={ic('beaker')} />Request composer</button>
+      <button class="swh-menu-item" role="menuitem" data-open="mock"><Fragment set:html={ic('sparkle')} />Mock event library<kbd>m</kbd></button>
+      <button class="swh-menu-item" role="menuitem" data-open="stats"><Fragment set:html={ic('activity')} />Endpoint analytics</button>
+      <button class="swh-menu-item" role="menuitem" data-open="monitor"><Fragment set:html={ic('globe')} />Uptime &amp; TLS check</button>
+      <p class="swh-menu-label">Data</p>
+      <button class="swh-menu-item" role="menuitem" data-open="forward"><Fragment set:html={ic('terminal')} />Forward to localhost</button>
+      <button class="swh-menu-item" role="menuitem" data-open="import"><Fragment set:html={ic('upload')} />Import session</button>
+      <div class="swh-menu-sep"></div>
+      <button class="swh-menu-item" role="menuitem" data-open="keys"><Fragment set:html={ic('keyboard')} />Keyboard shortcuts<kbd>?</kbd></button>
+      <a class="swh-menu-item" role="menuitem" href="/docs"><Fragment set:html={ic('book')} />Documentation</a>
+    </div>
+  </div>
+
+  <button id="swh-notify" class="swh-b swh-b--ico swh-b--line swh-hide-lg" aria-pressed="false" title="Notify me when a request arrives">
+    <Fragment set:html={ic('bell')} />
+  </button>
+
+  <div class="swh-seg swh-hide-md" role="radiogroup" aria-label="Colour theme">
+    <button class="swh-theme" data-theme="bright" role="radio" aria-checked="false" title="Bright" aria-label="Bright theme"><Fragment set:html={ic('sun', 14)} /></button>
+    <button class="swh-theme" data-theme="obsidian" role="radio" aria-checked="true" title="Obsidian" aria-label="Obsidian theme"><Fragment set:html={ic('moon', 14)} /></button>
+    <button class="swh-theme" data-theme="midnight" role="radio" aria-checked="false" title="Midnight" aria-label="Midnight theme"><Fragment set:html={ic('sparkle', 14)} /></button>
+  </div>
+</header>

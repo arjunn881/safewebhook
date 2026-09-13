@@ -1,6 +1,55 @@
+# SafeWebhook robots.txt
+# Allows search engine crawlers, IndexNow, and AI answer engines
+
 User-agent: *
 Allow: /
-Disallow: /app
-Disallow: /api/
+Disallow: /api/r/
+Disallow: /api/in/
+Disallow: /api/session/
 
+# Explicitly permit AI search and answer engine crawlers (GEO / AEO)
+User-agent: GPTBot
+Allow: /
+Disallow: /api/r/
+Disallow: /api/in/
+Disallow: /api/session/
+
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /api/r/
+Disallow: /api/in/
+Disallow: /api/session/
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /api/r/
+Disallow: /api/in/
+Disallow: /api/session/
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /api/r/
+Disallow: /api/in/
+Disallow: /api/session/
+
+User-agent: Google-Extended
+Allow: /
+Disallow: /api/r/
+Disallow: /api/in/
+Disallow: /api/session/
+
+User-agent: Applebot-Extended
+Allow: /
+Disallow: /api/r/
+Disallow: /api/in/
+Disallow: /api/session/
+
+User-agent: CCBot
+Allow: /
+Disallow: /api/r/
+Disallow: /api/in/
+Disallow: /api/session/
+
+# Authoritative XML Sitemap and RSS Feeds
 Sitemap: https://safewebhook.com/sitemap.xml
+

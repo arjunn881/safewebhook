@@ -1,0 +1,55 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+export const prerender = false;
+---
+
+<Layout
+  title="404 — Page Not Found | SafeWebhook"
+  description="The requested page or endpoint could not be found on SafeWebhook."
+  robots="noindex, nofollow"
+>
+  <Header subTitle="/ 404 Not Found" />
+
+  <main class="min-h-[calc(100vh-200px)] flex items-center justify-center px-4 py-16 sm:px-6 lg:px-8 bg-developer-grid flex-1">
+    <div class="max-w-md w-full text-center space-y-6">
+      
+      <!-- Terminal Status Pill -->
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-zinc-900 border border-blue-200 dark:border-zinc-800 text-xs font-mono text-slate-700 dark:text-zinc-400">
+        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+        <span>HTTP Status 404 &bull; Resource Not Found</span>
+      </div>
+
+      <!-- Main Display -->
+      <div class="space-y-3">
+        <h1 class="text-6xl sm:text-7xl font-mono font-extrabold text-slate-900 dark:text-white tracking-tight">404</h1>
+        <h2 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-zinc-200 font-sans">Page or Endpoint Not Found</h2>
+        <p class="text-slate-600 dark:text-zinc-400 text-xs sm:text-sm leading-relaxed max-w-sm mx-auto font-normal">
+          The requested route doesn't exist on the edge. If you are trying to send a webhook, make sure your URL format is <code class="text-indigo-600 dark:text-sky-300 font-mono">/api/r/:endpoint_id</code>.
+        </p>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+        <a
+          href="/app"
+          class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 shadow-sm shadow-indigo-500/20 text-white transition-colors shadow-sm"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+          <span>Open Webhook Workbench</span>
+        </a>
+        <a
+          href="/docs"
+          class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 text-slate-800 dark:text-zinc-300 transition-colors"
+        >
+          <span>Read API Documentation</span>
+        </a>
+      </div>
+
+    </div>
+  </main>
+
+  <Footer />
+</Layout>

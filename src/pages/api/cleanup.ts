@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { safeGetDatabase, purgeOldWebhooks } from '../../lib/db';
 import { jsonResponse, errorResponse, CORS_HEADERS } from '../../lib/http';
 import type { CleanupResponse, Env } from '../../types/database';
+import { env } from 'cloudflare:workers';
 
 export const prerender = false;
 
@@ -25,9 +26,8 @@ async function handleCleanup(context: Parameters<APIRoute>[0]): Promise<Response
 
   try {
     // 1. Security Check: If CRON_SECRET is configured, enforce token authorization
-    const env = (context.locals?.runtime?.env as Env | undefined) ||
-      (globalThis as unknown as { env?: Env }).env;
-    const cronSecret = env?.CRON_SECRET;
+    const cfEnv = env as unknown as Env;
+    const cronSecret = cfEnv?.CRON_SECRET;
 
     if (cronSecret) {
       const authHeader = request.headers.get('Authorization');

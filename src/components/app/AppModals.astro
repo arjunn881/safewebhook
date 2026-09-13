@@ -1,0 +1,312 @@
+---
+import Modal from './Modal.astro';
+import { ic } from '../../scripts/app/icons.js';
+
+const LANGS = [
+  ['curl', 'cURL'], ['js', 'JavaScript'], ['node', 'Node'], ['python', 'Python'],
+  ['go', 'Go'], ['php', 'PHP'], ['ruby', 'Ruby'], ['rust', 'Rust'], ['csharp', 'C#'], ['java', 'Java'],
+];
+
+/* Kept in frontmatter: a bare `{` in markup is parsed as a JS expression. */
+const DEFAULT_RESPONSE = '{"success":true,"message":"Webhook received"}';
+---
+
+<Modal id="respond" title="Response builder" icon="zap" sub="Choose exactly what your endpoint returns to the sender — status, headers, body and artificial latency.">
+  <div class="swh-chips" id="swh-resp-presets">
+    <button class="swh-chip" data-preset="ok">200 OK</button>
+    <button class="swh-chip" data-preset="created">201 CREATED</button>
+    <button class="swh-chip" data-preset="accepted">202 ACCEPTED</button>
+    <button class="swh-chip" data-preset="bad">400 BAD REQUEST</button>
+    <button class="swh-chip" data-preset="unauth">401 UNAUTHORIZED</button>
+    <button class="swh-chip" data-preset="server">500 ERROR</button>
+    <button class="swh-chip" data-preset="slow">SLOW 3s</button>
+  </div>
+  <div class="swh-row2">
+    <div class="swh-f">
+      <label for="swh-resp-status">Status code</label>
+      <input id="swh-resp-status" class="swh-in mono" type="number" min="100" max="599" value="200" />
+    </div>
+    <div class="swh-f">
+      <label for="swh-resp-ct">Content-Type</label>
+      <select id="swh-resp-ct" class="swh-sel">
+        <option value="application/json">application/json</option>
+        <option value="text/plain">text/plain</option>
+        <option value="text/html">text/html</option>
+        <option value="application/xml">application/xml</option>
+      </select>
+    </div>
+  </div>
+  <div class="swh-f">
+    <label for="swh-resp-delay">Simulated latency — <span id="swh-resp-delay-v" class="mono">0 ms</span></label>
+    <input id="swh-resp-delay" type="range" min="0" max="10000" step="100" value="0" style="accent-color:var(--accent-primary)" />
+    <p class="swh-hint">Useful for testing sender timeouts and retry behaviour. Capped at 10 s by the edge.</p>
+  </div>
+  <div class="swh-f">
+    <label for="swh-resp-body">Response body</label>
+    <textarea id="swh-resp-body" class="swh-ta" spellcheck="false" set:text={DEFAULT_RESPONSE}></textarea>
+    <div class="swh-fr">
+      <button id="swh-resp-fmt" class="swh-b swh-b--sm swh-b--line">Format JSON</button>
+      <span id="swh-resp-valid" class="swh-hint"></span>
+    </div>
+  </div>
+  <div class="swh-f">
+    <span class="swh-lb">Extra response headers</span>
+    <div id="swh-resp-headers" class="swh-fc"></div>
+    <button id="swh-resp-addh" class="swh-b swh-b--sm swh-b--line" style="align-self:flex-start"><Fragment set:html={ic('plus', 12)} />Add header</button>
+  </div>
+  <p class="swh-hint">
+    Per-request overrides also work without saving: append <code class="mono">?status=422&amp;delay=500</code> to the webhook URL.
+  </p>
+  <div class="swh-modal-f" slot="footer">
+    <button class="swh-b" data-close>Cancel</button>
+    <button id="swh-resp-save" class="swh-b swh-b--pri"><Fragment set:html={ic('check', 13)} />Save response</button>
+  </div>
+</Modal>
+<Modal id="workflow" title="Forwarding &amp; alerts" icon="workflow" sub="Relay every captured request onward, and get pinged in Slack or Discord when one lands.">
+  <label class="swh-sw"><input type="checkbox" id="swh-wf-on" /><span>Enable this workflow<small>Rules run at the edge as soon as a request is captured.</small></span></label>
+  <div class="swh-f">
+    <label for="swh-wf-fwd">Auto-forward every request to</label>
+    <div class="swh-fr">
+      <input id="swh-wf-fwd" class="swh-in mono" type="url" placeholder="https://staging.example.com/webhooks/stripe" />
+      <button id="swh-wf-test" class="swh-b swh-b--line">Test</button>
+    </div>
+    <p class="swh-hint">Method, headers and body are replayed as received. Private, loopback and metadata addresses are blocked by the SSRF guard, so localhost targets need the tunnel script under Tools → Forward to localhost.</p>
+  </div>
+  <div class="swh-f">
+    <label for="swh-wf-notify">Notify a Slack or Discord webhook</label>
+    <input id="swh-wf-notify" class="swh-in mono" type="url" placeholder="https://hooks.slack.com/services/…" />
+    <p class="swh-hint">Posts a one-line summary — method, endpoint, payload size and detected signature provider.</p>
+  </div>
+  <div class="swh-modal-f" slot="footer">
+    <button class="swh-b" data-close>Cancel</button>
+    <button id="swh-wf-save" class="swh-b swh-b--pri"><Fragment set:html={ic('check', 13)} />Save workflow</button>
+  </div>
+</Modal>
+
+<Modal id="compose" title="Request composer" icon="beaker" size="swh-modal-box--wide" sub="Build and fire a request at your endpoint — optionally signed with a real HMAC so your verification code can be tested end to end.">
+  <div class="swh-row2">
+    <div class="swh-f">
+      <label for="swh-c-method">Method</label>
+      <select id="swh-c-method" class="swh-sel">
+        <option>POST</option><option>GET</option><option>PUT</option><option>PATCH</option><option>DELETE</option>
+      </select>
+    </div>
+    <div class="swh-f">
+      <label for="swh-c-target">Target</label>
+      <select id="swh-c-target" class="swh-sel">
+        <option value="self">My endpoint</option>
+        <option value="custom">Another URL…</option>
+      </select>
+    </div>
+  </div>
+  <div class="swh-f hidden" id="swh-c-url-wrap">
+    <label for="swh-c-url">Destination URL</label>
+    <input id="swh-c-url" class="swh-in mono" type="url" placeholder="https://example.com/hooks" />
+  </div>
+  <div class="swh-f">
+    <label for="swh-c-qs">Query string <span style="text-transform:none;font-weight:500">(optional)</span></label>
+    <input id="swh-c-qs" class="swh-in mono" placeholder="status=201&amp;delay=250" />
+  </div>
+  <div class="swh-f">
+    <span class="swh-lb">Headers</span>
+    <div id="swh-c-headers" class="swh-fc"></div>
+    <button id="swh-c-addh" class="swh-b swh-b--sm swh-b--line" style="align-self:flex-start"><Fragment set:html={ic('plus', 12)} />Add header</button>
+  </div>
+  <div class="swh-f">
+    <label for="swh-c-body">Body <span style="text-transform:none;font-weight:500">— {'{{uuid}}'}, {'{{now}}'}, {'{{iso}}'} and {'{{rand}}'} are expanded before sending</span></label>
+    <textarea id="swh-c-body" class="swh-ta" spellcheck="false" style="min-height:150px"></textarea>
+    <div class="swh-fr" style="flex-wrap:wrap">
+      <select id="swh-c-preset" class="swh-sel" style="width:auto">
+        <option value="">Load a template…</option>
+      </select>
+      <button id="swh-c-fmt" class="swh-b swh-b--sm swh-b--line">Format JSON</button>
+    </div>
+  </div>
+  <div class="swh-row2">
+    <div class="swh-f">
+      <label for="swh-c-sign">Sign the payload as</label>
+      <select id="swh-c-sign" class="swh-sel">
+        <option value="">No signature</option>
+        <option value="stripe">Stripe</option>
+        <option value="github">GitHub</option>
+        <option value="shopify">Shopify</option>
+        <option value="slack">Slack</option>
+        <option value="svix">Svix / Clerk</option>
+      </select>
+    </div>
+    <div class="swh-f">
+      <label for="swh-c-secret">Signing secret</label>
+      <input id="swh-c-secret" class="swh-in mono" type="text" placeholder="whsec_test_123" autocomplete="off" spellcheck="false" />
+    </div>
+  </div>
+  <div class="swh-row2">
+    <div class="swh-f">
+      <label for="swh-c-count">Repeat count</label>
+      <input id="swh-c-count" class="swh-in mono" type="number" min="1" max="20" value="1" />
+    </div>
+    <div class="swh-f">
+      <label for="swh-c-gap">Gap between sends (ms)</label>
+      <input id="swh-c-gap" class="swh-in mono" type="number" min="0" max="5000" step="50" value="250" />
+    </div>
+  </div>
+  <div id="swh-c-out" class="hidden"></div>
+  <div class="swh-modal-f" slot="footer">
+    <span id="swh-c-status" class="swh-hint swh-mla"></span>
+    <button class="swh-b" data-close>Close</button>
+    <button id="swh-c-send" class="swh-b swh-b--pri"><Fragment set:html={ic('send', 13)} />Send request</button>
+  </div>
+</Modal>
+
+<Modal id="mock" title="Mock event library" icon="sparkle" size="swh-modal-box--wide" sub="Fire a realistic, provider-shaped payload at your endpoint — including valid signature headers where the provider uses them.">
+  <div class="swh-fr">
+    <input id="swh-mock-secret" class="swh-in mono" placeholder="Optional signing secret — signs Stripe, GitHub, Shopify and Slack mocks" autocomplete="off" spellcheck="false" />
+  </div>
+  <div id="swh-mock-grid" class="swh-grid"></div>
+  <p class="swh-hint">Mocks are sent from your browser to your own endpoint, so they travel the exact same edge path as a real provider call.</p>
+</Modal>
+
+<Modal id="replay" title="Replay this request" icon="replay" sub="Re-send the captured request to any public HTTPS destination, with retries and full response capture.">
+  <div class="swh-f">
+    <label for="swh-rp-url">Destination URL</label>
+    <input id="swh-rp-url" class="swh-in mono" type="url" placeholder="https://api.example.com/webhooks" list="swh-rp-recent" />
+    <datalist id="swh-rp-recent"></datalist>
+    <p class="swh-hint">Private networks, loopback and cloud metadata addresses are refused by the SSRF guard.</p>
+  </div>
+  <div class="swh-row2">
+    <div class="swh-f">
+      <label for="swh-rp-headers">Headers to send</label>
+      <select id="swh-rp-headers" class="swh-sel">
+        <option value="all">All original headers</option>
+        <option value="min">Content-Type only</option>
+        <option value="none">No headers</option>
+      </select>
+    </div>
+    <div class="swh-f">
+      <label for="swh-rp-retry">Retries on 5xx</label>
+      <select id="swh-rp-retry" class="swh-sel">
+        <option value="0">None</option>
+        <option value="1" selected>1 retry</option>
+        <option value="2">2 retries</option>
+        <option value="3">3 retries</option>
+      </select>
+    </div>
+  </div>
+  <div id="swh-rp-out" class="hidden"></div>
+  <div class="swh-modal-f" slot="footer">
+    <button class="swh-b" data-close>Close</button>
+    <button id="swh-rp-send" class="swh-b swh-b--pri"><Fragment set:html={ic('send', 13)} />Send replay</button>
+  </div>
+</Modal>
+
+<Modal id="code" title="Integration snippets" icon="code" size="swh-modal-box--wide" sub="Copy a ready-to-run call to your endpoint in the language you actually use.">
+  <div class="swh-seg" id="swh-code-langs" role="tablist" style="flex-wrap:wrap">
+    {LANGS.map(([id, label], i) => <button data-lang={id} aria-selected={i === 0 ? 'true' : 'false'}>{label}</button>)}
+  </div>
+  <pre class="swh-code swh-code--wrap" style="max-height:46dvh"><code id="swh-code-out"></code></pre>
+  <div class="swh-modal-f" slot="footer">
+    <button class="swh-b" data-close>Close</button>
+    <button id="swh-code-copy" class="swh-b swh-b--pri"><Fragment set:html={ic('copy', 13)} />Copy snippet</button>
+  </div>
+</Modal>
+<Modal id="endpoints" title="Endpoints" icon="server" sub="Every endpoint you have used in this browser. Switching keeps each request log separate.">
+  <div class="swh-f">
+    <label for="swh-ep-name">Create or open an endpoint</label>
+    <div class="swh-fr">
+      <input id="swh-ep-name" class="swh-in mono" placeholder="team-staging-stripe" maxlength="64" autocomplete="off" spellcheck="false" />
+      <button id="swh-ep-create" class="swh-b swh-b--pri"><Fragment set:html={ic('plus', 13)} />Open</button>
+    </div>
+    <p class="swh-hint">1–64 characters: letters, numbers, dashes and underscores. Leave blank for a random id.</p>
+  </div>
+  <div id="swh-ep-list" class="swh-fc"></div>
+</Modal>
+
+<Modal id="stats" title="Endpoint analytics" icon="activity" sub="Aggregated from the edge store for this endpoint — independent of what this browser has captured.">
+  <div id="swh-stats-out" class="swh-fc"></div>
+  <div class="swh-modal-f" slot="footer">
+    <button class="swh-b" data-close>Close</button>
+    <button id="swh-stats-refresh" class="swh-b swh-b--line"><Fragment set:html={ic('refresh', 13)} />Refresh</button>
+  </div>
+</Modal>
+
+<Modal id="monitor" title="Uptime &amp; TLS check" icon="globe" sub="Ping any public URL from the Cloudflare edge and measure status, latency and TLS.">
+  <div class="swh-f">
+    <label for="swh-mon-url">URL to check</label>
+    <div class="swh-fr">
+      <input id="swh-mon-url" class="swh-in mono" type="url" placeholder="https://api.example.com/health" />
+      <select id="swh-mon-method" class="swh-sel" style="width:auto">
+        <option>GET</option><option>HEAD</option><option>POST</option>
+      </select>
+    </div>
+  </div>
+  <div id="swh-mon-out" class="hidden"></div>
+  <div class="swh-modal-f" slot="footer">
+    <button class="swh-b" data-close>Close</button>
+    <button id="swh-mon-run" class="swh-b swh-b--pri"><Fragment set:html={ic('zap', 13)} />Run check</button>
+  </div>
+</Modal>
+
+<Modal id="forward" title="Forward to localhost" icon="terminal" size="swh-modal-box--wide" sub="No tunnel, no ngrok. This script streams captured requests straight into your local server.">
+  <div class="swh-fr">
+    <div class="swh-f swh-grow">
+      <label for="swh-fwd-target">Local target</label>
+      <input id="swh-fwd-target" class="swh-in mono" value="http://localhost:3000/api/webhooks" spellcheck="false" />
+    </div>
+    <div class="swh-seg" id="swh-fwd-langs" role="tablist" style="align-self:flex-end;height:36px">
+      <button data-lang="node" aria-selected="true">Node</button>
+      <button data-lang="bash" aria-selected="false">Bash</button>
+      <button data-lang="python" aria-selected="false">Python</button>
+    </div>
+  </div>
+  <pre class="swh-code swh-code--wrap" style="max-height:44dvh"><code id="swh-fwd-code"></code></pre>
+  <div class="swh-modal-f" slot="footer">
+    <button class="swh-b" data-close>Close</button>
+    <button id="swh-fwd-copy" class="swh-b swh-b--pri"><Fragment set:html={ic('copy', 13)} />Copy script</button>
+  </div>
+</Modal>
+<Modal id="import" title="Import a session" icon="upload" sub="Drop in a SafeWebhook export to inspect it offline — nothing is uploaded.">
+  <div id="swh-drop" role="button" tabindex="0" aria-label="Choose an export file to import">
+    <Fragment set:html={ic('upload', 22)} />
+    <p>Drop a <b>.json</b> or <b>.ndjson</b> file here</p>
+    <p class="swh-hint">…or click to browse. Plain arrays of events work too.</p>
+    <input id="swh-drop-input" type="file" accept=".json,.ndjson,.txt,application/json" class="hidden" />
+  </div>
+  <div class="swh-f">
+    <label for="swh-import-ta">Or paste JSON</label>
+    <textarea id="swh-import-ta" class="swh-ta" placeholder='{"records":[…]}  ·  [{…},{…}]' spellcheck="false"></textarea>
+  </div>
+  <label class="swh-sw"><input type="checkbox" id="swh-import-replace" /><span>Replace the current log<small>Otherwise imported events are merged in and de-duplicated by id.</small></span></label>
+  <div class="swh-modal-f" slot="footer">
+    <button class="swh-b" data-close>Cancel</button>
+    <button id="swh-import-go" class="swh-b swh-b--pri"><Fragment set:html={ic('upload', 13)} />Import</button>
+  </div>
+</Modal>
+
+<Modal id="keys" title="Keyboard shortcuts" icon="keyboard" sub="Everything in the workspace is reachable without the mouse.">
+  <div id="swh-keys-out" class="swh-fc"></div>
+</Modal>
+
+<Modal id="confirm" title="Please confirm" icon="alert" size="swh-modal-box--slim">
+  <p id="swh-confirm-msg" style="font-size:13px;line-height:1.6;color:var(--text-secondary)"></p>
+  <div class="swh-modal-f" slot="footer">
+    <button class="swh-b" data-close>Cancel</button>
+    <button id="swh-confirm-ok" class="swh-b swh-b--pri">Confirm</button>
+  </div>
+</Modal>
+
+<div id="swh-pal" class="hidden" role="dialog" aria-modal="true" aria-label="Command palette">
+  <div class="swh-modal-bg" data-close></div>
+  <div class="swh-pal-box">
+    <div class="swh-pal-in">
+      <Fragment set:html={ic('search', 17)} />
+      <input id="swh-pal-q" placeholder="Search commands and requests…" autocomplete="off" spellcheck="false" aria-label="Command palette search" />
+      <kbd>esc</kbd>
+    </div>
+    <div id="swh-pal-list" role="listbox" aria-label="Commands"></div>
+    <div class="swh-pal-hint">
+      <span><kbd>↑</kbd><kbd>↓</kbd> move</span>
+      <span><kbd>↵</kbd> run</span>
+      <span><kbd>esc</kbd> close</span>
+      <span class="swh-mla">Type to search requests too</span>
+    </div>
+  </div>
+</div>

@@ -9,66 +9,118 @@ export interface Props {
   ogImage?: string;
   ogType?: 'website' | 'article';
   robots?: string;
+  schema?: Record<string, unknown> | Array<unknown>;
+  googleSiteVerification?: string;
 }
 
 const {
   title = 'SafeWebhook — Free Online Webhook Tester & No-Login Request Debugger',
   description = 'SafeWebhook is the instant free online webhook tester with zero signup. 100% client-side payload inspector, secure private webhook tester, and request bin alternative to test webhooks online.',
-  keywords = 'SafeWebhook, safewebhook.com, free webhook tester, online webhook debugger, test webhooks online, webhook listener online, inspect http requests, request bin alternative free, webhook tester no login, free webhook tool without registration, client side webhook inspector, secure private webhook tester, temporary webhook url creator, webhook.site free alternative, unlimited free webhook logger, stripe webhook tester online, shopify webhook debugger tool, github webhook simulation payload, test slack outgoing webhooks, cloudflare workers webhook capture, paypal webhook listener free',
+  keywords = 'SafeWebhook, safewebhook.com, free webhook tester, online webhook debugger, test webhooks online, webhook listener online, inspect http requests, request bin alternative free, webhook tester no login, client side webhook inspector, secure private webhook tester, temporary webhook url creator, webhook.site free alternative, unlimited free webhook logger, stripe webhook tester online, shopify webhook debugger tool, github webhook simulation payload, test slack outgoing webhooks, cloudflare workers webhook capture, paypal webhook listener free',
   canonicalURL,
   ogImage = '/images/hero-telemetry.jpg',
   ogType = 'website',
   robots = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+  schema,
+  googleSiteVerification = import.meta.env.GOOGLE_SITE_VERIFICATION || '',
 } = Astro.props;
 
 const siteUrl = Astro.site ? Astro.site.toString().replace(/\/$/, '') : (Astro.url ? Astro.url.origin : 'https://safewebhook.com');
 const canonical = canonicalURL || new URL(Astro.url.pathname, siteUrl).toString();
 const absoluteOgImage = ogImage.startsWith('http') ? ogImage : `${siteUrl}${ogImage}`;
 
-const structuredData = {
+const defaultStructuredData = {
   '@context': 'https://schema.org',
-  '@type': 'WebApplication',
-  name: 'SafeWebhook',
-  alternateName: 'SafeWebhook — Zero-Login Request Debugger & Client-Side Webhook Listener',
-  url: siteUrl,
-  description: description,
-  applicationCategory: 'DeveloperApplication',
-  operatingSystem: 'All',
-  keywords: keywords,
-  aggregateRating: {
-    '@type': 'AggregateRating',
-    ratingValue: '4.9',
-    reviewCount: '1240',
-    bestRating: '5',
-    worstRating: '1'
-  },
-  offers: {
-    '@type': 'Offer',
-    price: '0',
-    priceCurrency: 'USD',
-  },
-  featureList: [
-    'SafeWebhook Free Online Webhook Tester with zero signup required',
-    'No-Login Webhook Debugger for Stripe, GitHub, and Shopify',
-    '100% Client-Side Payload Inspector with live header breakdown',
-    'Private Local-Only Request Logging with zero persistent server storage',
-    'Custom HTTP Status Code & Response Simulator (200, 201, 400, 500)',
-    'Simulated Latency Engine (0-5000ms delay)',
-    '1-Click Request Replay to Localhost without Ngrok',
-    'Inbound Email Webhook Ingestion & Parser'
-  ],
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      '@id': `${siteUrl}/#website`,
+      url: siteUrl,
+      name: 'SafeWebhook',
+      description: description,
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: `${siteUrl}/integrations?q={search_term_string}`,
+        'query-input': 'required name=search_term_string'
+      }
+    },
+    {
+      '@type': 'Organization',
+      '@id': `${siteUrl}/#organization`,
+      name: 'SafeWebhook',
+      url: siteUrl,
+      logo: `${siteUrl}/favicon.svg`,
+      sameAs: ['https://github.com/safewebhook']
+    },
+    {
+      '@type': 'WebApplication',
+      '@id': `${siteUrl}/#webapp`,
+      name: 'SafeWebhook',
+      alternateName: 'SafeWebhook — Zero-Login Request Debugger & Client-Side Webhook Listener',
+      url: siteUrl,
+      description: description,
+      applicationCategory: 'DeveloperApplication',
+      operatingSystem: 'All',
+      keywords: keywords,
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: '4.9',
+        reviewCount: '1240',
+        bestRating: '5',
+        worstRating: '1'
+      },
+      offers: {
+        '@type': 'Offer',
+        price: '0',
+        priceCurrency: 'USD'
+      },
+      featureList: [
+        'SafeWebhook Free Online Webhook Tester with zero signup required',
+        'No-Login Webhook Debugger for Stripe, GitHub, Shopify, and OpenAI',
+        '100% Client-Side Payload Inspector with live header breakdown',
+        'Private Local-Only Request Logging with zero persistent server storage',
+        'Custom HTTP Status Code & Response Simulator (200, 201, 400, 500)',
+        'Simulated Latency Engine (0-5000ms delay)',
+        '1-Click Request Replay to Localhost without Ngrok',
+        'Inbound Email Webhook Ingestion & Parser'
+      ]
+    }
+  ]
 };
+
+const finalStructuredData = schema || defaultStructuredData;
 ---
 
 <!doctype html>
 <html lang="en" class="dark scroll-smooth">
   <head>
+    <!-- Google tag (gtag.js) -->
+    <script is:inline async src="https://www.googletagmanager.com/gtag/js?id=G-00WEF01D0Z"></script>
+    <script is:inline>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-00WEF01D0Z');
+    </script>
+
+    <!-- Resource Hints & Performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+
     <!-- Essential Meta Tags -->
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
     <meta name="generator" content={Astro.generator} />
+    <!-- Favicon & Touch Icons -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
     <link rel="canonical" href={canonical} />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <link rel="alternate" type="application/rss+xml" title="SafeWebhook Feed" href="/feed.xml" />
 
     <!-- Primary Meta Tags -->
     <title>{title}</title>
@@ -77,15 +129,20 @@ const structuredData = {
     <meta name="keywords" content={keywords} />
     <meta name="author" content="SafeWebhook" />
     <meta name="robots" content={robots} />
+    <meta name="rating" content="general" />
+    {googleSiteVerification && <meta name="google-site-verification" content={googleSiteVerification} />}
+
+    <!-- Generative Engine Optimization (GEO) & AEO Meta Hints -->
+    <meta name="ai-content-declaration" content="developer-documentation" />
+    <meta name="format-detection" content="telephone=no" />
 
     <!-- Mobile & Display Configurations -->
-    <meta name="theme-color" content="#020617" />
+    <meta name="theme-color" content="#070a12" />
     <meta name="color-scheme" content="dark" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="format-detection" content="telephone=no" />
 
-    <!-- Open Graph / Discord / Slack / Facebook -->
+    <!-- Open Graph / Facebook / LinkedIn -->
     <meta property="og:type" content={ogType} />
     <meta property="og:url" content={canonical} />
     <meta property="og:title" content={title} />
@@ -93,7 +150,7 @@ const structuredData = {
     <meta property="og:image" content={absoluteOgImage} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="SafeWebhook — Free Online Webhook Tester & Payload Inspector" />
+    <meta property="og:image:alt" content={title} />
     <meta property="og:site_name" content="SafeWebhook" />
     <meta property="og:locale" content="en_US" />
 
@@ -103,12 +160,29 @@ const structuredData = {
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={absoluteOgImage} />
-    <meta name="twitter:image:alt" content="SafeWebhook — Free Online Webhook Tester & Payload Inspector" />
+    <meta name="twitter:image:alt" content={title} />
 
     <!-- JSON-LD Structured Data Schema -->
-    <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredData)} />
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(finalStructuredData)} />
+
+    <!-- Immediate Theme Initialization Script (Zero-Flicker) -->
+    <script is:inline>
+      (function() {
+        try {
+          var theme = localStorage.getItem('safewebhook_theme') || 'obsidian';
+          document.documentElement.setAttribute('data-theme', theme);
+          if (theme === 'bright' || theme === 'light') {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.classList.add('light');
+          } else {
+            document.documentElement.classList.add('dark');
+            document.documentElement.classList.remove('light');
+          }
+        } catch(e) {}
+      })();
+    </script>
   </head>
-  <body class="bg-slate-950 text-slate-100 font-sans antialiased selection:bg-cyan-500/30 selection:text-cyan-200">
+  <body class="font-sans antialiased min-h-screen flex flex-col overflow-x-hidden" style="background-color: var(--bg-base); color: var(--text-primary);">
     <slot />
   </body>
 </html>

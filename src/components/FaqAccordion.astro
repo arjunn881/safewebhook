@@ -1,0 +1,410 @@
+---
+import { type FaqItem, type FaqCategory, FAQ_CATEGORIES } from '../data/faqs';
+
+export interface Props {
+  faqs: FaqItem[];
+  categories?: FaqCategory[];
+  activeCategory?: string;
+  showCategoryFilter?: boolean;
+  showSearch?: boolean;
+  defaultExpandedIndex?: number;
+}
+
+const {
+  faqs,
+  categories = FAQ_CATEGORIES,
+  activeCategory = 'all',
+  showCategoryFilter = true,
+  showSearch = true,
+  defaultExpandedIndex = 0
+} = Astro.props;
+---
+
+<div class="faq-container space-y-8 max-w-full" data-active-category={activeCategory}>
+  <!-- Search & Category Filters -->
+  {(showSearch || showCategoryFilter) && (
+    <div class="space-y-4">
+      {showSearch && (
+        <div class="relative max-w-2xl mx-auto">
+          <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-zinc-500">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            id="faq-search-input"
+            placeholder="Search questions, error codes (504, 401), platforms (Stripe, GitHub)..."
+            class="w-full pl-10 pr-10 py-3 text-sm rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm transition-all"
+            autocomplete="off"
+          />
+          <button
+            type="button"
+            id="faq-search-clear"
+            class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:text-zinc-500 dark:hover:text-zinc-300 hidden"
+            aria-label="Clear search"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {showCategoryFilter && (
+        <div class="flex items-center justify-center flex-wrap gap-2 pt-2">
+          <button
+            type="button"
+            data-category-target="all"
+            class={`category-filter-btn px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-all ${
+              activeCategory === 'all'
+                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/20'
+                : 'bg-slate-100 dark:bg-zinc-800/70 text-slate-700 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-800'
+            }`}
+          >
+            All Questions ({faqs.length})
+          </button>
+          {categories.map((cat) => {
+            const count = faqs.filter((f) => f.category === cat.slug).length;
+            if (count === 0) return null;
+            return (
+              <button
+                type="button"
+                data-category-target={cat.slug}
+                class={`category-filter-btn px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-all ${
+                  activeCategory === cat.slug
+                    ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/20'
+                    : 'bg-slate-100 dark:bg-zinc-800/70 text-slate-700 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-800'
+                }`}
+              >
+                {cat.shortTitle} ({count})
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  )}
+
+  <!-- Search Results Counter (Hidden by default) -->
+  <div id="faq-search-counter" class="text-center text-xs font-mono text-slate-500 dark:text-zinc-400 hidden">
+    Showing <span id="faq-match-count" class="font-bold text-slate-900 dark:text-white">0</span> matching questions
+  </div>
+
+  <!-- FAQ Accordion Items List -->
+  <div class="space-y-3.5 w-full" id="faq-accordion-list">
+    {faqs.map((faq, idx) => {
+      const isInitiallyOpen = idx === defaultExpandedIndex;
+      return (
+        <article
+          id={faq.id}
+          class="faq-card w-full rounded-xl border border-slate-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 overflow-hidden shadow-sm hover:border-indigo-500/30 dark:hover:border-zinc-700 transition-all scroll-mt-24"
+          data-category={faq.category}
+          data-keywords={faq.keywords.join(' ').toLowerCase()}
+          data-question={faq.question.toLowerCase()}
+          data-short-answer={faq.shortAnswer.toLowerCase()}
+        >
+          <!-- Accordion Header Row (Valid HTML: No nested button) -->
+          <div class="faq-header-row w-full px-5 sm:px-6 py-4 sm:py-4.5 flex items-center justify-between gap-4 hover:bg-slate-50 dark:hover:bg-zinc-800/30 transition-colors cursor-pointer group select-none">
+            <button
+              type="button"
+              class="faq-header-btn flex-1 text-left flex items-start sm:items-center justify-between gap-4 cursor-pointer"
+              aria-expanded={isInitiallyOpen ? 'true' : 'false'}
+              aria-controls={`answer-${faq.id}`}
+            >
+              <div class="space-y-1.5 pr-2">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider font-semibold bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/20">
+                    {faq.categoryName}
+                  </span>
+                  {faq.platform && (
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono capitalize font-medium bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20">
+                      {faq.platform}
+                    </span>
+                  )}
+                  {faq.isHomepageFeatured && (
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-500/20">
+                      High CTR
+                    </span>
+                  )}
+                </div>
+                <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  {faq.question}
+                </h2>
+              </div>
+            </button>
+            
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <button
+                type="button"
+                class="copy-anchor-btn p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                title="Copy link to this question"
+                data-anchor-id={faq.id}
+                aria-label={`Copy link to ${faq.question}`}
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+              </button>
+              <svg
+                class={`faq-arrow-icon w-5 h-5 text-slate-400 dark:text-zinc-500 transition-transform duration-200 pointer-events-none ${
+                  isInitiallyOpen ? 'rotate-180 text-indigo-600 dark:text-indigo-400' : ''
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+
+          <!-- Accordion Answer Body -->
+          <div
+            id={`answer-${faq.id}`}
+            class={`faq-answer-panel px-5 sm:px-6 pb-6 pt-3 border-t border-slate-100 dark:border-zinc-800/60 space-y-4 ${
+              isInitiallyOpen ? 'block' : 'hidden'
+            }`}
+          >
+            <!-- AEO Direct Answer Snippet Box (For AI Answer Engines & Fast Reading) -->
+            <div class="p-3.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-500/20 text-xs sm:text-sm text-slate-800 dark:text-indigo-200/90 leading-relaxed font-sans">
+              <div class="flex items-center gap-1.5 font-mono text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <span>Direct Answer (AEO / Fast Summary)</span>
+              </div>
+              <p class="font-medium text-slate-800 dark:text-zinc-200">{faq.shortAnswer}</p>
+            </div>
+
+            <!-- Detailed Answer Content -->
+            <div class="faq-detailed-content text-sm text-slate-600 dark:text-zinc-300 leading-relaxed space-y-3 font-normal prose dark:prose-invert max-w-none">
+              <Fragment set:html={faq.detailedAnswer} />
+            </div>
+
+            <!-- Question Tags / Keyword Metadata -->
+            <div class="pt-3 flex items-center justify-between flex-wrap gap-2 text-[11px] font-mono text-slate-400 dark:text-zinc-500 border-t border-slate-100 dark:border-zinc-800/40">
+              <div class="flex items-center gap-1 flex-wrap">
+                <span>Tags:</span>
+                {faq.keywords.slice(0, 3).map((kw) => (
+                  <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400">
+                    {kw}
+                  </span>
+                ))}
+              </div>
+              <a
+                href={`#${faq.id}`}
+                class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1 font-semibold"
+              >
+                <span>#{faq.id}</span>
+              </a>
+            </div>
+          </div>
+        </article>
+      );
+    })}
+  </div>
+
+  <!-- Empty Search State -->
+  <div id="faq-empty-state" class="hidden p-8 rounded-2xl border border-dashed border-slate-300 dark:border-zinc-800 text-center space-y-3 bg-slate-50 dark:bg-zinc-900/30">
+    <div class="w-12 h-12 rounded-full bg-slate-200 dark:bg-zinc-800 flex items-center justify-center mx-auto text-slate-500 dark:text-zinc-400">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    </div>
+    <h3 class="text-base font-bold text-slate-900 dark:text-white font-sans">No matching FAQ questions found</h3>
+    <p class="text-xs text-slate-600 dark:text-zinc-400 max-w-sm mx-auto">
+      Try searching for broader keywords like "Stripe", "headers", "signature", "replay", or "local".
+    </p>
+    <button
+      type="button"
+      id="faq-reset-filter-btn"
+      class="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-opacity"
+    >
+      Reset Filters &amp; View All
+    </button>
+  </div>
+</div>
+
+<script is:inline>
+  (function () {
+    const searchInput = document.getElementById('faq-search-input');
+    const searchClear = document.getElementById('faq-search-clear');
+    const searchCounter = document.getElementById('faq-search-counter');
+    const matchCountEl = document.getElementById('faq-match-count');
+    const emptyState = document.getElementById('faq-empty-state');
+    const resetBtn = document.getElementById('faq-reset-filter-btn');
+    const cards = document.querySelectorAll('.faq-card');
+    const categoryBtns = document.querySelectorAll('.category-filter-btn');
+
+    let currentCategory = 'all';
+    let searchQuery = '';
+
+    function filterFaqs() {
+      let visibleCount = 0;
+      const query = searchQuery.trim().toLowerCase();
+
+      cards.forEach((card) => {
+        const category = card.getAttribute('data-category') || '';
+        const question = card.getAttribute('data-question') || '';
+        const shortAnswer = card.getAttribute('data-short-answer') || '';
+        const keywords = card.getAttribute('data-keywords') || '';
+
+        const matchesCategory = currentCategory === 'all' || category === currentCategory;
+        const matchesSearch =
+          !query ||
+          question.includes(query) ||
+          shortAnswer.includes(query) ||
+          keywords.includes(query) ||
+          card.innerText.toLowerCase().includes(query);
+
+        if (matchesCategory && matchesSearch) {
+          card.classList.remove('hidden');
+          visibleCount++;
+        } else {
+          card.classList.add('hidden');
+        }
+      });
+
+      if (searchCounter && matchCountEl) {
+        if (query.length > 0 || currentCategory !== 'all') {
+          searchCounter.classList.remove('hidden');
+          matchCountEl.textContent = String(visibleCount);
+        } else {
+          searchCounter.classList.add('hidden');
+        }
+      }
+
+      if (emptyState) {
+        if (visibleCount === 0) {
+          emptyState.classList.remove('hidden');
+        } else {
+          emptyState.classList.add('hidden');
+        }
+      }
+    }
+
+    // Toggle Accordions (Clicking on header row toggles accordion)
+    document.querySelectorAll('.faq-header-row').forEach((row) => {
+      row.addEventListener('click', (e) => {
+        // If clicking copy button, don't toggle accordion
+        if (e.target.closest('.copy-anchor-btn')) return;
+
+        const card = row.closest('.faq-card');
+        if (!card) return;
+
+        const panel = card.querySelector('.faq-answer-panel');
+        const arrow = row.querySelector('.faq-arrow-icon');
+        const btn = row.querySelector('.faq-header-btn');
+        if (!panel) return;
+
+        const isCurrentlyOpen = !panel.classList.contains('hidden');
+
+        if (isCurrentlyOpen) {
+          panel.classList.add('hidden');
+          if (arrow) arrow.classList.remove('rotate-180', 'text-indigo-600', 'dark:text-indigo-400');
+          if (btn) btn.setAttribute('aria-expanded', 'false');
+        } else {
+          panel.classList.remove('hidden');
+          if (arrow) arrow.classList.add('rotate-180', 'text-indigo-600', 'dark:text-indigo-400');
+          if (btn) btn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    });
+
+    // Copy Anchor Links with Feedback
+    document.querySelectorAll('.copy-anchor-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const anchorId = btn.getAttribute('data-anchor-id');
+        if (!anchorId) return;
+
+        const url = window.location.origin + window.location.pathname + '#' + anchorId;
+        navigator.clipboard.writeText(url).then(() => {
+          const origHtml = btn.innerHTML;
+          btn.innerHTML = '<svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>';
+          setTimeout(() => {
+            btn.innerHTML = origHtml;
+          }, 2000);
+        }).catch(() => {});
+      });
+    });
+
+    // Search Input Listener
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        searchQuery = e.target.value;
+        if (searchClear) {
+          if (searchQuery.length > 0) {
+            searchClear.classList.remove('hidden');
+          } else {
+            searchClear.classList.add('hidden');
+          }
+        }
+        filterFaqs();
+      });
+    }
+
+    if (searchClear && searchInput) {
+      searchClear.addEventListener('click', () => {
+        searchInput.value = '';
+        searchQuery = '';
+        searchClear.classList.add('hidden');
+        filterFaqs();
+        searchInput.focus();
+      });
+    }
+
+    // Category Filter Buttons
+    categoryBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const target = btn.getAttribute('data-category-target') || 'all';
+        currentCategory = target;
+
+        categoryBtns.forEach((b) => {
+          b.classList.remove('bg-indigo-600', 'text-white', 'shadow-sm', 'shadow-indigo-500/20');
+          b.classList.add('bg-slate-100', 'dark:bg-zinc-800/70', 'text-slate-700', 'dark:text-zinc-300');
+        });
+
+        btn.classList.remove('bg-slate-100', 'dark:bg-zinc-800/70', 'text-slate-700', 'dark:text-zinc-300');
+        btn.classList.add('bg-indigo-600', 'text-white', 'shadow-sm', 'shadow-indigo-500/20');
+
+        filterFaqs();
+      });
+    });
+
+    if (resetBtn && searchInput) {
+      resetBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        searchQuery = '';
+        currentCategory = 'all';
+        if (searchClear) searchClear.classList.add('hidden');
+        categoryBtns.forEach((b) => {
+          if (b.getAttribute('data-category-target') === 'all') {
+            b.classList.add('bg-indigo-600', 'text-white');
+          } else {
+            b.classList.remove('bg-indigo-600', 'text-white');
+          }
+        });
+        filterFaqs();
+      });
+    }
+
+    // Handle initial hash in URL (deep link navigation)
+    if (window.location.hash) {
+      const targetId = window.location.hash.substring(1);
+      const targetEl = document.getElementById(targetId);
+      if (targetEl) {
+        const panel = targetEl.querySelector('.faq-answer-panel');
+        const arrow = targetEl.querySelector('.faq-arrow-icon');
+        const btn = targetEl.querySelector('.faq-header-btn');
+        if (panel) panel.classList.remove('hidden');
+        if (arrow) arrow.classList.add('rotate-180', 'text-indigo-600', 'dark:text-indigo-400');
+        if (btn) btn.setAttribute('aria-expanded', 'true');
+        setTimeout(() => {
+          targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 150);
+      }
+    }
+  })();
+</script>

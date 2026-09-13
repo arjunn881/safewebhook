@@ -1,0 +1,102 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { ERROR_GUIDES } from '../../data/errorGuides';
+
+export const prerender = false;
+
+const errorGuides = Object.values(ERROR_GUIDES);
+
+const pageTitle = 'Webhook HTTP Error Troubleshooting & Fixes | SafeWebhook';
+const pageDescription = 'Diagnose and fix webhook HTTP errors: 504 Gateway Timeout, 502 Bad Gateway, 500 Internal Server Error, 429 Too Many Requests, 400 Bad Request, and 401 Unauthorized.';
+
+const structuredSchema = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'CollectionPage',
+      name: pageTitle,
+      description: pageDescription,
+      url: Astro.url.href,
+      mainEntity: {
+        '@type': 'ItemList',
+        itemListElement: errorGuides.map((e, idx) => ({
+          '@type': 'ListItem',
+          position: idx + 1,
+          name: e.title,
+          url: `https://safewebhook.com/errors/${e.slug}`
+        }))
+      }
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://safewebhook.com/' },
+        { '@type': 'ListItem', position: 2, name: 'Error Guides', item: Astro.url.href }
+      ]
+    }
+  ]
+};
+---
+
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  canonicalURL={Astro.url.href}
+  keywords="webhook error codes, fix webhook 504 gateway timeout, debug webhook 502 bad gateway, fix webhook 500 error, webhook 429 rate limit fix, webhook 401 signature failed"
+  schema={structuredSchema}
+>
+  <Header activeNav="errors" subTitle="/ Errors" />
+
+  <main class="py-12 sm:py-16 flex-1 bg-developer-grid">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+      
+      <!-- Hero -->
+      <div class="text-center max-w-3xl mx-auto space-y-4">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20 font-mono">
+          <span>Troubleshooting Hub</span>
+        </div>
+        <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white font-sans">
+          Webhook HTTP Error Troubleshooting
+        </h1>
+        <p class="text-base sm:text-lg text-slate-600 dark:text-zinc-400 leading-relaxed font-normal">
+          Comprehensive root-cause analyses, provider retry schedules, and production-ready code fixes for all common webhook failure status codes.
+        </p>
+      </div>
+
+      <!-- Errors Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+        {errorGuides.map(guide => (
+          <a
+            href={`/errors/${guide.slug}`}
+            class="p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 hover:border-rose-500/50 hover:shadow-md transition-all group flex flex-col justify-between space-y-4"
+          >
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20">
+                  HTTP {guide.statusCode}
+                </span>
+                <span class="text-[11px] font-mono text-slate-400 dark:text-zinc-500">Diagnostic Guide</span>
+              </div>
+              <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors font-sans">
+                {guide.title}
+              </h2>
+              <p class="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed line-clamp-3 font-normal">
+                {guide.headline}
+              </p>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 dark:border-zinc-800/60 flex items-center justify-between text-xs font-mono text-slate-500 dark:text-zinc-400 group-hover:text-slate-900 dark:group-hover:text-zinc-200">
+              <span>Read Troubleshooting Guide &rarr;</span>
+              <span class="text-[10px] text-rose-600 dark:text-rose-400 font-semibold">Checklist</span>
+            </div>
+          </a>
+        ))}
+      </div>
+
+    </div>
+  </main>
+
+  <Footer />
+</Layout>

@@ -1,0 +1,116 @@
+# SafeWebhook — Comprehensive LLM Developer Reference
+
+SafeWebhook (https://safewebhook.com) is the zero-login, client-side private developer tool for testing, debugging, and simulating webhooks and email payloads.
+
+## System Architecture & Privacy
+1. **Edge Routing**: All requests hit Cloudflare Edge workers with < 20ms global latency.
+2. **Ephemeral Memory Stream**: Inbound requests are streamed directly via Server-Sent Events (SSE) to the client's browser session.
+3. **Zero Disk Storage**: Payloads are never saved to server-side SQL/NoSQL databases or persistent disks.
+4. **Local Browser Storage**: Historical logs and session definitions reside exclusively in the developer's IndexedDB / localStorage.
+
+---
+
+## Edge API Reference
+
+### 1. Ingest Webhook
+- **URL**: `https://safewebhook.com/api/r/{endpoint_id}`
+- **Methods**: `GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `HEAD`, `OPTIONS`
+- **Supported Content-Types**: `application/json`, `application/x-www-form-urlencoded`, `multipart/form-data`, `application/xml`, `text/plain`, binary buffers.
+- **Headers**: All incoming headers are captured and preserved.
+
+### 2. Live Stream (SSE)
+- **URL**: `https://safewebhook.com/api/stream/{endpoint_id}`
+- **Protocol**: Server-Sent Events (`text/event-stream`)
+- **Event Types**:
+  - `connected`: Initial handshake confirmation.
+  - `request`: Dispatched whenever an HTTP request hits the endpoint.
+  - `email`: Dispatched when an inbound email is parsed.
+  - `ping`: Keep-alive heartbeat every 15 seconds.
+
+### 3. Configure Response Behavior
+- **URL**: `https://safewebhook.com/api/config/{endpoint_id}`
+- **Method**: `POST`
+- **Body Schema**:
+  ```json
+  {
+    "statusCode": 200,
+    "contentType": "application/json",
+    "responseBody": "{\"status\":\"ok\"}",
+    "delayMs": 0,
+    "headers": {
+      "X-Custom-Header": "SafeWebhook"
+    }
+  }
+  ```
+
+---
+
+## Direct Code Recipes
+
+### Stripe Webhook Verification (Node.js)
+```javascript
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  try {
+    const event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    console.log('Verified Event:', event.type);
+    res.json({ received: true });
+  } catch (err) {
+    res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+});
+```
+
+### GitHub Webhook Verification (Python)
+```python
+import hmac, hashlib
+from flask import Flask, request, abort
+
+app = Flask(__name__)
+
+@app.route('/webhook', methods=['POST'])
+def github_webhook():
+    signature = request.headers.get('X-Hub-Signature-256')
+    if not signature:
+        abort(400)
+    
+    sha_name, sig = signature.split('=')
+    expected_sig = hmac.new(b'YOUR_SECRET', request.get_data(), hashlib.sha256).hexdigest()
+    
+    if not hmac.compare_digest(sig, expected_sig):
+        abort(401)
+        
+    return 'OK', 200
+```
+
+### Stream Webhooks to Localhost (Zero-Install JS Script)
+```javascript
+import EventSource from 'eventsource';
+
+const endpoint = 'YOUR_ENDPOINT_ID';
+const localTarget = 'http://localhost:3000/api/webhook';
+const es = new EventSource(`https://safewebhook.com/api/stream/${endpoint}`);
+
+es.onmessage = async (e) => {
+  const data = JSON.parse(e.data);
+  if (data.type === 'connected' || data.type === 'ping') return;
+  
+  console.log(`Forwarding ${data.method} ${data.id} to ${localTarget}`);
+  await fetch(localTarget, {
+    method: data.method,
+    headers: data.headers,
+    body: ['GET', 'HEAD'].includes(data.method) ? undefined : data.body
+  });
+};
+```
+
+---
+
+## Directory Index of All Resources
+- **Integrations**: Stripe, GitHub, Shopify, OpenAI, WhatsApp, Telegram, Razorpay, Lemon Squeezy, Square, PayPal, Supabase, Clerk, Resend, Slack, Twilio, Discord, Svix, SendGrid, WooCommerce, Paddle, Mailgun, HubSpot, Linear, Jira.
+- **Alternatives**: Webhook.site, Ngrok, RequestBin, Hookdeck, Beeceptor, Smee.io, Pipedream, Postman Mock Server, Cloudflare Tunnel.
+- **Tools**: Response Simulator, Latency Delay, HMAC Verifier, Localhost Replay, Inbound Email, Slack Forwarder, Discord Router, Cron Monitor, JWT Validator, JSON Formatter, Rate Limit Tester, IPN Simulator.
+- **Error Guides**: HTTP 504, 502, 500, 429, 400, 401, 403, 408 troubleshooting.
+- **Framework Guides**: Next.js App Router, Express.js, FastAPI, Flask, Django, Go Gin, Laravel.

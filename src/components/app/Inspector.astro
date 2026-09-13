@@ -1,0 +1,255 @@
+---
+import { ic } from '../../scripts/app/icons.js';
+
+const TABS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'body', label: 'Body' },
+  { id: 'headers', label: 'Headers', pill: 'swh-h-count' },
+  { id: 'query', label: 'Query', pill: 'swh-q-count' },
+  { id: 'security', label: 'Security' },
+  { id: 'telemetry', label: 'Telemetry' },
+  { id: 'raw', label: 'Raw' },
+];
+---
+
+<section id="swh-insp" aria-label="Request inspector">
+  <div id="swh-zero" class="swh-scroll">
+    <div class="swh-zero-inner">
+      <span class="swh-tag"><Fragment set:html={ic('zap', 11)} />Edge listener armed</span>
+      <h2>Your throwaway webhook endpoint is ready</h2>
+      <p>
+        Point any provider at the URL below. Requests are captured at the edge, streamed to this tab in
+        real time, and inspected entirely in your browser — no account, no waiting.
+      </p>
+
+      <div class="swh-card">
+        <div class="swh-card-h"><Fragment set:html={ic('link', 14)} />Endpoint URL</div>
+        <div class="swh-card-b swh-fc">
+          <div class="swh-fr">
+            <input id="swh-zero-url" class="swh-in mono" readonly value="Preparing endpoint…" aria-label="Your webhook URL" />
+            <button class="swh-b swh-b--pri" data-copy="url"><Fragment set:html={ic('copy', 13)} />Copy</button>
+          </div>
+          <p class="swh-hint">Inbound email also works — mail anything to <code id="swh-zero-email" class="mono">…</code> and it appears here as a parsed message.</p>
+        </div>
+      </div>
+
+      <div class="swh-card">
+        <div class="swh-card-h">
+          <Fragment set:html={ic('terminal', 14)} />Try it from your terminal
+          <button class="swh-b swh-b--sm swh-mla" data-copy="curl"><Fragment set:html={ic('copy', 12)} />Copy</button>
+        </div>
+        <pre class="swh-code swh-code--wrap" style="border:0;background:transparent"><code id="swh-zero-curl"></code></pre>
+      </div>
+
+      <div class="swh-fr" style="flex-wrap:wrap">
+        <button class="swh-b swh-b--line" data-mock="stripe-pay"><Fragment set:html={ic('sparkle', 13)} />Send mock Stripe event</button>
+        <button class="swh-b swh-b--line" data-open="compose"><Fragment set:html={ic('beaker', 13)} />Compose a request</button>
+        <button class="swh-b swh-b--line" data-open="respond"><Fragment set:html={ic('zap', 13)} />Customise the response</button>
+        <button class="swh-b swh-b--line" data-open="forward"><Fragment set:html={ic('terminal', 13)} />Forward to localhost</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="swh-detail" class="swh-detail hidden">
+    <div class="swh-insp-bar">
+      <button id="swh-back" class="swh-b swh-b--ico swh-b--line swh-only-sm" title="Back to the request list">
+        <Fragment set:html={ic('chevronLeft')} />
+      </button>
+      <span id="swh-i-method" class="swh-m">POST</span>
+      <div class="swh-insp-id">
+        <span id="swh-i-title" class="swh-insp-title">—</span>
+        <span id="swh-i-meta" class="swh-insp-meta"></span>
+      </div>
+      <div class="swh-fr swh-insp-actions">
+        <button id="swh-replay" class="swh-b swh-b--line" title="Replay to another URL — r">
+          <Fragment set:html={ic('replay', 13)} /><span class="swh-hide-md">Replay</span>
+        </button>
+        <div class="swh-pop">
+          <button id="swh-copy-btn" class="swh-b swh-b--line" aria-haspopup="menu" aria-expanded="false" title="Copy from this request — y">
+            <Fragment set:html={ic('copy', 13)} /><Fragment set:html={ic('chevronDown', 11)} />
+          </button>
+          <div id="swh-copy-menu" class="swh-menu swh-menu--r hidden" role="menu">
+            <button class="swh-menu-item" role="menuitem" data-icopy="body"><Fragment set:html={ic('file')} />Body<kbd>y</kbd></button>
+            <button class="swh-menu-item" role="menuitem" data-icopy="headers"><Fragment set:html={ic('list')} />Headers as JSON</button>
+            <button class="swh-menu-item" role="menuitem" data-icopy="raw"><Fragment set:html={ic('terminal')} />Raw HTTP request</button>
+            <button class="swh-menu-item" role="menuitem" data-icopy="curl"><Fragment set:html={ic('terminal')} />Reproduce as cURL<kbd>c</kbd></button>
+            <button class="swh-menu-item" role="menuitem" data-icopy="fetch"><Fragment set:html={ic('code')} />Reproduce as fetch()</button>
+            <button class="swh-menu-item" role="menuitem" data-icopy="event"><Fragment set:html={ic('database')} />Whole event JSON</button>
+            <div class="swh-menu-sep"></div>
+            <button class="swh-menu-item" role="menuitem" data-icopy="link"><Fragment set:html={ic('link')} />Deep link to this request<kbd>l</kbd></button>
+            <button class="swh-menu-item" role="menuitem" data-icopy="download"><Fragment set:html={ic('download')} />Download body file</button>
+          </div>
+        </div>
+        <button id="swh-code" class="swh-b swh-b--ico swh-b--line" title="Integration snippets in 9 languages">
+          <Fragment set:html={ic('code', 13)} />
+        </button>
+        <button id="swh-compare" class="swh-b swh-b--ico swh-b--line" aria-pressed="false" title="Diff this request against the selected baseline — d">
+          <Fragment set:html={ic('layers', 13)} />
+        </button>
+        <button id="swh-i-pin" class="swh-b swh-b--ico swh-b--line" aria-pressed="false" title="Pin this request — p">
+          <Fragment set:html={ic('star', 13)} />
+        </button>
+        <button id="swh-i-del" class="swh-b swh-b--ico swh-b--line swh-b--danger" title="Delete this request">
+          <Fragment set:html={ic('trash', 13)} />
+        </button>
+      </div>
+    </div>
+
+    <nav class="swh-tabs" role="tablist" aria-label="Request sections">
+      {TABS.map((t, i) => (
+        <button class="swh-tab" role="tab" data-tab={t.id} id={`swh-tab-${t.id}`} aria-controls={`swh-pane-${t.id}`} aria-selected={i === 0 ? 'true' : 'false'}>
+          {t.label}
+          {t.pill && <span class="swh-tab-n" id={t.pill}>0</span>}
+          {t.id === 'security' && <i class="swh-dot" id="swh-sig-dot"></i>}
+        </button>
+      ))}
+      <button class="swh-tab hidden" role="tab" data-tab="diff" id="swh-tab-diff" aria-controls="swh-pane-diff" aria-selected="false">
+        Diff<span class="swh-tab-n">2</span>
+      </button>
+    </nav>
+
+    <div id="swh-panes">
+      <div class="swh-pane" id="swh-pane-overview" role="tabpanel" aria-labelledby="swh-tab-overview" data-on="1">
+        <div class="swh-pane-body swh-scroll swh-fc" id="swh-ov"></div>
+      </div>
+
+      <div class="swh-pane" id="swh-pane-body" role="tabpanel" aria-labelledby="swh-tab-body">
+        <div class="swh-pane-tools">
+          <div class="swh-seg" role="tablist" aria-label="Body view">
+            <button data-bview="tree" aria-selected="true">Tree</button>
+            <button data-bview="raw" aria-selected="false">Pretty</button>
+            <button data-bview="table" aria-selected="false">Table</button>
+          </div>
+          <label class="swh-search" style="max-width:230px">
+            <Fragment set:html={ic('search', 13)} />
+            <input id="swh-body-q" type="search" placeholder="Filter keys or values" aria-label="Filter body fields" />
+          </label>
+          <button id="swh-expand" class="swh-b swh-b--sm swh-b--line">Expand all</button>
+          <button id="swh-collapse" class="swh-b swh-b--sm swh-b--line">Collapse</button>
+          <span id="swh-fmt" class="swh-tag swh-tag--mute swh-mla">raw</span>
+          <button id="swh-body-copy" class="swh-b swh-b--sm swh-b--line"><Fragment set:html={ic('copy', 12)} />Copy</button>
+        </div>
+        <div class="swh-pane-body swh-scroll">
+          <div id="swh-email" class="swh-card hidden" style="margin-bottom:12px">
+            <div class="swh-card-h"><Fragment set:html={ic('mail', 14)} />Inbound email<span id="swh-email-subject" class="swh-tag swh-mla"></span></div>
+            <div class="swh-card-b swh-fc">
+              <div class="swh-grid">
+                <div class="swh-stat"><dt>From</dt><dd id="swh-email-from" style="font-size:12px">—</dd></div>
+                <div class="swh-stat"><dt>To</dt><dd id="swh-email-to" style="font-size:12px">—</dd></div>
+              </div>
+              <pre class="swh-code swh-code--wrap" id="swh-email-body"></pre>
+            </div>
+          </div>
+          <div id="swh-tree" class="swh-tree"></div>
+          <pre id="swh-pretty" class="swh-code swh-code--wrap hidden"><code></code></pre>
+          <div id="swh-btable" class="hidden"></div>
+        </div>
+      </div>
+
+      <div class="swh-pane" id="swh-pane-headers" role="tabpanel" aria-labelledby="swh-tab-headers">
+        <div class="swh-pane-tools">
+          <label class="swh-search" style="max-width:260px">
+            <Fragment set:html={ic('search', 13)} />
+            <input id="swh-h-q" type="search" placeholder="Filter headers" aria-label="Filter headers" />
+          </label>
+          <button id="swh-h-copy" class="swh-b swh-b--sm swh-b--line"><Fragment set:html={ic('copy', 12)} />Copy as JSON</button>
+          <span class="swh-hint swh-mla">Click any value to copy it</span>
+        </div>
+        <div class="swh-pane-body swh-scroll" style="padding:0">
+          <table class="swh-kv"><thead><tr><th>Header</th><th>Value</th></tr></thead><tbody id="swh-h-rows"></tbody></table>
+        </div>
+      </div>
+
+      <div class="swh-pane" id="swh-pane-query" role="tabpanel" aria-labelledby="swh-tab-query">
+        <div class="swh-pane-body swh-scroll" style="padding:0">
+          <table class="swh-kv"><thead><tr><th>Parameter</th><th>Value</th></tr></thead><tbody id="swh-qs-rows"></tbody></table>
+        </div>
+      </div>
+
+      <div class="swh-pane" id="swh-pane-security" role="tabpanel" aria-labelledby="swh-tab-security">
+        <div class="swh-pane-body swh-scroll swh-fc">
+          <div class="swh-card">
+            <div class="swh-card-h">
+              <Fragment set:html={ic('shield', 14)} />HMAC signature verification
+              <span id="swh-sig-detected" class="swh-tag swh-tag--mute swh-mla">No signature header</span>
+            </div>
+            <div class="swh-card-b swh-fc">
+              <div class="swh-row2">
+                <div class="swh-f">
+                  <label for="swh-sig-provider">Signing scheme</label>
+                  <select id="swh-sig-provider" class="swh-sel">
+                    <option value="auto">Auto-detect from headers</option>
+                    <option value="stripe">Stripe (t=…,v1=… HMAC-SHA256)</option>
+                    <option value="github">GitHub (X-Hub-Signature-256)</option>
+                    <option value="github1">GitHub legacy (SHA-1)</option>
+                    <option value="shopify">Shopify (base64 SHA-256)</option>
+                    <option value="slack">Slack (v0:ts:body)</option>
+                    <option value="svix">Svix / Clerk / Resend (whsec_)</option>
+                    <option value="razorpay">Razorpay (hex SHA-256)</option>
+                    <option value="hex">Generic — hex SHA-256 of raw body</option>
+                    <option value="b64">Generic — base64 SHA-256 of raw body</option>
+                  </select>
+                </div>
+                <div class="swh-f">
+                  <label for="swh-sig-secret">Signing secret</label>
+                  <div class="swh-fr">
+                    <input id="swh-sig-secret" class="swh-in mono" type="password" placeholder="whsec_… / shh_…" autocomplete="off" spellcheck="false" />
+                    <button id="swh-sig-eye" class="swh-b swh-b--ico swh-b--line" aria-pressed="false" aria-label="Reveal secret"><Fragment set:html={ic('eye', 13)} /></button>
+                  </div>
+                </div>
+              </div>
+              <label class="swh-sw"><input type="checkbox" id="swh-sig-remember" /><span>Remember this secret on this device<small>Kept in localStorage only — it is never sent to SafeWebhook.</small></span></label>
+              <label class="swh-sw"><input type="checkbox" id="swh-sig-auto" /><span>Verify every incoming request automatically<small>The HMAC is computed in your browser with WebCrypto.</small></span></label>
+              <div class="swh-fr">
+                <button id="swh-sig-run" class="swh-b swh-b--pri"><Fragment set:html={ic('shield', 13)} />Verify signature</button>
+                <span id="swh-sig-result" class="swh-tag swh-tag--mute">Not checked yet</span>
+              </div>
+              <div id="swh-sig-detail" class="swh-fc hidden">
+                <div class="swh-f"><span class="swh-lb">Signed payload (base string)</span><pre class="swh-code swh-code--wrap" id="swh-sig-base"></pre></div>
+                <div class="swh-row2">
+                  <div class="swh-f"><span class="swh-lb">Signature received</span><pre class="swh-code swh-code--wrap" id="swh-sig-got"></pre></div>
+                  <div class="swh-f"><span class="swh-lb">Signature computed</span><pre class="swh-code swh-code--wrap" id="swh-sig-exp"></pre></div>
+                </div>
+                <p class="swh-hint" id="swh-sig-age"></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="swh-card">
+            <div class="swh-card-h">
+              <Fragment set:html={ic('code', 14)} />Verify it in your own code
+              <div class="swh-seg swh-mla" id="swh-recipe-lang" role="tablist">
+                <button data-lang="node" aria-selected="true">Node</button>
+                <button data-lang="python" aria-selected="false">Python</button>
+                <button data-lang="php" aria-selected="false">PHP</button>
+                <button data-lang="go" aria-selected="false">Go</button>
+              </div>
+              <button id="swh-recipe-copy" class="swh-b swh-b--sm"><Fragment set:html={ic('copy', 12)} /></button>
+            </div>
+            <pre class="swh-code swh-code--wrap" style="border:0;background:transparent"><code id="swh-recipe"></code></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="swh-pane" id="swh-pane-telemetry" role="tabpanel" aria-labelledby="swh-tab-telemetry">
+        <div class="swh-pane-body swh-scroll swh-fc" id="swh-tele"></div>
+      </div>
+
+      <div class="swh-pane" id="swh-pane-raw" role="tabpanel" aria-labelledby="swh-tab-raw">
+        <div class="swh-pane-tools">
+          <button id="swh-wrap" class="swh-b swh-b--sm swh-b--line" aria-pressed="true"><Fragment set:html={ic('wrap', 12)} />Wrap</button>
+          <button id="swh-raw-copy" class="swh-b swh-b--sm swh-b--line"><Fragment set:html={ic('copy', 12)} />Copy raw</button>
+          <button id="swh-raw-dl" class="swh-b swh-b--sm swh-b--line"><Fragment set:html={ic('download', 12)} />Download</button>
+          <span id="swh-raw-size" class="swh-hint swh-mla"></span>
+        </div>
+        <div class="swh-pane-body swh-scroll">
+          <pre id="swh-raw" class="swh-code swh-code--wrap swh-ln"></pre>
+        </div>
+      </div>
+
+      <div class="swh-pane" id="swh-pane-diff" role="tabpanel" aria-labelledby="swh-tab-diff">
+        <div class="swh-pane-body swh-scroll" id="swh-diff"></div>
+      </div>
+    </div>
+  </div>
+</section>

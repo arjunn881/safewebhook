@@ -1,285 +1,628 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
 import { PLATFORMS } from '../../data/platforms';
 
-const localForwarderScript = `// Stream Webhooks to Localhost (zero install one-liner)
-const endpoint = "YOUR_ENDPOINT_ID";
-const targetLocalUrl = "http://localhost:8000/api/webhook";
+const sampleEndpoint = 'ep_live_demo';
+
+const curlTestScript = `curl -X POST https://safewebhook.com/api/r/${sampleEndpoint} \\
+  -H "Content-Type: application/json" \\
+  -H "Stripe-Signature: t=1755541200,v1=98a3c4f912e742c..." \\
+  -d '{"event": "payment_intent.succeeded", "amount": 4900, "currency": "usd"}'`;
+
+const nodeForwarderScript = `// Stream Webhooks to Localhost (Zero-Install One-Liner)
+import EventSource from 'eventsource';
+
+const endpoint = '${sampleEndpoint}';
+const localTarget = 'http://localhost:3000/api/webhook';
 
 const es = new EventSource(\`https://safewebhook.com/api/stream/\${endpoint}\`);
+
 es.onmessage = async (e) => {
   const data = JSON.parse(e.data);
   if (data.type === 'connected' || data.type === 'ping') return;
-  console.log(\`[Forwarding \${data.method}] to \${targetLocalUrl}\`);
-  await fetch(targetLocalUrl, {
+  
+  console.log(\`[Received \${data.method}] Forwarding \${data.id} to \${localTarget}\`);
+  await fetch(localTarget, {
     method: data.method,
     headers: data.headers,
-    body: data.body
+    body: ['GET', 'HEAD'].includes(data.method) ? undefined : data.body
   });
 };`;
+
+const pythonForwarderScript = `# Stream Webhooks to Localhost via Python
+import json
+import requests
+import sseclient
+
+endpoint = "${sampleEndpoint}"
+local_target = "http://localhost:8000/api/webhook"
+
+response = requests.get(f"https://safewebhook.com/api/stream/{endpoint}", stream=True)
+client = sseclient.SSEClient(response)
+
+for event in client.events():
+    if not event.data:
+        continue
+    data = json.loads(event.data)
+    if data.get("type") in ["connected", "ping"]:
+        continue
+    
+    print(f"[Received {data.get('method')}] Forwarding to {local_target}")
+    requests.request(
+        method=data.get("method", "POST"),
+        url=local_target,
+        headers=data.get("headers", {}),
+        data=data.get("body", "")
+    )`;
+
+const stripeVerificationNode = `import crypto from 'crypto';
+
+export function verifyStripeSignature(rawBody, signatureHeader, secret) {
+  const parts = signatureHeader.split(',');
+  const timestamp = parts.find(p => p.startsWith('t='))?.split('=')[1];
+  const signature = parts.find(p => p.startsWith('v1='))?.split('=')[1];
+  
+  if (!timestamp || !signature) return false;
+  
+  const signedPayload = \`\${timestamp}.\${rawBody}\`;
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(signedPayload)
+    .digest('hex');
+    
+  return crypto.timingSafeEqual(
+    Buffer.from(signature, 'utf8'),
+    Buffer.from(expectedSignature, 'utf8')
+  );
+}`;
 ---
 
 <Layout
-  title="SafeWebhook Documentation & Integration Guides — safewebhook.com"
-  description="Comprehensive developer documentation for SafeWebhook. Guides for Stripe, GitHub, Shopify, Custom Responses, Localhost Replay, and Signature Verification."
+  title="SafeWebhook API Documentation & Integration Guides — safewebhook.com"
+  description="Comprehensive developer documentation for SafeWebhook REST API, real-time SSE streaming, HMAC cryptographic verification, and local forwarding."
 >
-  <!-- Navigation Header -->
-  <header class="sticky top-0 z-50 w-full border-b border-slate-800 bg-slate-950/85 backdrop-blur-md">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <a href="/" class="flex items-center gap-3 group">
-        <div class="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:border-cyan-400 transition-colors shadow-sm shadow-cyan-500/10">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-        </div>
-        <div class="flex flex-col">
-          <span class="font-bold tracking-tight text-white text-base">Safe<span class="text-cyan-400">Webhook</span></span>
-          <span class="text-[10px] text-slate-400 -mt-1 font-mono">Documentation</span>
-        </div>
-      </a>
+  <Header activeNav="docs" subTitle="/ API Docs" />
 
-      <nav class="hidden md:flex items-center gap-6 text-sm font-medium text-slate-300">
-        <a href="#quickstart" class="hover:text-cyan-300 transition-colors">Quickstart</a>
-        <a href="#integrations-directory" class="hover:text-cyan-300 transition-colors">Integrations</a>
-        <a href="#custom-responses" class="hover:text-cyan-300 transition-colors">Custom Responses</a>
-        <a href="#api-reference" class="hover:text-cyan-300 transition-colors">API Reference</a>
-        <a href="/faq" class="text-cyan-400 hover:text-cyan-300 font-semibold transition-colors">FAQ</a>
-      </nav>
-
-      <a
-        href="/app"
-        class="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold rounded-lg text-slate-950 bg-gradient-to-r from-cyan-400 to-cyan-300 hover:from-cyan-300 hover:to-cyan-200 transition-all shadow-md shadow-cyan-500/20 active:scale-95"
-      >
-        Launch Workbench &rarr;
-      </a>
-    </div>
-  </header>
-
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
-      
-      <!-- Sticky Sidebar Navigation -->
-      <aside class="hidden lg:block lg:col-span-3 sticky top-24 self-start space-y-6 text-xs font-mono">
-        <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-3">
-          <div class="font-bold uppercase tracking-wider text-slate-400 text-[11px]">Getting Started</div>
-          <ul class="space-y-2 text-slate-300">
-            <li><a href="#quickstart" class="hover:text-cyan-400 transition-colors block py-0.5">Quickstart in 10s</a></li>
-            <li><a href="#integrations-directory" class="hover:text-cyan-400 transition-colors block py-0.5">Platform Portals</a></li>
-            <li><a href="/faq" class="hover:text-cyan-400 transition-colors block py-0.5">Frequently Asked Questions</a></li>
-          </ul>
-
-          <div class="font-bold uppercase tracking-wider text-slate-400 text-[11px] pt-3 border-t border-slate-800">Provider Guides</div>
-          <ul class="space-y-2 text-slate-300">
-            <li><a href="/test/stripe" class="hover:text-cyan-400 transition-colors block py-0.5">Stripe Webhook Testing</a></li>
-            <li><a href="/test/github" class="hover:text-cyan-400 transition-colors block py-0.5">GitHub Webhook Testing</a></li>
-            <li><a href="/test/shopify" class="hover:text-cyan-400 transition-colors block py-0.5">Shopify Webhook Testing</a></li>
-            <li><a href="/test/slack" class="hover:text-cyan-400 transition-colors block py-0.5">Slack Webhook Testing</a></li>
-            <li><a href="/test/twilio" class="hover:text-cyan-400 transition-colors block py-0.5">Twilio Webhook Testing</a></li>
-            <li><a href="/test/discord" class="hover:text-cyan-400 transition-colors block py-0.5">Discord Webhook Testing</a></li>
-          </ul>
-
-          <div class="font-bold uppercase tracking-wider text-slate-400 text-[11px] pt-3 border-t border-slate-800">Advanced Features</div>
-          <ul class="space-y-2 text-slate-300">
-            <li><a href="#custom-responses" class="hover:text-cyan-400 transition-colors block py-0.5">Custom Responses &amp; Latency</a></li>
-            <li><a href="#replay-guide" class="hover:text-cyan-400 transition-colors block py-0.5">Localhost Replay &amp; Tunnel</a></li>
-            <li><a href="#api-reference" class="hover:text-cyan-400 transition-colors block py-0.5">REST API Reference</a></li>
-          </ul>
-
-          <div class="font-bold uppercase tracking-wider text-slate-400 text-[11px] pt-3 border-t border-slate-800">Competitor Alternatives</div>
-          <ul class="space-y-2 text-slate-300">
-            <li><a href="/vs/webhook-site" class="hover:text-cyan-400 transition-colors block py-0.5">vs Webhook.site</a></li>
-            <li><a href="/vs/ngrok" class="hover:text-cyan-400 transition-colors block py-0.5">vs Ngrok</a></li>
-            <li><a href="/vs/requestbin" class="hover:text-cyan-400 transition-colors block py-0.5">vs RequestBin</a></li>
-          </ul>
-        </div>
-      </aside>
-
-      <!-- Main Docs Content -->
-      <main class="lg:col-span-9 space-y-16">
+  <div class="bg-developer-grid flex-1">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        <!-- Header Hero -->
-        <div>
-          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 text-xs font-mono mb-4">
-            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
-            <span>Developer Reference &amp; Guides</span>
-          </div>
-          <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight">
-            SafeWebhook Documentation
-          </h1>
-          <p class="mt-4 text-base sm:text-lg text-slate-300 leading-relaxed max-w-3xl">
-            Learn how to test, inspect, replay, and verify inbound webhooks from Stripe, GitHub, Shopify, and custom APIs with zero server storage and sub-20ms edge latency on safewebhook.com.
-          </p>
-        </div>
-
-        <!-- Section 1: Quickstart -->
-        <section id="quickstart" class="space-y-5 pt-8 border-t border-slate-800">
-          <div class="flex items-center gap-3">
-            <span class="text-cyan-400 font-mono text-sm font-bold">01.</span>
-            <h2 class="text-2xl font-bold text-white">Quickstart in 10 Seconds</h2>
-          </div>
-          <p class="text-slate-300 text-sm leading-relaxed">
-            Every session on SafeWebhook gives you a dedicated edge URL. No login, API keys, or signup forms are required.
-          </p>
-
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono text-xs">
-            <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-1">
-              <div class="text-cyan-400 font-bold">1. Open Workbench</div>
-              <div class="text-slate-400 text-[11px]">Navigate to <a href="/app" class="text-cyan-300 underline">safewebhook.com/app</a> to spawn your unique tracking URL.</div>
-            </div>
-            <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-1">
-              <div class="text-cyan-400 font-bold">2. Send HTTP Webhooks</div>
-              <div class="text-slate-400 text-[11px]">Paste the URL into your Stripe, GitHub or API provider settings.</div>
-            </div>
-            <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-1">
-              <div class="text-cyan-400 font-bold">3. Inspect in Real-Time</div>
-              <div class="text-slate-400 text-[11px]">View incoming payloads instantly via native Server-Sent Events.</div>
-            </div>
-          </div>
-        </section>
-
-        <!-- Programmatic Integration Directory Section -->
-        <section id="integrations-directory" class="space-y-6 pt-8 border-t border-slate-800">
-          <div class="flex items-center gap-3">
-            <span class="text-cyan-400 font-mono text-sm font-bold">02.</span>
-            <h2 class="text-2xl font-bold text-white">Platform Testing Portals &amp; Guides</h2>
-          </div>
-          <p class="text-slate-300 text-sm leading-relaxed">
-            Explore dedicated testing guides, HMAC signature verification recipes, and sample payloads for major API providers:
-          </p>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 font-mono text-xs">
-            {Object.values(PLATFORMS).map((p) => (
-              <a
-                href={`/test/${p.slug}`}
-                class="p-4 rounded-xl border border-slate-800 hover:border-cyan-500/40 bg-slate-900/60 hover:bg-slate-900 space-y-2 transition-all group block"
-              >
-                <div class="flex items-center justify-between">
-                  <span class="font-bold text-white group-hover:text-cyan-300 transition-colors">{p.name}</span>
-                  <span class="text-[10px] text-cyan-400 font-semibold">{p.category}</span>
-                </div>
-                <p class="text-slate-400 text-[11px] line-clamp-2 leading-relaxed font-sans">{p.tagline}</p>
-                <div class="text-[10px] text-slate-500 font-mono pt-1">{p.signatureHeader}</div>
-              </a>
-            ))}
-          </div>
-        </section>
-
-        <!-- Section 3: Custom Responses & Latency -->
-        <section id="custom-responses" class="space-y-5 pt-8 border-t border-slate-800">
-          <div class="flex items-center gap-3">
-            <span class="text-cyan-400 font-mono text-sm font-bold">03.</span>
-            <h2 class="text-2xl font-bold text-white">Custom Response &amp; Latency Engine</h2>
-          </div>
-          <p class="text-slate-300 text-sm leading-relaxed">
-            Unlike other platforms that charge $15/month for custom responses, SafeWebhook provides a 100% free visual configurator:
-          </p>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
-            <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-2">
-              <span class="text-emerald-400 font-bold">Custom Status Codes</span>
-              <p class="text-slate-400 text-[11px] leading-relaxed">
-                Return <code class="text-slate-200">201 Created</code>, <code class="text-slate-200">204 No Content</code>, <code class="text-slate-200">400 Bad Request</code>, or <code class="text-slate-200">500 Server Error</code> to test how the sender handles failures.
-              </p>
-            </div>
-
-            <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-2">
-              <span class="text-amber-400 font-bold">Simulated Latency (0–5000ms)</span>
-              <p class="text-slate-400 text-[11px] leading-relaxed">
-                Inject artificial delays into incoming webhook responses to verify your third-party webhook sender's retry mechanisms and timeout handling.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <!-- Section 4: Localhost Replay & Forwarding -->
-        <section id="replay-guide" class="space-y-5 pt-8 border-t border-slate-800">
-          <div class="flex items-center gap-3">
-            <span class="text-cyan-400 font-mono text-sm font-bold">04.</span>
-            <h2 class="text-2xl font-bold text-white">Localhost Replay &amp; Tunneling</h2>
-          </div>
-          <p class="text-slate-300 text-sm leading-relaxed">
-            Stream live webhooks directly to your local development server without installing external tunneling tools:
-          </p>
-
-          <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/80 space-y-3">
-            <h3 class="font-bold text-sm text-white font-mono">Lightweight Node.js Local Forwarder:</h3>
-            <pre class="p-4 rounded-xl bg-slate-950 text-cyan-300 font-mono text-xs leading-relaxed overflow-x-auto border border-slate-850"><code>{localForwarderScript}</code></pre>
-          </div>
-        </section>
-
-        <!-- Section 5: REST API Reference -->
-        <section id="api-reference" class="space-y-5 pt-8 border-t border-slate-800">
-          <div class="flex items-center gap-3">
-            <span class="text-cyan-400 font-mono text-sm font-bold">05.</span>
-            <h2 class="text-2xl font-bold text-white">Edge REST API Reference</h2>
-          </div>
-
-          <div class="space-y-4 font-mono text-xs">
+        <!-- Sidebar Navigation -->
+        <aside class="hidden lg:block lg:col-span-3 sticky top-20 self-start space-y-6 text-xs font-mono">
+          <div class="p-5 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 space-y-4 shadow-sm">
             
-            <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-2">
-              <div class="flex items-center gap-2">
-                <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">ALL</span>
-                <span class="text-slate-200 font-bold">/api/r/[endpoint_id]</span>
-              </div>
-              <p class="text-slate-400 text-[11px]">
-                Inbound webhook receiver. Ingests all HTTP methods, forwards to live SSE listeners, and returns the configured custom response.
-              </p>
+            <div class="space-y-2">
+              <div class="font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 text-[11px]">Getting Started</div>
+              <ul class="space-y-1.5 text-slate-700 dark:text-zinc-300">
+                <li><a href="#quickstart" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors block py-0.5">Quickstart in 10s</a></li>
+                <li><a href="#live-api-tester" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors block py-0.5 font-semibold text-slate-900 dark:text-white">Interactive Console</a></li>
+                <li><a href="/api/openapi.json" target="_blank" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors block py-0.5 text-slate-500 dark:text-zinc-400">OpenAPI 3.1 JSON &nearr;</a></li>
+              </ul>
             </div>
 
-            <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-2">
-              <div class="flex items-center gap-2">
-                <span class="px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 font-bold">POST</span>
-                <span class="text-slate-200 font-bold">/api/email/[endpoint_id]</span>
-              </div>
-              <p class="text-slate-400 text-[11px]">
-                Inbound email webhook ingestion endpoint for Mailgun, SendGrid, SES, and email notifications.
-              </p>
+            <div class="space-y-2 pt-3 border-t border-slate-100 dark:border-zinc-800">
+              <div class="font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 text-[11px]">REST Endpoints</div>
+              <ul class="space-y-1.5 text-slate-700 dark:text-zinc-300">
+                <li><a href="#ep-inbound" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors block py-0.5 flex items-center justify-between"><span class="truncate">POST /api/r/:id</span><span class="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold">INGEST</span></a></li>
+                <li><a href="#ep-stream" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors block py-0.5 flex items-center justify-between"><span class="truncate">GET /api/stream/:id</span><span class="text-[9px] text-indigo-600 dark:text-indigo-400 font-bold">SSE</span></a></li>
+                <li><a href="#ep-history" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors block py-0.5 flex items-center justify-between"><span class="truncate">GET /api/history/:id</span><span class="text-[9px] text-slate-500 dark:text-zinc-400">LOGS</span></a></li>
+                <li><a href="#ep-stats" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors block py-0.5 flex items-center justify-between"><span class="truncate">GET /api/stats/:id</span><span class="text-[9px] text-purple-600 dark:text-purple-400">STATS</span></a></li>
+                <li><a href="#ep-replay" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors block py-0.5 flex items-center justify-between"><span class="truncate">POST /api/replay</span><span class="text-[9px] text-violet-600 dark:text-violet-400">REPLAY</span></a></li>
+                <li><a href="#ep-health" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors block py-0.5 flex items-center justify-between"><span class="truncate">GET /api/health</span><span class="text-[9px] text-emerald-600 dark:text-emerald-400">HEALTH</span></a></li>
+              </ul>
             </div>
 
-            <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-2">
-              <div class="flex items-center gap-2">
-                <span class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-400 font-bold">GET</span>
-                <span class="text-slate-200 font-bold">/api/stream/[endpoint_id]</span>
+            <div class="space-y-2 pt-3 border-t border-slate-100 dark:border-zinc-800">
+              <div class="font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 text-[11px]">
+                <a href="/integrations" class="hover:text-indigo-600 dark:hover:text-indigo-400">Integrations (24+) &rarr;</a>
               </div>
-              <p class="text-slate-400 text-[11px]">
-                Server-Sent Events connection endpoint. Returns <code class="text-cyan-300">Content-Type: text/event-stream</code> for real-time browser telemetry.
-              </p>
+              <ul class="space-y-1.5 text-slate-700 dark:text-zinc-300">
+                <li><a href="/test/stripe" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors block py-0.5">Stripe Webhooks</a></li>
+                <li><a href="/test/openai" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors block py-0.5">OpenAI Callbacks</a></li>
+                <li><a href="/test/github" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors block py-0.5">GitHub Webhooks</a></li>
+                <li><a href="/test/shopify" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors block py-0.5">Shopify Webhooks</a></li>
+              </ul>
             </div>
 
-            <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-2">
-              <div class="flex items-center gap-2">
-                <span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold">POST</span>
-                <span class="text-slate-200 font-bold">/api/config/[endpoint_id]</span>
+            <div class="space-y-2 pt-3 border-t border-slate-100 dark:border-zinc-800">
+              <div class="font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 text-[11px]">
+                <a href="/tools" class="hover:text-indigo-600 dark:hover:text-indigo-400">Developer Tools &rarr;</a>
               </div>
-              <p class="text-slate-400 text-[11px]">
-                Configures custom response status code, content type, response body, and simulated delay in ms.
-              </p>
+              <ul class="space-y-1.5 text-slate-700 dark:text-zinc-300">
+                <li><a href="/tools/mock-api-response" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors block py-0.5">Mock Status Codes</a></li>
+                <li><a href="/tools/simulate-latency" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors block py-0.5">Simulate Delays</a></li>
+                <li><a href="/tools/verify-signatures" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors block py-0.5">HMAC Verifier</a></li>
+              </ul>
             </div>
 
           </div>
-        </section>
+        </aside>
 
-      </main>
+        <!-- Main Docs Content -->
+        <main class="lg:col-span-9 space-y-12 sm:space-y-16">
+          
+          <!-- Header Hero -->
+          <section class="space-y-4">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 text-xs font-mono">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span>Production Edge REST API &bull; v1.0.0</span>
+            </div>
+            <h1 class="text-3xl sm:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight font-sans">
+              SafeWebhook API Documentation
+            </h1>
+            <p class="text-slate-600 dark:text-zinc-400 text-sm sm:text-base leading-relaxed max-w-3xl font-normal">
+              Complete technical reference for SafeWebhook edge endpoints. Ingest, inspect, stream, replay, and verify incoming HTTP webhooks and email payloads with sub-20ms global edge latency and zero server-side storage retention.
+            </p>
+            <div class="flex flex-wrap items-center gap-3 pt-2">
+              <a
+                href="/app"
+                class="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors shadow-sm shadow-indigo-500/25"
+              >
+                <span>Open Webhook Workbench</span>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+              </a>
+              <a
+                href="/api/openapi.json"
+                target="_blank"
+                class="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-800 dark:text-zinc-200 transition-colors"
+              >
+                <span>Download OpenAPI Spec (.json)</span>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+              </a>
+            </div>
+          </section>
 
+          <!-- Section 1: Quickstart -->
+          <section id="quickstart" class="space-y-4 pt-8 border-t border-slate-200 dark:border-zinc-800">
+            <div class="flex items-center gap-2.5">
+              <span class="text-indigo-600 dark:text-indigo-400 font-mono text-sm font-bold">01</span>
+              <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white font-sans">Quickstart in 10 Seconds</h2>
+            </div>
+            <p class="text-slate-600 dark:text-zinc-400 text-xs sm:text-sm leading-relaxed font-normal">
+              Create an endpoint immediately without signup. Send any HTTP request (<code class="font-mono text-slate-800 dark:text-zinc-200">GET</code>, <code class="font-mono text-slate-800 dark:text-zinc-200">POST</code>, <code class="font-mono text-slate-800 dark:text-zinc-200">PUT</code>, <code class="font-mono text-slate-800 dark:text-zinc-200">DELETE</code>, <code class="font-mono text-slate-800 dark:text-zinc-200">PATCH</code>) to your endpoint URL:
+            </p>
+
+            <div class="rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-900 dark:bg-[#0b0f19] overflow-hidden shadow-sm">
+              <div class="flex items-center justify-between px-4 py-2.5 bg-slate-800/80 dark:bg-[#111625] border-b border-slate-700/60 dark:border-zinc-800 text-xs font-mono text-slate-300">
+                <span class="flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span>
+                  <span>cURL Inbound Webhook Test</span>
+                </span>
+                <button
+                  type="button"
+                  class="copy-code-btn px-2.5 py-1 rounded bg-slate-700 hover:bg-slate-600 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-200 text-[11px] font-mono transition-colors cursor-pointer border border-slate-600/60 dark:border-zinc-700"
+                  data-code={curlTestScript}
+                >
+                  Copy
+                </button>
+              </div>
+              <pre class="p-4 text-emerald-400 font-mono text-xs leading-relaxed overflow-x-auto"><code>{curlTestScript}</code></pre>
+            </div>
+          </section>
+
+          <!-- Section 2: Interactive Live API Console -->
+          <section id="live-api-tester" class="space-y-4 pt-8 border-t border-slate-200 dark:border-zinc-800">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <span class="text-indigo-600 dark:text-indigo-400 font-mono text-sm font-bold">02</span>
+                <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white font-sans">Interactive API Console</h2>
+              </div>
+              <span class="px-2.5 py-1 rounded text-[10px] font-mono font-semibold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">LIVE TESTER</span>
+            </div>
+            <p class="text-slate-600 dark:text-zinc-400 text-xs sm:text-sm leading-relaxed font-normal">
+              Execute requests directly against the live SafeWebhook edge engine from your browser.
+            </p>
+
+            <div class="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 p-5 sm:p-6 space-y-4 shadow-sm">
+              <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+                <div class="md:col-span-4">
+                  <label class="block text-[11px] font-mono uppercase text-slate-700 dark:text-zinc-300 font-semibold mb-1">Method &amp; Action</label>
+                  <select id="console-endpoint-select" class="w-full h-10 px-3 rounded-lg bg-slate-50 dark:bg-zinc-950 border border-slate-300 dark:border-zinc-700 text-slate-900 dark:text-zinc-200 text-xs font-mono focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400">
+                    <option value="health">GET /api/health</option>
+                    <option value="inbound" selected>POST /api/r/:endpoint_id</option>
+                    <option value="history">GET /api/history/:endpoint_id</option>
+                    <option value="stats">GET /api/stats/:endpoint_id</option>
+                    <option value="openapi">GET /api/openapi.json</option>
+                  </select>
+                </div>
+
+                <div class="md:col-span-5">
+                  <label class="block text-[11px] font-mono uppercase text-slate-700 dark:text-zinc-300 font-semibold mb-1">Target Endpoint ID</label>
+                  <input
+                    id="console-endpoint-input"
+                    type="text"
+                    value="ep_live_demo"
+                    class="w-full h-10 px-3 rounded-lg bg-slate-50 dark:bg-zinc-950 border border-slate-300 dark:border-zinc-700 text-slate-900 dark:text-zinc-200 text-xs font-mono focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400"
+                    placeholder="ep_demo_123"
+                  />
+                </div>
+
+                <div class="md:col-span-3 flex items-end">
+                  <button
+                    id="console-execute-btn"
+                    type="button"
+                    class="w-full h-10 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm shadow-indigo-500/25"
+                  >
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /></svg>
+                    <span>Execute Request</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Optional Request Body for POST -->
+              <div id="console-body-wrap" class="space-y-1">
+                <label class="block text-[11px] font-mono uppercase text-slate-700 dark:text-zinc-300 font-semibold">Request Body (JSON)</label>
+                <textarea
+                  id="console-body-input"
+                  rows="3"
+                  class="w-full p-3 rounded-lg bg-slate-50 dark:bg-zinc-950 border border-slate-300 dark:border-zinc-700 text-slate-900 dark:text-zinc-200 text-xs font-mono focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 resize-y"
+                >{`{
+  "event": "customer.subscription.created",
+  "plan": "pro_annual",
+  "amount": 12000,
+  "currency": "usd",
+  "customer": "cus_98a7b1c"
+}`}</textarea>
+              </div>
+
+              <!-- Console Response Window -->
+              <div class="space-y-2 pt-3 border-t border-slate-100 dark:border-zinc-800">
+                <div class="flex items-center justify-between text-xs font-mono">
+                  <div class="flex items-center gap-2">
+                    <span class="text-slate-600 dark:text-zinc-400">Response:</span>
+                    <span id="console-status-badge" class="px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-400">Ready</span>
+                    <span id="console-latency-badge" class="text-slate-500 dark:text-zinc-500 text-[11px]"></span>
+                  </div>
+                  <button
+                    id="console-copy-response-btn"
+                    type="button"
+                    class="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                  >
+                    Copy Response
+                  </button>
+                </div>
+                <pre id="console-response-output" class="p-4 rounded-xl bg-slate-900 dark:bg-[#0b0f19] border border-slate-800 dark:border-zinc-850 text-emerald-400 font-mono text-xs leading-relaxed max-h-64 overflow-y-auto">Click "Execute Request" above to test the API live.</pre>
+              </div>
+            </div>
+          </section>
+
+
+          <!-- Section 3: REST API Reference -->
+          <section id="api-reference" class="space-y-8 pt-8 border-t border-slate-200 dark:border-zinc-800">
+            <div class="flex items-center gap-2.5">
+              <span class="text-indigo-600 dark:text-sky-400 font-mono text-sm font-bold">03</span>
+              <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white font-sans">REST API Specification</h2>
+            </div>
+
+            <div class="space-y-6">
+              
+              <!-- Inbound Receiver -->
+              <div id="ep-inbound" class="p-6 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 space-y-4 shadow-sm">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="flex items-center gap-2.5">
+                    <span class="px-2.5 py-1 rounded bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 font-mono font-bold text-xs">POST</span>
+                    <span class="text-slate-900 dark:text-white font-mono font-semibold text-sm">/api/r/:endpoint_id</span>
+                  </div>
+                  <span class="text-slate-500 dark:text-zinc-400 text-[11px] font-mono">100 req/min &bull; Max 1MB</span>
+                </div>
+                <p class="text-slate-600 dark:text-zinc-400 text-xs sm:text-sm leading-relaxed font-normal">
+                  Universal inbound receiver. Accepts all HTTP methods, broadcasts the payload in sub-20ms to connected SSE listeners, and stores the event in the session buffer. Returns the user-configured custom HTTP response.
+                </p>
+                <div class="bg-[#070b14] rounded-xl p-4 border border-[#1b263b] text-xs font-mono text-emerald-300">
+                  <span class="text-slate-400"># Example Response (200 OK)</span><br />
+                  {`{"success": true, "message": "Webhook received"}`}
+                </div>
+              </div>
+
+              <!-- SSE Real-time Stream -->
+              <div id="ep-stream" class="p-6 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 space-y-4 shadow-sm">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="flex items-center gap-2.5">
+                    <span class="px-2.5 py-1 rounded bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 font-mono font-bold text-xs">GET</span>
+                    <span class="text-slate-900 dark:text-white font-mono font-semibold text-sm">/api/stream/:endpoint_id</span>
+                  </div>
+                  <span class="text-slate-500 dark:text-zinc-400 text-[11px] font-mono">text/event-stream &bull; 50 listeners</span>
+                </div>
+                <p class="text-slate-600 dark:text-zinc-400 text-xs sm:text-sm leading-relaxed font-normal">
+                  Opens a persistent Server-Sent Events (SSE) connection. Inbound payloads sent to the endpoint are pushed immediately as JSON frames with 25-second heartbeat pings.
+                </p>
+              </div>
+
+              <!-- History API -->
+              <div id="ep-history" class="p-6 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 space-y-4 shadow-sm">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="flex items-center gap-2.5">
+                    <span class="px-2.5 py-1 rounded bg-slate-100 dark:bg-zinc-800 text-slate-800 dark:text-zinc-200 border border-slate-300 dark:border-zinc-700 font-mono font-bold text-xs">GET</span>
+                    <span class="text-slate-900 dark:text-white font-mono font-semibold text-sm">/api/history/:endpoint_id</span>
+                  </div>
+                  <span class="text-slate-500 dark:text-zinc-400 text-[11px] font-mono">Query params: page, limit, method, search</span>
+                </div>
+                <p class="text-slate-600 dark:text-zinc-400 text-xs sm:text-sm leading-relaxed font-normal">
+                  Fetches paginated captured webhook records. Supports filtering by HTTP method, keyword search in headers/body, and timestamp ranges.
+                </p>
+              </div>
+
+              <!-- Stats API -->
+              <div id="ep-stats" class="p-6 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 space-y-4 shadow-sm">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="flex items-center gap-2.5">
+                    <span class="px-2.5 py-1 rounded bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20 font-mono font-bold text-xs">GET</span>
+                    <span class="text-slate-900 dark:text-white font-mono font-semibold text-sm">/api/stats/:endpoint_id</span>
+                  </div>
+                  <span class="text-slate-500 dark:text-zinc-400 text-[11px] font-mono">Real-time Analytics</span>
+                </div>
+                <p class="text-slate-600 dark:text-zinc-400 text-xs sm:text-sm leading-relaxed font-normal">
+                  Returns hourly event frequency, HTTP method distribution, average payload size, and detected HMAC cryptographic signature providers.
+                </p>
+              </div>
+
+              <!-- SSRF-Guarded Replay API -->
+              <div id="ep-replay" class="p-6 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 space-y-4 shadow-sm">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="flex items-center gap-2.5">
+                    <span class="px-2.5 py-1 rounded bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 font-mono font-bold text-xs">POST</span>
+                    <span class="text-slate-900 dark:text-white font-mono font-semibold text-sm">/api/replay</span>
+                  </div>
+                  <span class="text-slate-500 dark:text-zinc-400 text-[11px] font-mono">20 replays/min &bull; SSRF Protected</span>
+                </div>
+                <p class="text-slate-600 dark:text-zinc-400 text-xs sm:text-sm leading-relaxed font-normal">
+                  Replays any captured request to an external destination with automatic retries (0–3) and exponential backoff. Blocks private RFC1918 IPs and internal loopbacks to prevent SSRF vulnerabilities.
+                </p>
+              </div>
+
+              <!-- Edge Health API -->
+              <div id="ep-health" class="p-6 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 space-y-4 shadow-sm">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="flex items-center gap-2.5">
+                    <span class="px-2.5 py-1 rounded bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 font-mono font-bold text-xs">GET</span>
+                    <span class="text-slate-900 dark:text-white font-mono font-semibold text-sm">/api/health</span>
+                  </div>
+                  <span class="text-slate-500 dark:text-zinc-400 text-[11px] font-mono">Uptime &amp; Storage Connectivity</span>
+                </div>
+                <p class="text-slate-600 dark:text-zinc-400 text-xs sm:text-sm leading-relaxed font-normal">
+                  Health check endpoint for monitoring pipelines. Verifies Cloudflare D1 database and KV session availability.
+                </p>
+              </div>
+
+            </div>
+          </section>
+
+          <!-- Section 4: Local Forwarder & Tunneling -->
+          <section id="local-forwarding" class="space-y-4 pt-8 border-t border-slate-200 dark:border-zinc-800">
+            <div class="flex items-center gap-2.5">
+              <span class="text-indigo-600 dark:text-indigo-400 font-mono text-sm font-bold">04</span>
+              <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white font-sans">Stream Webhooks to Localhost (No CLI Required)</h2>
+            </div>
+            <p class="text-slate-600 dark:text-zinc-400 text-xs sm:text-sm leading-relaxed font-normal">
+              Forward webhooks directly into your local development server (<code class="font-mono text-slate-800 dark:text-zinc-200">http://localhost:3000</code> or <code class="font-mono text-slate-800 dark:text-zinc-200">http://localhost:8000</code>) using standard Server-Sent Events. No paid tunnels, no ngrok binary, and no port forwarding required:
+            </p>
+
+            <div class="space-y-4">
+              <!-- Node.js Script -->
+              <div class="rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-900 dark:bg-[#0b0f19] overflow-hidden shadow-sm">
+                <div class="flex items-center justify-between px-4 py-2.5 bg-slate-800/80 dark:bg-[#111625] border-b border-slate-700/60 dark:border-zinc-800 text-xs font-mono text-slate-300">
+                  <span class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span>
+                    <span>Node.js / TypeScript Local Forwarder</span>
+                  </span>
+                  <button
+                    type="button"
+                    class="copy-code-btn px-2.5 py-1 rounded bg-slate-700 hover:bg-slate-600 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-200 text-[11px] font-mono transition-colors cursor-pointer border border-slate-600/60 dark:border-zinc-700"
+                    data-code={nodeForwarderScript}
+                  >
+                    Copy
+                  </button>
+                </div>
+                <pre class="p-4 text-emerald-400 font-mono text-xs leading-relaxed overflow-x-auto"><code>{nodeForwarderScript}</code></pre>
+              </div>
+
+              <!-- Python Script -->
+              <div class="rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-900 dark:bg-[#0b0f19] overflow-hidden shadow-sm">
+                <div class="flex items-center justify-between px-4 py-2.5 bg-slate-800/80 dark:bg-[#111625] border-b border-slate-700/60 dark:border-zinc-800 text-xs font-mono text-slate-300">
+                  <span class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-indigo-400 inline-block"></span>
+                    <span>Python Local Forwarder (requests + sseclient)</span>
+                  </span>
+                  <button
+                    type="button"
+                    class="copy-code-btn px-2.5 py-1 rounded bg-slate-700 hover:bg-slate-600 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-200 text-[11px] font-mono transition-colors cursor-pointer border border-slate-600/60 dark:border-zinc-700"
+                    data-code={pythonForwarderScript}
+                  >
+                    Copy
+                  </button>
+                </div>
+                <pre class="p-4 text-emerald-400 font-mono text-xs leading-relaxed overflow-x-auto"><code>{pythonForwarderScript}</code></pre>
+              </div>
+            </div>
+          </section>
+
+          <!-- Section 5: HMAC Cryptographic Verification -->
+          <section id="hmac-verification" class="space-y-4 pt-8 border-t border-slate-200 dark:border-zinc-800">
+            <div class="flex items-center gap-2.5">
+              <span class="text-indigo-600 dark:text-indigo-400 font-mono text-sm font-bold">05</span>
+              <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white font-sans">HMAC Cryptographic Signature Verification</h2>
+            </div>
+            <p class="text-slate-600 dark:text-zinc-400 text-xs sm:text-sm leading-relaxed font-normal">
+              SafeWebhook automatically inspects signature headers from Stripe, GitHub, Shopify, Slack, Twilio, and Svix. Below is the production-ready Node.js constant-time verification recipe:
+            </p>
+
+            <div class="rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-900 dark:bg-[#0b0f19] overflow-hidden shadow-sm">
+              <div class="flex items-center justify-between px-4 py-2.5 bg-slate-800/80 dark:bg-[#111625] border-b border-slate-700/60 dark:border-zinc-800 text-xs font-mono text-slate-300">
+                <span class="flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-purple-400 inline-block"></span>
+                  <span>Stripe HMAC-SHA256 Constant-Time Verifier</span>
+                </span>
+                <button
+                  type="button"
+                  class="copy-code-btn px-2.5 py-1 rounded bg-slate-700 hover:bg-slate-600 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-200 text-[11px] font-mono transition-colors cursor-pointer border border-slate-600/60 dark:border-zinc-700"
+                  data-code={stripeVerificationNode}
+                >
+                  Copy
+                </button>
+              </div>
+              <pre class="p-4 text-emerald-400 font-mono text-xs leading-relaxed overflow-x-auto"><code>{stripeVerificationNode}</code></pre>
+            </div>
+          </section>
+
+          <!-- Section 6: Provider Integration Hub -->
+          <section id="integrations" class="space-y-4 pt-8 border-t border-slate-200 dark:border-zinc-800">
+            <div class="flex items-center gap-2.5">
+              <span class="text-indigo-600 dark:text-indigo-400 font-mono text-sm font-bold">06</span>
+              <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white font-sans">Provider Integration Hub</h2>
+            </div>
+            <p class="text-slate-600 dark:text-zinc-400 text-xs sm:text-sm leading-relaxed font-normal">
+              Step-by-step setup guides with simulated sample payloads for the most popular platforms:
+            </p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {Object.values(PLATFORMS).map((p) => (
+                <a
+                  href={`/test/${p.slug}`}
+                  class="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 hover:border-indigo-500/40 hover:shadow-sm transition-all group block"
+                >
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="font-semibold text-slate-900 dark:text-zinc-200 group-hover:text-indigo-600 dark:group-hover:text-white transition-colors text-xs">{p.name}</span>
+                    <span class="text-slate-400 dark:text-zinc-500 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors text-xs">&rarr;</span>
+                  </div>
+                  <p class="text-[11px] text-slate-500 dark:text-zinc-400 line-clamp-2 leading-relaxed font-normal">
+                    {p.description}
+                  </p>
+                </a>
+              ))}
+            </div>
+          </section>
+
+
+        </main>
+      </div>
     </div>
   </div>
 
-  <!-- Footer -->
-  <footer class="py-12 border-t border-slate-800 bg-slate-950 text-slate-400 text-sm">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
-      <div class="flex items-center gap-3">
-        <div class="w-6 h-6 rounded bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-xs font-bold font-mono">
-          S
-        </div>
-        <span class="font-semibold text-slate-200">SafeWebhook Docs</span>
-        <span class="text-xs text-slate-400">&bull; safewebhook.com &bull; 100% Free Edge Platform</span>
-      </div>
+  <!-- Interactive Scripts: Copy Helper & Live API Console -->
+  <script is:inline>
+    // Copy code button handler
+    document.querySelectorAll('.copy-code-btn').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        var code = btn.getAttribute('data-code');
+        if (!code) return;
+        try {
+          await navigator.clipboard.writeText(code);
+          var orig = btn.textContent;
+          btn.textContent = 'Copied!';
+          btn.classList.add('text-emerald-400');
+          setTimeout(function() {
+            btn.textContent = orig;
+            btn.classList.remove('text-emerald-400');
+          }, 2000);
+        } catch (e) {}
+      });
+    });
 
-      <div class="flex items-center gap-6 text-xs">
-        <a href="/" class="hover:text-cyan-300 transition-colors">Home</a>
-        <a href="/faq" class="hover:text-cyan-300 transition-colors">FAQ</a>
-        <a href="/app" class="text-cyan-400 hover:text-cyan-300 font-semibold transition-colors">Open App Workbench &rarr;</a>
-      </div>
-    </div>
-  </footer>
+    // Interactive API Console Runner
+    (function() {
+      var selectEl = document.getElementById('console-endpoint-select');
+      var inputEl = document.getElementById('console-endpoint-input');
+      var bodyWrap = document.getElementById('console-body-wrap');
+      var bodyInput = document.getElementById('console-body-input');
+      var execBtn = document.getElementById('console-execute-btn');
+      var statusBadge = document.getElementById('console-status-badge');
+      var latencyBadge = document.getElementById('console-latency-badge');
+      var responseOutput = document.getElementById('console-response-output');
+      var copyResBtn = document.getElementById('console-copy-response-btn');
+
+      if (!selectEl || !execBtn) return;
+
+      selectEl.addEventListener('change', function() {
+        var val = selectEl.value;
+        if (val === 'inbound') {
+          if (bodyWrap) bodyWrap.classList.remove('hidden');
+        } else {
+          if (bodyWrap) bodyWrap.classList.add('hidden');
+        }
+      });
+
+      execBtn.addEventListener('click', async function() {
+        var val = selectEl.value;
+        var epId = (inputEl.value || 'ep_live_demo').trim();
+        var origin = window.location.origin;
+
+        var url = '';
+        var method = 'GET';
+        var body = null;
+        var headers = {};
+
+        if (val === 'health') {
+          url = origin + '/api/health';
+        } else if (val === 'inbound') {
+          url = origin + '/api/r/' + encodeURIComponent(epId);
+          method = 'POST';
+          headers['Content-Type'] = 'application/json';
+          body = bodyInput ? bodyInput.value : '{}';
+        } else if (val === 'history') {
+          url = origin + '/api/history/' + encodeURIComponent(epId) + '?limit=10';
+        } else if (val === 'stats') {
+          url = origin + '/api/stats/' + encodeURIComponent(epId);
+        } else if (val === 'openapi') {
+          url = origin + '/api/openapi.json';
+        }
+
+        execBtn.disabled = true;
+        execBtn.textContent = 'Running...';
+        statusBadge.className = 'px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-400';
+        statusBadge.textContent = 'Sending...';
+        latencyBadge.textContent = '';
+        responseOutput.textContent = 'Executing ' + method + ' ' + url + '...';
+
+        var start = performance.now();
+
+        try {
+          var res = await fetch(url, {
+            method: method,
+            headers: headers,
+            body: body
+          });
+
+          var duration = Math.round(performance.now() - start);
+          var isOk = res.ok;
+          var status = res.status + ' ' + res.statusText;
+
+          statusBadge.textContent = status;
+          statusBadge.className = isOk
+            ? 'px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30'
+            : 'px-2 py-0.5 rounded text-[11px] font-bold bg-rose-50 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30';
+          latencyBadge.textContent = duration + ' ms';
+
+          var text = await res.text();
+          try {
+            var json = JSON.parse(text);
+            responseOutput.textContent = JSON.stringify(json, null, 2);
+          } catch (e) {
+            responseOutput.textContent = text || '(Empty Response)';
+          }
+        } catch (err) {
+          statusBadge.textContent = 'Failed';
+          statusBadge.className = 'px-2 py-0.5 rounded text-[11px] font-bold bg-rose-50 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30';
+          responseOutput.textContent = 'Fetch Error: ' + err.message;
+        } finally {
+          execBtn.disabled = false;
+          execBtn.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /></svg><span>Execute Request</span>';
+        }
+      });
+
+      if (copyResBtn) {
+        copyResBtn.addEventListener('click', async function() {
+          try {
+            await navigator.clipboard.writeText(responseOutput.textContent);
+            var orig = copyResBtn.textContent;
+            copyResBtn.textContent = 'Copied!';
+            setTimeout(function() { copyResBtn.textContent = orig; }, 2000);
+          } catch (e) {}
+        });
+      }
+    })();
+  </script>
+
+  <Footer />
 </Layout>

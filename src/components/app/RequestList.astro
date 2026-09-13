@@ -1,0 +1,112 @@
+---
+import { ic } from '../../scripts/app/icons.js';
+
+const METHODS = ['POST', 'GET', 'PUT', 'PATCH', 'DELETE', 'EMAIL'];
+---
+
+<aside id="swh-list" aria-label="Captured requests">
+  <div class="swh-list-head">
+    <div class="swh-fr">
+      <label class="swh-search swh-grow">
+        <Fragment set:html={ic('search', 14)} />
+        <input id="swh-q" type="search" placeholder="Search payloads, headers, IPs…" autocomplete="off" aria-label="Search captured requests" />
+        <kbd>/</kbd>
+      </label>
+      <button id="swh-filters-btn" class="swh-b swh-b--ico swh-b--line" aria-expanded="false" aria-controls="swh-filters" title="Filters and sorting">
+        <Fragment set:html={ic('filter')} />
+      </button>
+    </div>
+
+    <div id="swh-filters" class="swh-fc hidden">
+      <div class="swh-chips" role="group" aria-label="Filter by method">
+        <button class="swh-chip" data-method="ALL" aria-pressed="true">ALL</button>
+        {METHODS.map((m) => <button class="swh-chip" data-method={m} aria-pressed="false">{m}</button>)}
+      </div>
+      <div class="swh-fr">
+        <button id="swh-f-pin" class="swh-chip" aria-pressed="false" title="Show pinned requests only">
+          <Fragment set:html={ic('star', 11)} />PINNED
+        </button>
+        <button id="swh-f-sig" class="swh-chip" aria-pressed="false" title="Show signed requests only">
+          <Fragment set:html={ic('shield', 11)} />SIGNED
+        </button>
+        <select id="swh-sort" class="swh-sel swh-mla" style="width:auto;padding:4px 26px 4px 8px;font-size:11px" aria-label="Sort requests">
+          <option value="new">Newest first</option>
+          <option value="old">Oldest first</option>
+          <option value="big">Largest payload</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="swh-list-meta">
+    <span id="swh-count">No requests yet</span>
+    <div id="swh-spark" class="swh-spark" title="Requests per 10-second bucket (last 2 minutes)" aria-hidden="true"></div>
+    <div class="swh-fr swh-mla">
+      <button id="swh-density" class="swh-b swh-b--sm" aria-pressed="false" title="Roomy rows — click to fit more on screen">
+        <Fragment set:html={ic('rows', 13)} />
+      </button>
+      <button id="swh-select-mode" class="swh-b swh-b--sm" title="Select multiple requests">
+        <Fragment set:html={ic('list', 13)} />
+      </button>
+      <div class="swh-pop">
+        <button id="swh-export-btn" class="swh-b swh-b--sm" aria-haspopup="menu" aria-expanded="false" title="Export captured requests">
+          <Fragment set:html={ic('download', 13)} />
+        </button>
+        <div id="swh-export-menu" class="swh-menu swh-menu--r hidden" role="menu">
+          <p class="swh-menu-label">Download this session</p>
+          <button class="swh-menu-item" role="menuitem" data-export="json"><Fragment set:html={ic('file')} />JSON archive</button>
+          <button class="swh-menu-item" role="menuitem" data-export="ndjson"><Fragment set:html={ic('list')} />NDJSON (one per line)</button>
+          <button class="swh-menu-item" role="menuitem" data-export="csv"><Fragment set:html={ic('rows')} />CSV (spreadsheet)</button>
+          <button class="swh-menu-item" role="menuitem" data-export="md"><Fragment set:html={ic('book')} />Markdown report</button>
+          <button class="swh-menu-item" role="menuitem" data-export="har"><Fragment set:html={ic('globe')} />HAR 1.2 (DevTools)</button>
+          <button class="swh-menu-item" role="menuitem" data-export="curl"><Fragment set:html={ic('terminal')} />Replayable cURL script</button>
+          <div class="swh-menu-sep"></div>
+          <button class="swh-menu-item" role="menuitem" data-export="edge-json"><Fragment set:html={ic('database')} />Edge archive (server copy)</button>
+          <button class="swh-menu-item" role="menuitem" data-export="clipboard"><Fragment set:html={ic('copy')} />Copy all as JSON</button>
+        </div>
+      </div>
+      <button id="swh-clear" class="swh-b swh-b--sm swh-b--danger" title="Clear every captured request">
+        <Fragment set:html={ic('trash', 13)} />
+      </button>
+    </div>
+  </div>
+
+  <div id="swh-bulk" class="hidden">
+    <span id="swh-bulk-n">0 selected</span>
+    <div class="swh-fr swh-mla">
+      <button id="swh-bulk-all" class="swh-b swh-b--sm">All</button>
+      <button id="swh-bulk-export" class="swh-b swh-b--sm"><Fragment set:html={ic('download', 12)} />Export</button>
+      <button id="swh-bulk-del" class="swh-b swh-b--sm swh-b--danger"><Fragment set:html={ic('trash', 12)} />Delete</button>
+      <button id="swh-bulk-off" class="swh-b swh-b--sm"><Fragment set:html={ic('x', 12)} /></button>
+    </div>
+  </div>
+
+  <button id="swh-jump" class="swh-b swh-b--pri swh-b--sm hidden">
+    <Fragment set:html={ic('arrowUp', 12)} /><span id="swh-jump-n">new</span>
+  </button>
+
+  <div id="swh-rows" class="swh-scroll" role="listbox" aria-label="Request timeline" tabindex="-1"></div>
+
+  <div id="swh-empty" class="swh-wait swh-scroll">
+    <div class="swh-wait-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+    <div>
+      <h3>Listening for requests</h3>
+      <p>Your endpoint is live at the edge. Anything sent to it shows up here instantly — no refresh, no signup.</p>
+    </div>
+    <div class="swh-steps">
+      <div class="swh-step" id="swh-step-1">
+        <span class="swh-step-n">1</span><span>Copy your webhook URL</span>
+      </div>
+      <div class="swh-step" id="swh-step-2">
+        <span class="swh-step-n">2</span><span>Paste it into Stripe, GitHub, Shopify…</span>
+      </div>
+      <div class="swh-step" id="swh-step-3">
+        <span class="swh-step-n">3</span><span>Inspect, verify and replay the payload</span>
+      </div>
+    </div>
+    <div class="swh-fr">
+      <button class="swh-b swh-b--pri" data-mock="stripe-pay"><Fragment set:html={ic('zap', 13)} />Send a test event</button>
+      <button class="swh-b swh-b--line" data-open="mock"><Fragment set:html={ic('sparkle', 13)} />Event library</button>
+    </div>
+  </div>
+</aside>

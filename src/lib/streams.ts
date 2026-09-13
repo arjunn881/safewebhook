@@ -140,7 +140,14 @@ export function broadcastWebhook(
   });
 
   // Clean up any broken controllers
-  deadControllers.forEach((dc) => listeners.delete(dc));
+  deadControllers.forEach((dc) => {
+    listeners.delete(dc);
+    try {
+      dc.close();
+    } catch {
+      // Ignore if already closed or aborted
+    }
+  });
   if (listeners.size === 0) {
     activeStreams.delete(endpointId);
   }
@@ -178,7 +185,14 @@ export function pingStream(endpointId: string): void {
     }
   });
 
-  deadControllers.forEach((dc) => listeners.delete(dc));
+  deadControllers.forEach((dc) => {
+    listeners.delete(dc);
+    try {
+      dc.close();
+    } catch {
+      // Ignore if already closed or aborted
+    }
+  });
   if (listeners.size === 0) {
     activeStreams.delete(endpointId);
   }

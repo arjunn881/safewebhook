@@ -1,0 +1,140 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+const pageTitle = 'Terms and Conditions — SafeWebhook';
+const pageDescription = 'SafeWebhook Terms and Conditions. Review our terms of service, acceptable use policy, user rules, content limitations, and affiliate link disclosures.';
+---
+
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  robots="index, follow"
+>
+  <Header subTitle="/ Terms &amp; Conditions" />
+
+  <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 flex-1 bg-developer-grid">
+    
+    <!-- Page Header -->
+    <div class="space-y-3 mb-10">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 text-xs font-mono">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        Legal Agreement
+      </div>
+      <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white font-sans">
+        Terms and Conditions
+      </h1>
+      <p class="text-slate-500 dark:text-zinc-400 font-mono text-xs sm:text-sm">
+        Effective Date: August 20, 2026 &bull; Last Updated: August 20, 2026
+      </p>
+    </div>
+
+    <!-- Content Sections -->
+    <div class="space-y-8 text-slate-700 dark:text-zinc-300 leading-relaxed font-normal text-sm sm:text-base">
+
+      <!-- Summary Agreement Card -->
+      <section class="p-6 rounded-2xl border border-blue-200 dark:border-sky-500/30 bg-blue-50/50 dark:bg-sky-950/20 space-y-3 shadow-sm">
+        <h2 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white font-sans">Agreement to Terms</h2>
+        <p class="text-slate-800 dark:text-zinc-200">
+          By accessing or using SafeWebhook ("the Service") at <strong class="text-slate-900 dark:text-white">safewebhook.com</strong>, you agree to be bound by these Terms and Conditions, all applicable laws, and regulations. If you do not agree with any of these terms, you are prohibited from using or accessing this site.
+        </p>
+      </section>
+
+      <!-- 1. Description of Service -->
+      <section class="space-y-3 p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white font-sans">1. Description of Service</h2>
+        <p>SafeWebhook is a free, privacy-first webhook debugging and payload inspection platform providing developers with:</p>
+        <ul class="list-disc list-inside space-y-1.5 ml-2">
+          <li>Temporary endpoint URL generation for capturing real-time HTTP webhooks</li>
+          <li>Sub-20ms Server-Sent Events (SSE) payload streaming</li>
+          <li>Local browser payload inspection and request replaying</li>
+          <li>Cryptographic signature verification recipes and technical error guides</li>
+          <li>Custom response simulation (status codes, headers, network latency)</li>
+        </ul>
+      </section>
+
+      <!-- 2. Acceptable Use Policy & User Rules (Strict) -->
+      <section class="space-y-3 p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white font-sans">2. Acceptable Use Policy &amp; User Rules</h2>
+        <p>You agree to use SafeWebhook strictly for lawful software development and testing. You agree <strong class="text-slate-900 dark:text-white">NOT</strong> to:</p>
+        <ul class="list-disc list-inside space-y-1.5 ml-2 text-rose-600 dark:text-rose-400 font-normal">
+          <li>Transmit malicious payloads, ransomware, spyware, trojans, or automated spam</li>
+          <li>Launch denial-of-service (DoS) or distributed denial-of-service (DDoS) attacks against any entity</li>
+          <li>Use SafeWebhook endpoints as command-and-control (C2) servers for illicit activities</li>
+          <li>Attempt unauthorized port scanning, vulnerability fuzzing, or infrastructure probing</li>
+          <li>Store or transmit unlawful, infringing, libelous, or defamatory materials</li>
+        </ul>
+        <p class="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-2">
+          Violation of this Acceptable Use Policy will result in immediate IP banning and notification to relevant infrastructure providers or law enforcement.
+        </p>
+      </section>
+
+      <!-- 3. Content Limitations & Code Snippets -->
+      <section class="space-y-3 p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white font-sans">3. Content Limitations &amp; Intellectual Property</h2>
+        <p>
+          All educational documentation, diagnostic guides, and code templates published on SafeWebhook are provided for public developer use under standard open-source principles.
+        </p>
+        <p>
+          You are responsible for reviewing and testing any code snippets before deploying them to your own production systems. SafeWebhook makes no warranty that code recipes will be error-free or uninterrupted.
+        </p>
+      </section>
+
+      <!-- 4. Third-Party Links & Affiliate Disclosure -->
+      <section class="space-y-3 p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white font-sans">4. Third-Party Links, Ads &amp; Affiliate Disclosure</h2>
+        <p>
+          SafeWebhook may contain links to third-party websites or services (e.g. documentation for Stripe, GitHub, Cloudflare, Google AdSense, etc.) that are not owned or controlled by SafeWebhook.
+        </p>
+        <p>
+          SafeWebhook has no control over, and assumes no responsibility for, the content, privacy policies, or practices of any third-party websites or services. Some links may be affiliated, meaning we may earn a referral fee at no cost to you if you purchase services through our links.
+        </p>
+      </section>
+
+      <!-- 5. Disclaimer of Warranties -->
+      <section class="space-y-3 p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white font-sans">5. Disclaimer of Warranties ("AS IS")</h2>
+        <p>
+          The Service is provided on an <strong>"AS IS"</strong> and <strong>"AS AVAILABLE"</strong> basis without any representations or warranties of any kind, whether express, statutory, or implied, including but not limited to implied warranties of merchantability, fitness for a particular purpose, non-infringement, or course of performance.
+        </p>
+      </section>
+
+      <!-- 6. Limitation of Liability -->
+      <section class="space-y-3 p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white font-sans">6. Limitation of Liability</h2>
+        <p>
+          To the maximum extent permitted by applicable law, in no event shall SafeWebhook, its creators, or contributors be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses resulting from:
+        </p>
+        <ul class="list-disc list-inside space-y-1 ml-2">
+          <li>Your access to or use of or inability to access or use the Service</li>
+          <li>Any conduct or content of any third party on the Service</li>
+          <li>Any unauthorized access, use, or alteration of your webhook transmissions</li>
+        </ul>
+      </section>
+
+      <!-- 7. Modifications to Terms -->
+      <section class="space-y-3 p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white font-sans">7. Modifications to Terms</h2>
+        <p>
+          We reserve the right, at our sole discretion, to modify or replace these Terms at any time. Changes become effective immediately upon posting to this page. By continuing to access or use our Service after those revisions become effective, you agree to be bound by the revised terms.
+        </p>
+      </section>
+
+      <!-- 8. Contact Information -->
+      <section class="space-y-3 p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white font-sans">8. Contact Information</h2>
+        <p>If you have any questions about these Terms and Conditions, please contact us:</p>
+        <ul class="list-disc list-inside space-y-1 ml-2 font-mono text-xs sm:text-sm">
+          <li>Email: <a href="mailto:support@safewebhook.com" class="text-indigo-600 dark:text-sky-400 hover:underline">support@safewebhook.com</a></li>
+          <li>Contact Page: <a href="/contact" class="text-indigo-600 dark:text-sky-400 hover:underline">https://safewebhook.com/contact</a></li>
+        </ul>
+      </section>
+
+    </div>
+  </main>
+
+  <Footer />
+</Layout>

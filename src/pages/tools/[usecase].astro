@@ -1,51 +1,59 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { USE_CASES, type ToolUseCase } from '../../data/usecases';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { USE_CASES, type UseCaseInfo } from '../../data/usecases';
 
 export const prerender = false;
 
 const { usecase } = Astro.params;
-const caseData: ToolUseCase | undefined = usecase ? USE_CASES[usecase] : undefined;
+const caseData: UseCaseInfo | undefined = USE_CASES[usecase as string];
 
 if (!caseData) {
-  return Astro.redirect('/docs');
+  return Astro.redirect('/tools');
 }
 
-const pageTitle = `${caseData.name} — SafeWebhook Developer Tool`;
-const pageDescription = `${caseData.headline}. ${caseData.description} Powered by SafeWebhook at safewebhook.com.`;
+const pageTitle = `${caseData.name} — Free Online Webhook Utility | SafeWebhook`;
+const pageDescription = `${caseData.headline} Test webhooks online with ${caseData.name.toLowerCase()} at safewebhook.com. Zero login, 100% private in-memory capture.`;
 
 const structuredSchema = {
   '@context': 'https://schema.org',
   '@graph': [
     {
-      '@type': 'HowTo',
-      name: caseData.name,
+      '@type': 'TechArticle',
+      headline: pageTitle,
       description: pageDescription,
-      step: caseData.practicalGuide.map((step, idx) => ({
-        '@type': 'HowToStep',
-        position: idx + 1,
-        name: `Step ${idx + 1}`,
-        text: step
+      url: Astro.url.href,
+      author: {
+        '@type': 'Organization',
+        name: 'SafeWebhook'
+      }
+    },
+    {
+      '@type': 'FAQPage',
+      mainEntity: caseData.faqs.map(faq => ({
+        '@type': 'Question',
+        name: faq.q,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: faq.a
+        }
       }))
     },
     {
       '@type': 'BreadcrumbList',
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://safewebhook.com/' },
-        { '@type': 'ListItem', position: 2, name: 'Tools', item: 'https://safewebhook.com/docs' },
+        { '@type': 'ListItem', position: 2, name: 'Tools', item: 'https://safewebhook.com/tools' },
         { '@type': 'ListItem', position: 3, name: caseData.name, item: Astro.url.href }
       ]
-    },
-    {
-      '@type': 'FAQPage',
-      mainEntity: caseData.faqs.map(f => ({
-        '@type': 'Question',
-        name: f.q,
-        acceptedAnswer: { '@type': 'Answer', text: f.a }
-      }))
     }
   ]
 };
+
+const otherTools = Object.values(USE_CASES)
+  .filter(u => u.slug !== caseData.slug)
+  .slice(0, 3);
 ---
 
 <Layout
@@ -53,167 +61,172 @@ const structuredSchema = {
   description={pageDescription}
   canonicalURL={Astro.url.href}
   keywords={caseData.targetQueries.join(', ')}
+  schema={structuredSchema}
 >
-  <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredSchema)} />
+  <Header activeNav="tools" subTitle={`/ ${caseData.name}`} />
 
-  <!-- Navigation Header -->
-  <header class="sticky top-0 z-50 w-full border-b border-slate-800 bg-slate-950/85 backdrop-blur-md">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <a href="/" class="flex items-center gap-3 group">
-        <div class="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:border-cyan-400 transition-colors shadow-sm shadow-cyan-500/10">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-        </div>
-        <div class="flex flex-col">
-          <span class="font-bold tracking-tight text-white text-base font-sans">Safe<span class="text-cyan-400">Webhook</span></span>
-          <span class="text-[10px] text-slate-400 -mt-1 font-mono">safewebhook.com</span>
-        </div>
-      </a>
-
-      <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
-        <a href="/" class="hover:text-cyan-300 transition-colors">Home</a>
-        <a href="/docs" class="hover:text-cyan-300 transition-colors">Docs</a>
-        <a href="/faq" class="hover:text-cyan-300 transition-colors">FAQ</a>
-      </nav>
-
-      <a
-        href="/app"
-        class="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold rounded-lg text-slate-950 bg-gradient-to-r from-cyan-400 to-cyan-300 hover:from-cyan-300 hover:to-cyan-200 transition-all shadow-md shadow-cyan-500/20 active:scale-95"
-      >
-        Launch Workbench &rarr;
-      </a>
-    </div>
-  </header>
-
-  <main class="py-12 sm:py-20">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+  <main class="py-10 sm:py-16 flex-1 bg-developer-grid">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 sm:space-y-12">
       
       <!-- Breadcrumbs -->
-      <nav class="flex items-center gap-2 text-xs font-mono text-slate-400">
-        <a href="/" class="hover:text-cyan-300 transition-colors">Home</a>
+      <nav class="flex items-center gap-2 text-xs font-mono text-slate-500 dark:text-zinc-400" aria-label="Breadcrumb">
+        <a href="/" class="hover:text-slate-900 dark:hover:text-white transition-colors">Home</a>
         <span>/</span>
-        <a href="/docs" class="hover:text-cyan-300 transition-colors">Tools</a>
+        <a href="/tools" class="hover:text-slate-900 dark:hover:text-white transition-colors">Tools</a>
         <span>/</span>
-        <span class="text-cyan-400 font-semibold">{caseData.name}</span>
+        <span class="text-indigo-600 dark:text-sky-400 font-semibold">{caseData.name}</span>
       </nav>
 
       <!-- Hero Header -->
       <div class="space-y-4">
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 text-xs font-mono">
-          <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
-          <span>SafeWebhook Developer Tool</span>
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 font-mono">
+          <span>Developer Utility</span>
         </div>
-        <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight leading-tight">
+        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white font-sans">
           {caseData.name}
         </h1>
-        <p class="text-base sm:text-lg text-slate-300 leading-relaxed">
+        <p class="text-base sm:text-lg text-slate-600 dark:text-zinc-400 leading-relaxed max-w-3xl font-normal">
           {caseData.headline}
         </p>
+      </div>
 
-        <!-- Target Search Query Tags -->
-        <div class="pt-2 flex flex-wrap gap-2">
-          {caseData.targetQueries.map(q => (
-            <span class="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono text-cyan-300">
-              #{q}
-            </span>
+      <!-- GEO / AEO Direct Answer Box -->
+      {caseData.directAnswer && (
+        <section class="rounded-xl border border-blue-200 dark:border-sky-500/30 bg-blue-50/50 dark:bg-sky-950/20 p-5 sm:p-6 backdrop-blur-sm shadow-sm">
+          <div class="flex items-center gap-2 text-indigo-600 dark:text-sky-400 text-xs font-mono font-semibold uppercase tracking-wider mb-2">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Direct Answer / Tool Overview
+          </div>
+          <p class="text-sm sm:text-base text-slate-800 dark:text-zinc-200 leading-relaxed font-sans font-medium">
+            {caseData.directAnswer}
+          </p>
+        </section>
+      )}
+
+      <!-- Key Benefits Grid -->
+      <section class="space-y-4">
+        <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
+          Key Capabilities &amp; Benefits
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          {caseData.benefits.map(benefit => (
+            <div class="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 flex items-start gap-3 shadow-sm">
+              <div class="w-5 h-5 rounded-md bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <span class="text-xs sm:text-sm text-slate-700 dark:text-zinc-300 leading-relaxed font-normal">{benefit}</span>
+            </div>
           ))}
         </div>
-
-        <div class="pt-4 flex flex-wrap items-center gap-4">
-          <a
-            href="/app"
-            class="px-6 py-3 rounded-xl text-sm font-bold text-slate-950 bg-gradient-to-r from-cyan-400 via-cyan-300 to-teal-300 hover:from-cyan-300 hover:to-teal-200 transition-all shadow-lg shadow-cyan-500/25"
-          >
-            Launch Live Interactive Tool &rarr;
-          </a>
-        </div>
-      </div>
-
-      <!-- Core Benefits -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 font-mono text-xs">
-        {caseData.benefits.map(b => (
-          <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 flex items-start gap-3">
-            <div class="w-5 h-5 rounded bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 flex-shrink-0 mt-0.5">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-            </div>
-            <span class="text-slate-200 text-sm font-sans">{b}</span>
-          </div>
-        ))}
-      </div>
+      </section>
 
       <!-- Step-by-Step Practical Guide -->
-      <section class="space-y-6 pt-8 border-t border-slate-800">
-        <h2 class="text-2xl font-bold text-white">How to Use This Tool</h2>
+      <section class="space-y-4 sm:space-y-5">
+        <div class="space-y-1">
+          <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
+            How to Use: Step-by-Step Practical Guide
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-600 dark:text-zinc-400">
+            Follow these simple steps to configure and utilize this feature:
+          </p>
+        </div>
+
         <div class="space-y-3">
           {caseData.practicalGuide.map((step, idx) => (
-            <div class="flex items-start gap-3.5 p-4 rounded-xl border border-slate-800 bg-slate-900/40 text-sm text-slate-200">
-              <span class="w-6 h-6 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-mono text-xs flex items-center justify-center flex-shrink-0 font-bold">
+            <div class="flex items-start gap-3.5 p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/30 shadow-sm">
+              <span class="w-6 h-6 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 text-xs font-mono font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
                 {idx + 1}
               </span>
-              <span class="leading-relaxed">{step}</span>
+              <div class="text-xs sm:text-sm text-slate-700 dark:text-zinc-300 leading-relaxed font-normal">
+                {step}
+              </div>
             </div>
           ))}
         </div>
       </section>
 
-      <!-- Code Snippet / API Recipe -->
-      <section class="space-y-4 pt-8 border-t border-slate-800">
-        <h2 class="text-2xl font-bold text-white">Code Implementation Recipe</h2>
-        <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-3 font-mono text-xs">
-          <pre class="p-4 rounded-xl bg-slate-950 text-cyan-300 overflow-x-auto border border-slate-850 leading-relaxed"><code>{caseData.codeSnippet}</code></pre>
-        </div>
-      </section>
+      <!-- Code Snippet / API Configuration Recipe -->
+      {caseData.codeSnippet && (
+        <section class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
+              Code Configuration &amp; Integration Recipe
+            </h2>
+            <span class="text-[11px] font-mono text-slate-500 dark:text-zinc-400">cURL / JavaScript API</span>
+          </div>
+          <div class="rounded-xl border border-slate-800 bg-[#070b14] p-4 font-mono text-xs text-emerald-400 overflow-x-auto shadow-lg">
+            <pre><code>{caseData.codeSnippet}</code></pre>
+          </div>
+        </section>
+      )}
 
-      <!-- FAQs -->
-      <section class="space-y-6 pt-8 border-t border-slate-800">
-        <h2 class="text-2xl font-bold text-white">Frequently Asked Questions</h2>
-        <div class="space-y-4">
+      <!-- Frequently Asked Questions -->
+      <section class="space-y-4 sm:space-y-5">
+        <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
+          Frequently Asked Questions
+        </h2>
+        <div class="space-y-3">
           {caseData.faqs.map(faq => (
-            <div class="p-5 rounded-xl border border-slate-800 bg-slate-900/60 space-y-2">
-              <h3 class="font-semibold text-white text-base">{faq.q}</h3>
-              <p class="text-sm text-slate-300 leading-relaxed">{faq.a}</p>
+            <div class="p-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 space-y-2 shadow-sm">
+              <h3 class="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">
+                {faq.q}
+              </h3>
+              <p class="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 leading-relaxed font-normal">
+                {faq.a}
+              </p>
             </div>
           ))}
         </div>
       </section>
 
       <!-- CTA Box -->
-      <div class="p-8 rounded-2xl border border-cyan-500/30 bg-slate-900/90 text-center space-y-4">
-        <h3 class="text-2xl font-bold text-white">Start testing on SafeWebhook right now</h3>
-        <p class="text-sm text-slate-300 max-w-lg mx-auto">
-          No signups, subscriptions, or credit cards required. 100% private in-browser memory at safewebhook.com.
+      <section class="rounded-2xl border border-blue-200 dark:border-sky-500/30 bg-gradient-to-br from-blue-50 via-white to-slate-100 dark:from-[#070a12] dark:via-zinc-900/50 dark:to-zinc-950 p-6 sm:p-8 text-center space-y-4 shadow-sm">
+        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white font-sans">
+          Try {caseData.name} on SafeWebhook
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 max-w-xl mx-auto font-normal">
+          Start testing in your browser right now with zero signup.
         </p>
-        <div class="pt-2">
+        <div>
           <a
             href="/app"
-            class="inline-flex items-center justify-center px-8 py-3.5 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold text-sm shadow-md shadow-cyan-500/20 transition-all"
+            class="inline-flex items-center justify-center px-6 py-3 text-sm font-semibold rounded-xl text-white bg-indigo-600 hover:bg-indigo-500 shadow-sm shadow-indigo-500/20 transition-all shadow-md hover:scale-105"
           >
-            Launch SafeWebhook Workbench &rarr;
+            <span>Open Workbench &rarr;</span>
           </a>
         </div>
-      </div>
+      </section>
+
+      <!-- Related Tools -->
+      {otherTools.length > 0 && (
+        <section class="space-y-4 border-t border-slate-200 dark:border-zinc-800 pt-8">
+          <h2 class="text-xs font-mono font-semibold uppercase text-slate-500 dark:text-zinc-400 tracking-wider">
+            Explore More Webhook Utilities
+          </h2>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {otherTools.map(t => (
+              <a
+                href={`/tools/${t.slug}`}
+                class="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/30 hover:border-indigo-600 dark:hover:border-sky-500/50 transition-all group block shadow-sm"
+              >
+                <div class="text-xs font-semibold text-slate-800 dark:text-zinc-200 group-hover:text-indigo-600 dark:group-hover:text-sky-400 transition-colors truncate">
+                  {t.name}
+                </div>
+                <div class="text-[11px] text-slate-500 dark:text-zinc-400 mt-1 line-clamp-2">
+                  {t.headline}
+                </div>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
 
     </div>
   </main>
 
-  <!-- Footer -->
-  <footer class="py-12 border-t border-slate-800 bg-slate-950 text-slate-400 text-sm">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
-      <div class="flex items-center gap-3">
-        <div class="w-6 h-6 rounded bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-xs font-bold font-mono">
-          S
-        </div>
-        <span class="font-semibold text-slate-200">SafeWebhook</span>
-        <span class="text-xs text-slate-400">&bull; safewebhook.com &bull; {caseData.name}</span>
-      </div>
-
-      <div class="flex items-center gap-6 text-xs">
-        <a href="/" class="hover:text-cyan-300 transition-colors">Home</a>
-        <a href="/docs" class="hover:text-cyan-300 transition-colors">Docs</a>
-        <a href="/faq" class="hover:text-cyan-300 transition-colors">FAQ</a>
-        <a href="/app" class="text-cyan-400 hover:text-cyan-300 font-semibold transition-colors">Open App &rarr;</a>
-      </div>
-    </div>
-  </footer>
+  <Footer />
 </Layout>

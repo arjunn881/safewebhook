@@ -13,9 +13,28 @@ export const OPTIONS: APIRoute = async () => {
     status: 204,
     headers: {
       ...CORS_HEADERS,
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     },
   });
+};
+
+/**
+ * GET /api/monitor — Returns system operational status for uptime monitors
+ */
+export const GET: APIRoute = async () => {
+  return new Response(
+    JSON.stringify({
+      success: true,
+      status: 'operational',
+      service: 'safewebhook',
+      timestamp: new Date().toISOString(),
+      runtime: 'cloudflare-workers',
+    }),
+    {
+      status: 200,
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    }
+  );
 };
 
 /**

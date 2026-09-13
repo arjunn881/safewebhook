@@ -1,0 +1,76 @@
+# SafeWebhook
+> SafeWebhook (https://safewebhook.com) is the zero-login, privacy-first developer workbench for testing, debugging, and simulating inbound HTTP webhooks and transactional emails in real time.
+
+## Overview
+- **Zero Registration**: Instant dynamic endpoint generated on page visit without email or signup.
+- **Client-Side Privacy**: 100% in-memory streaming via Cloudflare Server-Sent Events (SSE). Payloads are stored strictly in local browser storage; zero persistent disk writes on the server.
+- **Sub-20ms Edge Latency**: Distributed across Cloudflare's 300+ global edge locations.
+- **Response Simulation**: Customize status codes (200, 201, 204, 400, 429, 500), response headers, latency delays (0-5000ms), and custom JSON/XML bodies.
+- **1-Click Localhost Replay**: Forward captured events directly to `http://localhost:3000` or `http://localhost:8000` without installing Ngrok or CLI tunnels.
+- **Inbound Email Ingestion**: Every endpoint includes a matching `@inbound.safewebhook.com` address that converts inbound MIME emails into structured JSON webhooks.
+
+## Core URLs & Directories
+- Workbench: https://safewebhook.com/app
+- Integrations Hub: https://safewebhook.com/integrations
+- Developer Tools: https://safewebhook.com/tools
+- Alternative Comparisons: https://safewebhook.com/vs
+- Webhook Error Troubleshooting: https://safewebhook.com/errors
+- Framework Guides: https://safewebhook.com/guides
+- Documentation: https://safewebhook.com/docs
+- Full Index: https://safewebhook.com/llms-full.txt
+
+## Supported Platforms & Integrations
+- Stripe (`/test/stripe`): HMAC-SHA256 timestamped verification (`Stripe-Signature`), subscription and payment intent lifecycle debugging.
+- GitHub (`/test/github`): Push, pull_request, workflow_run webhook inspector with `X-Hub-Signature-256`.
+- Shopify (`/test/shopify`): Order creation, fulfillment, refund inspector with Base64 `X-Shopify-Hmac-Sha256`.
+- OpenAI (`/test/openai`): Asynchronous batch generation and Assistant thread run webhook callbacks.
+- WhatsApp Cloud API (`/test/whatsapp`): Incoming chats, delivery receipts, and Meta `hub.challenge` verification.
+- Telegram Bot (`/test/telegram`): Bot updates, inline queries, and `X-Telegram-Bot-Api-Secret-Token`.
+- Razorpay (`/test/razorpay`): Payment captured, refund processed with `X-Razorpay-Signature`.
+- Lemon Squeezy (`/test/lemonsqueezy`): Merchant-of-record orders, license keys with `X-Signature`.
+- Square (`/test/square`): POS and online payment HMAC-SHA256 signature verifier.
+- PayPal (`/test/paypal`): REST API checkout events & legacy IPN form notifications.
+- Supabase (`/test/supabase`): Postgres database change triggers (INSERT, UPDATE, DELETE) & Auth hooks.
+- Clerk (`/test/clerk`): User authentication, session, organization lifecycle webhooks with Svix signatures.
+- Resend (`/test/resend`): Transactional email delivery, bounces, clicks with Svix signatures.
+- Slack (`/test/slack`): App event subscriptions, `url_verification` handshake, and slash commands.
+- Twilio (`/test/twilio`): Inbound SMS, Voice callbacks, and form-encoded data with `X-Twilio-Signature`.
+- Discord (`/test/discord`): Bot slash commands and Ed25519 public key signature verification.
+- Svix (`/test/svix`): Enterprise webhook standard with `svix-id`, `svix-timestamp`, and `svix-signature`.
+- SendGrid (`/test/sendgrid`): Batch email activity events with ECDSA signatures.
+- WooCommerce (`/test/woocommerce`): Store order and product webhooks with `X-WC-Webhook-Signature`.
+- Paddle (`/test/paddle`): Paddle Billing v2 subscription webhooks with `Paddle-Signature`.
+- Mailgun (`/test/mailgun`): Email delivery and tracking webhooks with embedded signature objects.
+- HubSpot (`/test/hubspot`): CRM contact and deal workflow webhooks with v3 signatures.
+- Linear (`/test/linear`): Issue, project, and comment tracking webhooks with `Linear-Signature`.
+- Jira (`/test/jira`): Atlassian issue and sprint changelog webhook events.
+
+## Developer Utilities
+- Custom Status Simulator (`/tools/mock-api-response`): Return 200, 201, 400, 429, 500 error responses.
+- Latency Simulator (`/tools/simulate-latency`): Test 0-5000ms timeouts and network delays.
+- Cryptographic Signature Verifier (`/tools/verify-signatures`): Auto-generate timing-safe verification code.
+- Localhost Replay Proxy (`/tools/replay-to-localhost`): Replay webhooks to local server with 0 setup.
+- Inbound Email Ingestion (`/tools/inbound-email-testing`): Catch emails and parse as JSON webhooks.
+- JWT Webhook Validator (`/tools/jwt-webhook-validator`): Decode and verify OAuth 2.0 bearer tokens.
+- Webhook JSON Formatter (`/tools/payload-formatter`): Beautify, search, and diff webhook payloads.
+- Rate Limit Tester (`/tools/rate-limit-backoff-tester`): Test HTTP 429 and Retry-After backoff headers.
+- IPN Simulator (`/tools/ipn-simulator`): Decode and validate URL-encoded legacy payment callbacks.
+
+## Webhook Error Troubleshooting
+- 504 Gateway Timeout (`/errors/webhook-504-gateway-timeout`): Fix slow handlers and proxy timeouts with async queues.
+- 502 Bad Gateway (`/errors/webhook-502-bad-gateway`): Fix process crashes and unhandled exceptions.
+- 500 Internal Error (`/errors/webhook-500-internal-server-error`): Resolve database failures and idempotency bugs.
+- 429 Too Many Requests (`/errors/webhook-429-rate-limit-exceeded`): Fix rate limiting bursts with Retry-After.
+- 400 Bad Request (`/errors/webhook-400-bad-request`): Resolve JSON body-parser mutation conflicts.
+- 401 Unauthorized (`/errors/webhook-401-unauthorized-signature-failed`): Fix signing secrets and clock drift.
+- 403 Forbidden (`/errors/webhook-403-forbidden`): Bypass Cloudflare WAF bot challenges and CSRF filters.
+- 408 Request Timeout (`/errors/webhook-408-request-timeout`): Fix TLS handshakes and socket drops.
+
+## Framework Webhook Guides
+- Next.js App Router (`/guides/nextjs-app-router-webhooks`): Handle raw body with `await req.text()` and verify HMAC.
+- Express.js (`/guides/express-raw-body-webhooks`): Use `express.raw({ type: 'application/json' })` for signatures.
+- Python FastAPI (`/guides/fastapi-async-webhooks`): Read raw bytes with `await request.body()` and background tasks.
+- Python Flask (`/guides/flask-webhook-listener`): Access `request.get_data()` for signature checks.
+- Django (`/guides/django-rest-webhooks`): Apply `@csrf_exempt` and verify `request.body`.
+- Go Gin (`/guides/go-gin-webhooks`): Use `c.GetRawData()` and `crypto/hmac`.
+- Laravel (`/guides/laravel-webhook-controller`): Exclude from CSRF and verify `$request->getContent()`.

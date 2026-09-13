@@ -9,6 +9,9 @@ import {
   readRequestBody,
   errorResponse,
 } from '../../../lib/http';
+import { checkRateLimit, rateLimitResponse, rateLimitHeaders } from '../../../lib/rate_limit';
+import { checkSSRF } from '../../../lib/ssrf_guard';
+import { env } from 'cloudflare:workers';
 
 export const prerender = false;
 
@@ -18,6 +21,9 @@ export const prerender = false;
  */
 async function handleInboundWebhook(context: Parameters<APIRoute>[0]): Promise<Response> {
   const { params, request, url } = context;
+  // Cloudflare Workers execution context for background tasks (waitUntil)
+  // Astro v6+: use context.locals.cfContext (runtime.ctx was removed in v6)
+  const ctx = (context.locals as { cfContext?: ExecutionContext }).cfContext;
   const endpointId = params.endpoint_id;
 
   // 1. Handle preflight CORS OPTIONS requests immediately
@@ -36,19 +42,47 @@ async function handleInboundWebhook(context: Parameters<APIRoute>[0]): Promise<R
     );
   }
 
+  // 3. Extract incoming URL query parameters
+  const urlObj = new URL(url);
+  const queryParams: Record<string, string> = {};
+  urlObj.searchParams.forEach((value, key) => {
+    queryParams[key] = value;
+  });
+
+  // 4. Per-endpoint rate limiting: default 100 requests/min (supports ?rate_limit=N for custom throttling/testing)
+  const rateLimitParam = queryParams['rate_limit'];
+  const parsedLimit = rateLimitParam ? parseInt(rateLimitParam, 10) : NaN;
+  const limit = (!isNaN(parsedLimit) && parsedLimit >= 1 && parsedLimit <= 5000) ? parsedLimit : 100;
+
+  const kv = (env as unknown as Record<string, KVNamespace | undefined>)?.SESSION ?? null;
+  const rlResult = await checkRateLimit(kv, `rl:inbound:${endpointId}`, limit, 60_000);
+  if (!rlResult.allowed) {
+    try {
+      if (!request.bodyUsed) {
+        await request.text();
+      }
+    } catch {}
+    return rateLimitResponse(rlResult);
+  }
+
   try {
-    // 3. Extract raw body text safely with memory limits
-    const { bodyText, byteSize } = await readRequestBody(request);
+    // 5. Extract raw body text safely with hard 1MB limit (returns 413 on oversize)
+    let bodyText: string | null;
+    let byteSize: number;
+    try {
+      const result = await readRequestBody(request, 1 * 1024 * 1024);
+      bodyText = result.bodyText;
+      byteSize = result.byteSize;
+    } catch (sizeErr: unknown) {
+      const err = sizeErr as Error;
+      if (err.message.includes('Payload too large')) {
+        return errorResponse('Payload too large. Maximum accepted body size is 1MB.', 413);
+      }
+      throw sizeErr;
+    }
 
-    // 4. Extract and normalize all request headers into a plain JSON object
+    // 6. Extract and normalize all request headers into a plain JSON object
     const headersMap = extractHeaders(request);
-
-    // 5. Extract incoming URL query parameters
-    const urlObj = new URL(url);
-    const queryParams: Record<string, string> = {};
-    urlObj.searchParams.forEach((value, key) => {
-      queryParams[key] = value;
-    });
 
     // 6. Detect Content Format & Signature Providers
     const contentType = (headersMap['content-type'] || '').toLowerCase();
@@ -104,49 +138,67 @@ async function handleInboundWebhook(context: Parameters<APIRoute>[0]): Promise<R
     // 8. Instantly forward to active in-memory SSE stream listeners
     const { delivered, recipientCount } = broadcastWebhook(endpointId!, payload);
 
-    // Save to Cloudflare KV & memory store for multi-isolate synchronization
-    await saveWebhookPayload(endpointId!, payload);
+    // Save to in-memory store (sync) + schedule KV write via waitUntil (non-blocking).
+    // NOT awaiting the KV write here is critical — wrangler 4.x miniflare crashes when
+    // KV loopback I/O from one request overlaps with the next. By deferring via waitUntil,
+    // the response is returned before KV completes, preventing the overlap.
+    const kvWrite = saveWebhookPayload(endpointId!, payload);
+    if (ctx?.waitUntil) {
+      ctx.waitUntil(kvWrite);
+    }
+    // Note: if ctx is unavailable (rare edge case), the KV write still runs as a
+    // background IIFE from inside saveWebhookPayload — in-memory store is always updated.
 
-    // Save to Cloudflare D1 asynchronously (non-blocking)
+    // Persist to Cloudflare D1 Database
     const db = safeGetDatabase(context);
     if (db) {
-      insertWebhook(db, {
+      const d1Promise = insertWebhook(db, {
         id: webhookId,
         endpoint_id: endpointId!,
         timestamp,
         method: payload.method,
         headers: JSON.stringify(headersMap),
         body: bodyText || null,
-      }).catch((err) => console.error('[D1 Async Insert Failed]', err));
+      }).catch((err) => console.error('[D1 Inbound Insert Error]', err));
+
+      if (ctx?.waitUntil) {
+        ctx.waitUntil(d1Promise);
+      }
     }
 
     // 9. Execute automated workflows (Auto-forwarding / Slack notifications)
     const workflow = getEndpointWorkflow(endpointId!);
     if (workflow && workflow.enabled) {
-      // Auto-Forwarding proxy
+      // Auto-Forwarding proxy (with SSRF protection) — registered via waitUntil
       if (workflow.autoForwardUrl) {
-        fetch(workflow.autoForwardUrl, {
-          method: payload.method,
-          headers: {
-            ...headersMap,
-            'X-Forwarded-By': 'WebhookTester-Workflow-Engine',
-          },
-          body: ['GET', 'HEAD'].includes(payload.method) ? undefined : bodyText,
-        }).catch(() => {
-          // Non-blocking auto-forward error suppression
-        });
+        const ssrfBlock = checkSSRF(workflow.autoForwardUrl);
+        if (!ssrfBlock) {
+          const fwdFetch = fetch(workflow.autoForwardUrl!, {
+            method: payload.method,
+            headers: {
+              ...headersMap,
+              'X-Forwarded-By': 'SafeWebhook-Workflow-Engine',
+              'X-Safewebhook-Endpoint': endpointId!,
+            },
+            body: ['GET', 'HEAD'].includes(payload.method) ? undefined : bodyText ?? undefined,
+          }).catch(() => { /* Non-blocking auto-forward errors are suppressed */ });
+          if (ctx?.waitUntil) ctx.waitUntil(fwdFetch);
+        } else {
+          console.warn(`[Workflow SSRF Block] endpoint=${endpointId} url=${workflow.autoForwardUrl} reason=${ssrfBlock}`);
+        }
       }
 
-      // Notify external Discord / Slack webhook
+      // Notify external Discord / Slack webhook — registered via waitUntil
       if (workflow.notifyWebhookUrl) {
-        fetch(workflow.notifyWebhookUrl, {
+        const notifyFetch = fetch(workflow.notifyWebhookUrl!, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            content: `🚨 **New Webhook Event [${payload.method}]**\nEndpoint: \`${endpointId}\`\nSize: ${byteSize} bytes\nSignature: ${signatureProvider || 'None'}`,
-            text: `New Webhook Event [${payload.method}] on ${endpointId}`,
+            content: `**[EVENT] New Webhook Received [${payload.method}]**\nEndpoint: \`${endpointId}\`\nSize: ${byteSize} bytes\nSignature: ${signatureProvider || 'None'}`,
+            text: `[EVENT] New Webhook [${payload.method}] on ${endpointId}`,
           }),
-        }).catch(() => {});
+        }).catch(() => { /* Notification errors are suppressed */ });
+        if (ctx?.waitUntil) ctx.waitUntil(notifyFetch);
       }
     }
 
@@ -182,6 +234,7 @@ async function handleInboundWebhook(context: Parameters<APIRoute>[0]): Promise<R
       'X-Webhook-Delivered': delivered ? 'true' : 'false',
       'X-Webhook-Recipients': String(recipientCount),
       'X-Webhook-Simulated-Delay': `${delayMs}ms`,
+      ...rateLimitHeaders(rlResult),
       ...config.responseHeaders,
     };
 
@@ -191,6 +244,7 @@ async function handleInboundWebhook(context: Parameters<APIRoute>[0]): Promise<R
     });
   } catch (err: unknown) {
     const error = err as Error;
+    console.error(`[Inbound Webhook Error on ${request.method}]:`, error.message, error.stack);
     return errorResponse(`Failed to process inbound webhook: ${error.message}`, 500);
   }
 }

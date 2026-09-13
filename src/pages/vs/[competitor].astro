@@ -1,176 +1,266 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { COMPETITORS, type CompetitorComparison } from '../../data/competitors';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { COMPETITORS, type CompetitorInfo } from '../../data/competitors';
 
 export const prerender = false;
 
 const { competitor } = Astro.params;
-const compData: CompetitorComparison | undefined = competitor ? COMPETITORS[competitor] : undefined;
+const compData: CompetitorInfo | undefined = COMPETITORS[competitor as string];
 
 if (!compData) {
-  return Astro.redirect('/');
+  return Astro.redirect('/vs');
 }
 
-const pageTitle = `SafeWebhook vs ${compData.name} — 100% Free ${compData.name} Alternative`;
-const pageDescription = `Compare SafeWebhook vs ${compData.name}. Discover why SafeWebhook is 100% free with zero paywalls, sub-20ms edge latency, and private local storage at safewebhook.com.`;
+const pageTitle = `SafeWebhook vs ${compData.name} — Feature & Privacy Comparison (2026) | SafeWebhook`;
+const pageDescription = `Detailed head-to-head comparison of SafeWebhook vs ${compData.name}. Compare privacy architecture, pricing, rate limits, latency, and client-side payload inspection without accounts.`;
 
 const structuredSchema = {
   '@context': 'https://schema.org',
-  '@type': 'TechArticle',
-  headline: `SafeWebhook vs ${compData.name} Feature & Architecture Comparison`,
-  description: pageDescription,
-  author: { '@type': 'Organization', name: 'SafeWebhook' },
-  datePublished: '2026-08-19',
-  dateModified: '2026-08-19',
-  mainEntityOfPage: Astro.url.href
+  '@graph': [
+    {
+      '@type': 'TechArticle',
+      headline: pageTitle,
+      description: pageDescription,
+      url: Astro.url.href,
+      author: {
+        '@type': 'Organization',
+        name: 'SafeWebhook'
+      }
+    },
+    {
+      '@type': 'FAQPage',
+      mainEntity: compData.faqs.map(faq => ({
+        '@type': 'Question',
+        name: faq.q,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: faq.a
+        }
+      }))
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://safewebhook.com/' },
+        { '@type': 'ListItem', position: 2, name: 'Alternatives', item: 'https://safewebhook.com/vs' },
+        { '@type': 'ListItem', position: 3, name: `SafeWebhook vs ${compData.name}`, item: Astro.url.href }
+      ]
+    }
+  ]
 };
+
+const otherCompetitors = Object.values(COMPETITORS)
+  .filter(c => c.slug !== compData.slug)
+  .slice(0, 3);
 ---
 
 <Layout
   title={pageTitle}
   description={pageDescription}
   canonicalURL={Astro.url.href}
+  keywords={`${compData.name.toLowerCase()} alternative, free ${compData.name.toLowerCase()} alternative, safewebhook vs ${compData.name.toLowerCase()}, ${compData.name.toLowerCase()} without login, best ${compData.name.toLowerCase()} replacement`}
+  schema={structuredSchema}
 >
-  <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredSchema)} />
+  <Header activeNav="vs" subTitle={`/ vs ${compData.name}`} />
 
-  <!-- Header -->
-  <header class="sticky top-0 z-50 w-full border-b border-slate-800 bg-slate-950/85 backdrop-blur-md">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <a href="/" class="flex items-center gap-3 group">
-        <div class="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:border-cyan-400 transition-colors shadow-sm shadow-cyan-500/10">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-        </div>
-        <div class="flex flex-col">
-          <span class="font-bold tracking-tight text-white text-base font-sans">Safe<span class="text-cyan-400">Webhook</span></span>
-          <span class="text-[10px] text-slate-400 -mt-1 font-mono">vs {compData.name}</span>
-        </div>
-      </a>
-
-      <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
-        <a href="/" class="hover:text-cyan-300 transition-colors">Home</a>
-        <a href="/docs" class="hover:text-cyan-300 transition-colors">Docs</a>
-        <a href="/faq" class="hover:text-cyan-300 transition-colors">FAQ</a>
-      </nav>
-
-      <a
-        href="/app"
-        class="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold rounded-lg text-slate-950 bg-gradient-to-r from-cyan-400 to-cyan-300 hover:from-cyan-300 hover:to-cyan-200 transition-all shadow-md shadow-cyan-500/20 active:scale-95"
-      >
-        Launch Workbench &rarr;
-      </a>
-    </div>
-  </header>
-
-  <main class="py-12 sm:py-20">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+  <main class="py-10 sm:py-16 flex-1 bg-developer-grid">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 sm:space-y-12">
       
-      <!-- Breadcrumb -->
-      <nav class="flex items-center gap-2 text-xs font-mono text-slate-400">
-        <a href="/" class="hover:text-cyan-300 transition-colors">Home</a>
+      <!-- Breadcrumbs -->
+      <nav class="flex items-center gap-2 text-xs font-mono text-slate-500 dark:text-zinc-400">
+        <a href="/" class="hover:text-slate-900 dark:hover:text-white transition-colors">Home</a>
         <span>/</span>
-        <a href="#compare" class="hover:text-cyan-300 transition-colors">Comparison</a>
+        <a href="/vs" class="hover:text-slate-900 dark:hover:text-white transition-colors">Alternatives</a>
         <span>/</span>
-        <span class="text-cyan-400 font-semibold">vs {compData.name}</span>
+        <span class="text-indigo-600 dark:text-sky-400 font-semibold">SafeWebhook vs {compData.name}</span>
       </nav>
 
-      <!-- Hero Section -->
+      <!-- Hero Header -->
       <div class="space-y-4">
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 text-xs font-mono">
-          <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
-          <span>Competitive Comparison</span>
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 font-mono">
+          <span>Head-to-Head Comparison</span>
         </div>
-        <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight leading-tight">
-          SafeWebhook vs {compData.name}
+        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white font-sans">
+          SafeWebhook vs <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 via-sky-600 to-blue-500 dark:from-sky-400 dark:via-blue-400 dark:to-indigo-400">{compData.name}</span>
         </h1>
-        <p class="text-base sm:text-lg text-slate-300 leading-relaxed">
-          {compData.summary}
+        <p class="text-base sm:text-lg text-slate-600 dark:text-zinc-400 leading-relaxed max-w-3xl font-normal">
+          {compData.tagline}
         </p>
       </div>
 
-      <!-- Core Differentiator Cards -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono text-xs">
-        <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-2">
-          <div class="text-cyan-400 font-bold uppercase text-[11px]">Pricing Model</div>
-          <p class="text-slate-300 text-[11px] leading-relaxed">{compData.pricingDifference}</p>
+      <!-- GEO / AEO Direct Answer / Verdict Box -->
+      {compData.directAnswer && (
+        <section class="rounded-xl border border-blue-200 dark:border-sky-500/30 bg-blue-50/50 dark:bg-sky-950/20 p-5 sm:p-6 backdrop-blur-sm shadow-sm">
+          <div class="flex items-center gap-2 text-indigo-600 dark:text-sky-400 text-xs font-mono font-semibold uppercase tracking-wider mb-2">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Direct Answer / Executive Verdict
+          </div>
+          <p class="text-sm sm:text-base text-slate-800 dark:text-zinc-200 leading-relaxed font-sans font-medium">
+            {compData.directAnswer}
+          </p>
+        </section>
+      )}
+
+      <!-- Feature Comparison Matrix Table -->
+      <section class="space-y-4">
+        <div class="space-y-1">
+          <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
+            Feature Comparison Matrix
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 font-normal">
+            See how SafeWebhook and {compData.name} compare across privacy, pricing, and developer tools:
+          </p>
         </div>
 
-        <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-2">
-          <div class="text-emerald-400 font-bold uppercase text-[11px]">Data Privacy</div>
-          <p class="text-slate-300 text-[11px] leading-relaxed">{compData.privacyDifference}</p>
-        </div>
-
-        <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-2">
-          <div class="text-purple-400 font-bold uppercase text-[11px]">Edge Latency</div>
-          <p class="text-slate-300 text-[11px] leading-relaxed">{compData.latencyDifference}</p>
-        </div>
-      </div>
-
-      <!-- Advantages List -->
-      <section class="space-y-6 pt-8 border-t border-slate-800">
-        <h2 class="text-2xl font-bold text-white">Why Developers Choose SafeWebhook</h2>
-        <div class="space-y-3 font-mono text-xs">
-          {compData.advantages.map(adv => (
-            <div class="flex items-center gap-3 p-4 rounded-xl border border-slate-800 bg-slate-900/40 text-slate-200">
-              <div class="w-5 h-5 rounded bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 flex-shrink-0">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-              </div>
-              <span class="text-sm font-sans">{adv}</span>
-            </div>
-          ))}
+        <div class="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 overflow-hidden shadow-sm">
+          <table class="w-full text-left text-xs sm:text-sm">
+            <thead class="bg-slate-50 dark:bg-zinc-900/80 border-b border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 font-mono text-[11px] uppercase tracking-wider">
+              <tr>
+                <th class="py-3 px-4 sm:px-6">Feature</th>
+                <th class="py-3 px-4 sm:px-6 text-indigo-600 dark:text-sky-400 font-bold">SafeWebhook</th>
+                <th class="py-3 px-4 sm:px-6 text-slate-700 dark:text-zinc-300">{compData.name}</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
+              {compData.comparisonMatrix.map((row, idx) => (
+                <tr class={idx % 2 === 0 ? 'bg-slate-50/50 dark:bg-zinc-950/30' : 'bg-white dark:bg-zinc-900/20'}>
+                  <td class="py-3.5 px-4 sm:px-6 font-medium text-slate-800 dark:text-zinc-200">{row.feature}</td>
+                  <td class="py-3.5 px-4 sm:px-6 font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                    <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>{row.safewebhook}</span>
+                  </td>
+                  <td class="py-3.5 px-4 sm:px-6 text-slate-600 dark:text-zinc-400">{row.competitor}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
 
-      <!-- Comparison FAQs -->
-      <section class="space-y-6 pt-8 border-t border-slate-800">
-        <h2 class="text-2xl font-bold text-white">Comparison FAQ</h2>
-        <div class="space-y-4">
+      <!-- Key Pillars Breakdown -->
+      <section class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <div class="p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/30 space-y-2 shadow-sm">
+          <div class="text-xs font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-semibold">Pricing Advantage</div>
+          <p class="text-xs sm:text-sm text-slate-700 dark:text-zinc-300 leading-relaxed font-normal">{compData.pricingDifference}</p>
+        </div>
+        <div class="p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/30 space-y-2 shadow-sm">
+          <div class="text-xs font-mono uppercase tracking-wider text-indigo-600 dark:text-sky-400 font-semibold">Privacy Architecture</div>
+          <p class="text-xs sm:text-sm text-slate-700 dark:text-zinc-300 leading-relaxed font-normal">{compData.privacyDifference}</p>
+        </div>
+        <div class="p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/30 space-y-2 shadow-sm">
+          <div class="text-xs font-mono uppercase tracking-wider text-amber-600 dark:text-amber-400 font-semibold">Global Latency</div>
+          <p class="text-xs sm:text-sm text-slate-700 dark:text-zinc-300 leading-relaxed font-normal">{compData.latencyDifference}</p>
+        </div>
+      </section>
+
+      <!-- Pros vs Cons Comparison -->
+      <section class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+        <!-- SafeWebhook Advantages -->
+        <div class="p-5 sm:p-6 rounded-xl border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/10 space-y-3.5 shadow-sm">
+          <h3 class="text-base font-bold text-emerald-800 dark:text-emerald-400 flex items-center gap-2 font-sans">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Why Developers Choose SafeWebhook
+          </h3>
+          <ul class="space-y-2 text-xs sm:text-sm text-slate-700 dark:text-zinc-300 font-normal">
+            {compData.advantages.map(adv => (
+              <li class="flex items-start gap-2">
+                <span class="text-emerald-600 dark:text-emerald-400 font-bold">&bull;</span>
+                <span>{adv}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <!-- Competitor Limitations -->
+        <div class="p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/30 space-y-3.5 shadow-sm">
+          <h3 class="text-base font-bold text-slate-800 dark:text-zinc-300 flex items-center gap-2 font-sans">
+            <svg class="w-4 h-4 text-rose-500 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            {compData.name} Limitations
+          </h3>
+          <ul class="space-y-2 text-xs sm:text-sm text-slate-600 dark:text-zinc-400 font-normal">
+            {compData.limitations.map(lim => (
+              <li class="flex items-start gap-2">
+                <span class="text-rose-500 dark:text-rose-400 font-bold">&bull;</span>
+                <span>{lim}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <!-- Frequently Asked Questions -->
+      <section class="space-y-4 sm:space-y-5">
+        <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
+          Frequently Asked Questions: SafeWebhook vs {compData.name}
+        </h2>
+        <div class="space-y-3">
           {compData.faqs.map(faq => (
-            <div class="p-5 rounded-xl border border-slate-800 bg-slate-900/60 space-y-2">
-              <h3 class="font-semibold text-white text-base">{faq.q}</h3>
-              <p class="text-sm text-slate-300 leading-relaxed">{faq.a}</p>
+            <div class="p-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 space-y-2 shadow-sm">
+              <h3 class="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">
+                {faq.q}
+              </h3>
+              <p class="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 leading-relaxed font-normal">
+                {faq.a}
+              </p>
             </div>
           ))}
         </div>
       </section>
 
-      <!-- Bottom Action CTA -->
-      <div class="p-8 rounded-2xl border border-cyan-500/30 bg-slate-900/90 text-center space-y-4">
-        <h3 class="text-2xl font-bold text-white">Experience faster, 100% free webhook testing</h3>
-        <p class="text-sm text-slate-300 max-w-lg mx-auto">
-          No signups or credit cards required. Get started in 3 seconds at safewebhook.com.
+      <!-- CTA Box -->
+      <section class="rounded-2xl border border-blue-200 dark:border-sky-500/30 bg-gradient-to-br from-blue-50 via-white to-slate-100 dark:from-[#070a12] dark:via-zinc-900/50 dark:to-zinc-950 p-6 sm:p-8 text-center space-y-4 shadow-sm">
+        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white font-sans">
+          Switch to SafeWebhook in 2 Seconds
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 max-w-xl mx-auto font-normal">
+          No signups, no paywalls, zero limits. Test your webhooks with full edge power right now.
         </p>
-        <div class="pt-2">
+        <div>
           <a
             href="/app"
-            class="inline-flex items-center justify-center px-8 py-3.5 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold text-sm shadow-md shadow-cyan-500/20 transition-all"
+            class="inline-flex items-center justify-center px-6 py-3 text-sm font-semibold rounded-xl text-white bg-indigo-600 hover:bg-indigo-500 shadow-sm shadow-indigo-500/20 transition-all shadow-md hover:scale-105"
           >
-            Launch SafeWebhook Free &rarr;
+            <span>Launch Free Workbench &rarr;</span>
           </a>
         </div>
-      </div>
+      </section>
+
+      <!-- Other Comparisons -->
+      {otherCompetitors.length > 0 && (
+        <section class="space-y-4 border-t border-slate-200 dark:border-zinc-800 pt-8">
+          <h2 class="text-xs font-mono font-semibold uppercase text-slate-500 dark:text-zinc-400 tracking-wider">
+            Explore Other Webhook Tool Comparisons
+          </h2>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {otherCompetitors.map(c => (
+              <a
+                href={`/vs/${c.slug}`}
+                class="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/30 hover:border-indigo-600 dark:hover:border-sky-500/50 transition-all group block shadow-sm"
+              >
+                <div class="text-xs font-semibold text-slate-800 dark:text-zinc-200 group-hover:text-indigo-600 dark:group-hover:text-sky-400 transition-colors">
+                  SafeWebhook vs {c.name}
+                </div>
+                <div class="text-[11px] text-slate-500 dark:text-zinc-400 mt-1 truncate">
+                  {c.tagline}
+                </div>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
 
     </div>
   </main>
 
-  <!-- Footer -->
-  <footer class="py-12 border-t border-slate-800 bg-slate-950 text-slate-400 text-sm">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
-      <div class="flex items-center gap-3">
-        <div class="w-6 h-6 rounded bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-xs font-bold font-mono">
-          S
-        </div>
-        <span class="font-semibold text-slate-200">SafeWebhook</span>
-        <span class="text-xs text-slate-400">&bull; safewebhook.com &bull; vs {compData.name}</span>
-      </div>
-
-      <div class="flex items-center gap-6 text-xs">
-        <a href="/" class="hover:text-cyan-300 transition-colors">Home</a>
-        <a href="/docs" class="hover:text-cyan-300 transition-colors">Docs</a>
-        <a href="/faq" class="hover:text-cyan-300 transition-colors">FAQ</a>
-        <a href="/app" class="text-cyan-400 hover:text-cyan-300 font-semibold transition-colors">Open App &rarr;</a>
-      </div>
-    </div>
-  </footer>
+  <Footer />
 </Layout>

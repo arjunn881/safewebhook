@@ -1,257 +1,290 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { PLATFORMS, type PlatformIntegration } from '../../data/platforms';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { PLATFORMS, type PlatformInfo } from '../../data/platforms';
 
 export const prerender = false;
 
 const { platform } = Astro.params;
-const platformData: PlatformIntegration | undefined = platform ? PLATFORMS[platform] : undefined;
+const platformData: PlatformInfo | undefined = PLATFORMS[platform as string];
 
 if (!platformData) {
-  return Astro.redirect('/docs');
+  return Astro.redirect('/integrations');
 }
 
-const pageTitle = `Test ${platformData.name} Webhooks Online — SafeWebhook`;
-const pageDescription = `Free online ${platformData.name} webhook tester by SafeWebhook. Inspect ${platformData.name} payloads, verify ${platformData.signatureHeader} HMAC signatures, and replay requests to localhost with zero login at safewebhook.com.`;
+const pageTitle = `Test ${platformData.name} Webhooks Online — HMAC Signature & Payload Inspector | SafeWebhook`;
+const pageDescription = `Free online ${platformData.name} webhook debugger and tester. Inspect incoming ${platformData.name} payloads, verify ${platformData.signatureHeader} with ${platformData.signatureAlgorithm}, simulate latency, and replay to localhost without signups.`;
 
 const structuredSchema = {
   '@context': 'https://schema.org',
   '@graph': [
     {
       '@type': 'TechArticle',
-      headline: `How to Test and Verify ${platformData.name} Webhooks on SafeWebhook`,
+      headline: pageTitle,
       description: pageDescription,
-      author: { '@type': 'Organization', name: 'SafeWebhook' },
-      datePublished: '2026-08-19',
-      dateModified: '2026-08-19',
-      mainEntityOfPage: Astro.url.href
+      url: Astro.url.href,
+      author: {
+        '@type': 'Organization',
+        name: 'SafeWebhook'
+      },
+      about: {
+        '@type': 'SoftwareApplication',
+        name: `${platformData.name} Webhook Integration`
+      }
+    },
+    {
+      '@type': 'FAQPage',
+      mainEntity: platformData.faqs.map(faq => ({
+        '@type': 'Question',
+        name: faq.q,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: faq.a
+        }
+      }))
     },
     {
       '@type': 'BreadcrumbList',
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://safewebhook.com/' },
-        { '@type': 'ListItem', position: 2, name: 'Integrations', item: 'https://safewebhook.com/docs' },
-        { '@type': 'ListItem', position: 3, name: `${platformData.name} Webhook Testing`, item: Astro.url.href }
+        { '@type': 'ListItem', position: 2, name: 'Integrations', item: 'https://safewebhook.com/integrations' },
+        { '@type': 'ListItem', position: 3, name: platformData.name, item: Astro.url.href }
       ]
-    },
-    {
-      '@type': 'FAQPage',
-      mainEntity: platformData.faqs.map(f => ({
-        '@type': 'Question',
-        name: f.q,
-        acceptedAnswer: { '@type': 'Answer', text: f.a }
-      }))
     }
   ]
 };
+
+// Internal Cross-Linking related platforms
+const relatedPlatforms = Object.values(PLATFORMS)
+  .filter(p => p.slug !== platformData.slug && p.category === platformData.category)
+  .slice(0, 3);
 ---
 
 <Layout
   title={pageTitle}
   description={pageDescription}
   canonicalURL={Astro.url.href}
+  keywords={`test ${platformData.name.toLowerCase()} webhook online, ${platformData.name.toLowerCase()} webhook tester, verify ${platformData.signatureHeader.toLowerCase()}, ${platformData.name.toLowerCase()} webhook simulator, inspect ${platformData.name.toLowerCase()} payload`}
+  schema={structuredSchema}
 >
-  <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredSchema)} />
+  <Header activeNav="integrations" subTitle={`/ ${platformData.name}`} />
 
-  <!-- Navigation Header -->
-  <header class="sticky top-0 z-50 w-full border-b border-slate-800 bg-slate-950/85 backdrop-blur-md">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <a href="/" class="flex items-center gap-3 group">
-        <div class="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:border-cyan-400 transition-colors shadow-sm shadow-cyan-500/10">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-        </div>
-        <div class="flex flex-col">
-          <span class="font-bold tracking-tight text-white text-base font-sans">Safe<span class="text-cyan-400">Webhook</span></span>
-          <span class="text-[10px] text-slate-400 -mt-1 font-mono">{platformData.name} Suite</span>
-        </div>
-      </a>
-
-      <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
-        <a href="/" class="hover:text-cyan-300 transition-colors">Home</a>
-        <a href="/docs" class="hover:text-cyan-300 transition-colors">Docs</a>
-        <a href="/faq" class="hover:text-cyan-300 transition-colors">FAQ</a>
-      </nav>
-
-      <a
-        href="/app"
-        class="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold rounded-lg text-slate-950 bg-gradient-to-r from-cyan-400 to-cyan-300 hover:from-cyan-300 hover:to-cyan-200 transition-all shadow-md shadow-cyan-500/20 active:scale-95"
-      >
-        Launch Workbench &rarr;
-      </a>
-    </div>
-  </header>
-
-  <main class="py-12 sm:py-20">
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+  <main class="py-10 sm:py-16 flex-1 bg-developer-grid">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 sm:space-y-12">
       
       <!-- Breadcrumbs -->
-      <nav class="flex items-center gap-2 text-xs font-mono text-slate-400">
-        <a href="/" class="hover:text-cyan-300 transition-colors">Home</a>
+      <nav class="flex items-center gap-2 text-xs font-mono text-slate-500 dark:text-zinc-400" aria-label="Breadcrumb">
+        <a href="/" class="hover:text-slate-900 dark:hover:text-white transition-colors">Home</a>
         <span>/</span>
-        <a href="/docs" class="hover:text-cyan-300 transition-colors">Integrations</a>
+        <a href="/integrations" class="hover:text-slate-900 dark:hover:text-white transition-colors">Integrations</a>
         <span>/</span>
-        <span class="text-cyan-400 font-semibold">{platformData.name}</span>
+        <span class="text-indigo-600 dark:text-sky-400 font-semibold">{platformData.name}</span>
       </nav>
 
       <!-- Hero Header -->
       <div class="space-y-4">
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 text-xs font-mono">
-          <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
-          <span>{platformData.category} Integration</span>
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 font-mono">
+          <span class="w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-sky-400 animate-pulse"></span>
+          {platformData.category} Integration Guide
         </div>
-        <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight leading-tight">
-          Test {platformData.name} Webhooks on SafeWebhook
+        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white font-sans">
+          Test <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 via-sky-600 to-blue-500 dark:from-sky-400 dark:via-blue-400 dark:to-indigo-400">{platformData.name}</span> Webhooks Online
         </h1>
-        <p class="text-base sm:text-lg text-slate-300 max-w-3xl leading-relaxed">
+        <p class="text-base sm:text-lg text-slate-600 dark:text-zinc-400 leading-relaxed max-w-3xl font-normal">
           {platformData.tagline}
         </p>
-
-        <div class="pt-4 flex flex-wrap items-center gap-4">
-          <a
-            href="/app"
-            class="px-6 py-3 rounded-xl text-sm font-bold text-slate-950 bg-gradient-to-r from-cyan-400 via-cyan-300 to-teal-300 hover:from-cyan-300 hover:to-teal-200 transition-all shadow-lg shadow-cyan-500/25"
-          >
-            Spawn Free {platformData.name} Endpoint &rarr;
-          </a>
-          <a
-            href="/docs"
-            class="px-5 py-3 rounded-xl text-sm font-semibold text-slate-200 bg-slate-900 hover:bg-slate-850 border border-slate-700 transition-colors"
-          >
-            Read All Integration Guides
-          </a>
-        </div>
       </div>
 
-      <!-- Quick Metadata Grid -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono text-xs">
-        <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-1">
-          <div class="text-slate-400 text-[11px] font-semibold uppercase">Signature Header</div>
-          <div class="text-cyan-300 font-bold truncate">{platformData.signatureHeader}</div>
-        </div>
+      <!-- GEO / AEO Direct Answer Box -->
+      {platformData.directAnswer && (
+        <section class="rounded-xl border border-blue-200 dark:border-sky-500/30 bg-blue-50/50 dark:bg-sky-950/20 p-5 sm:p-6 backdrop-blur-sm shadow-sm">
+          <div class="flex items-center gap-2 text-indigo-600 dark:text-sky-400 text-xs font-mono font-semibold uppercase tracking-wider mb-2">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Direct Answer / Quick Summary
+          </div>
+          <p class="text-sm sm:text-base text-slate-800 dark:text-zinc-200 leading-relaxed font-sans font-medium">
+            {platformData.directAnswer}
+          </p>
+        </section>
+      )}
 
-        <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-1">
-          <div class="text-slate-400 text-[11px] font-semibold uppercase">Cryptographic Algorithm</div>
-          <div class="text-emerald-300 font-bold truncate">{platformData.signatureAlgorithm}</div>
-        </div>
+      <!-- Key Takeaways Callout -->
+      {platformData.keyTakeaways && (
+        <section class="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 p-5 sm:p-6 space-y-3 shadow-sm">
+          <h2 class="text-xs font-mono font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-2">
+            <svg class="w-4 h-4 text-indigo-600 dark:text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Key Capabilities &amp; Testing Highlights
+          </h2>
+          <ul class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs sm:text-sm text-slate-700 dark:text-zinc-300 font-normal">
+            {platformData.keyTakeaways.map(item => (
+              <li class="flex items-start gap-2">
+                <span class="text-indigo-600 dark:text-sky-400 font-bold mt-0.5">&bull;</span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
-        <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-1">
-          <div class="text-slate-400 text-[11px] font-semibold uppercase">Server Retention</div>
-          <div class="text-teal-300 font-bold">100% Private (0 Disk Storage)</div>
+      <!-- Technical Specifications Bar -->
+      <section class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <div class="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 space-y-1 shadow-sm">
+          <div class="text-[11px] font-mono text-slate-500 dark:text-zinc-400">Signature Header</div>
+          <div class="text-sm font-semibold font-mono text-indigo-600 dark:text-sky-400 truncate">{platformData.signatureHeader}</div>
         </div>
-      </div>
+        <div class="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 space-y-1 shadow-sm">
+          <div class="text-[11px] font-mono text-slate-500 dark:text-zinc-400">Cryptographic Scheme</div>
+          <div class="text-sm font-semibold font-mono text-slate-800 dark:text-zinc-200 truncate">{platformData.signatureAlgorithm}</div>
+        </div>
+        <div class="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 space-y-1 shadow-sm">
+          <div class="text-[11px] font-mono text-slate-500 dark:text-zinc-400">Payload Retention</div>
+          <div class="text-sm font-semibold font-mono text-emerald-600 dark:text-emerald-400">100% Client-Side</div>
+        </div>
+      </section>
 
       <!-- Step-by-Step Setup Guide -->
-      <section class="space-y-6 pt-8 border-t border-slate-800">
-        <div class="flex items-center gap-3">
-          <span class="text-cyan-400 font-mono text-sm font-bold">01.</span>
-          <h2 class="text-2xl font-bold text-white">How to Set Up {platformData.name} Webhooks</h2>
+      <section class="space-y-4 sm:space-y-5">
+        <div class="space-y-1">
+          <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
+            Step-by-Step {platformData.name} Webhook Setup
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-600 dark:text-zinc-400">
+            Follow these 4 simple steps to capture real-time {platformData.name} events in your browser:
+          </p>
         </div>
+
         <div class="space-y-3">
           {platformData.setupSteps.map((step, idx) => (
-            <div class="flex items-start gap-3.5 p-4 rounded-xl border border-slate-800 bg-slate-900/40 text-sm text-slate-200">
-              <span class="w-6 h-6 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-mono text-xs flex items-center justify-center flex-shrink-0 font-bold">
+            <div class="flex items-start gap-3.5 p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/30 shadow-sm">
+              <span class="w-6 h-6 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 text-xs font-mono font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
                 {idx + 1}
               </span>
-              <span class="leading-relaxed">{step}</span>
+              <div class="text-xs sm:text-sm text-slate-700 dark:text-zinc-300 leading-relaxed font-normal">
+                {step}
+              </div>
             </div>
           ))}
         </div>
       </section>
 
-      <!-- Sample Payload Inspector Preview -->
-      <section class="space-y-4 pt-8 border-t border-slate-800">
+      <!-- Sample Webhook Payload Section -->
+      <section class="space-y-3">
         <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <span class="text-cyan-400 font-mono text-sm font-bold">02.</span>
-            <h2 class="text-2xl font-bold text-white">Sample {platformData.name} Payload Schema</h2>
-          </div>
-          <span class="text-xs font-mono text-slate-400">JSON Payload</span>
+          <h2 class="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2 font-sans">
+            <span>Sample {platformData.name} Webhook Payload</span>
+          </h2>
+          <span class="text-[11px] font-mono text-slate-500 dark:text-zinc-400">application/json</span>
         </div>
-        <div class="rounded-2xl border border-slate-800 bg-slate-950 p-5 overflow-x-auto text-xs font-mono">
-          <pre class="text-cyan-300 leading-relaxed"><code>{JSON.stringify(platformData.samplePayload, null, 2)}</code></pre>
-        </div>
-      </section>
-
-      <!-- Signature Verification Code Recipes -->
-      <section class="space-y-6 pt-8 border-t border-slate-800">
-        <div class="flex items-center gap-3">
-          <span class="text-cyan-400 font-mono text-sm font-bold">03.</span>
-          <h2 class="text-2xl font-bold text-white">Cryptographic Signature Verification Recipes</h2>
-        </div>
-
-        <!-- Node.js Recipe -->
-        <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-3 font-mono text-xs">
-          <div class="flex items-center justify-between text-slate-300 font-bold">
-            <span>Node.js / Express Recipe</span>
-            <span class="text-cyan-400 text-[11px]">JavaScript</span>
-          </div>
-          <pre class="p-4 rounded-xl bg-slate-950 text-cyan-300 overflow-x-auto border border-slate-850 leading-relaxed"><code>{platformData.verificationCodeNode}</code></pre>
-        </div>
-
-        <!-- Python Recipe -->
-        <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-3 font-mono text-xs">
-          <div class="flex items-center justify-between text-slate-300 font-bold">
-            <span>Python / Flask Recipe</span>
-            <span class="text-emerald-400 text-[11px]">Python 3</span>
-          </div>
-          <pre class="p-4 rounded-xl bg-slate-950 text-emerald-300 overflow-x-auto border border-slate-850 leading-relaxed"><code>{platformData.verificationCodePython}</code></pre>
+        
+        <div class="rounded-xl border border-slate-800 bg-[#070b14] p-4 font-mono text-xs text-slate-200 overflow-x-auto max-h-96 shadow-lg">
+          <pre><code>{JSON.stringify(platformData.samplePayload, null, 2)}</code></pre>
         </div>
       </section>
 
-      <!-- Platform-Specific FAQs -->
-      <section class="space-y-6 pt-8 border-t border-slate-800">
-        <div class="flex items-center gap-3">
-          <span class="text-cyan-400 font-mono text-sm font-bold">04.</span>
-          <h2 class="text-2xl font-bold text-white">Frequently Asked Questions</h2>
+      <!-- Production Signature Verification Recipes -->
+      <section class="space-y-5">
+        <div class="space-y-1">
+          <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
+            {platformData.name} Signature Verification Recipes
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-600 dark:text-zinc-400">
+            Copy-paste production-ready HMAC verification code for your backend:
+          </p>
         </div>
+
         <div class="space-y-4">
+          <!-- Node.js -->
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between text-xs font-mono text-slate-600 dark:text-zinc-400">
+              <span class="font-semibold text-slate-800 dark:text-zinc-200">Node.js / Express Recipe</span>
+              <span class="text-emerald-600 dark:text-emerald-400">crypto.timingSafeEqual</span>
+            </div>
+            <div class="rounded-xl border border-slate-800 bg-[#070b14] p-4 font-mono text-xs text-emerald-400 overflow-x-auto shadow-md">
+              <pre><code>{platformData.verificationCodeNode}</code></pre>
+            </div>
+          </div>
+
+          <!-- Python -->
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between text-xs font-mono text-slate-600 dark:text-zinc-400">
+              <span class="font-semibold text-slate-800 dark:text-zinc-200">Python / Flask / FastAPI Recipe</span>
+              <span class="text-sky-600 dark:text-sky-400">hmac.compare_digest</span>
+            </div>
+            <div class="rounded-xl border border-slate-800 bg-[#070b14] p-4 font-mono text-xs text-sky-300 overflow-x-auto shadow-md">
+              <pre><code>{platformData.verificationCodePython}</code></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Frequently Asked Questions (FAQ Section) -->
+      <section class="space-y-4 sm:space-y-5">
+        <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">
+          Frequently Asked Questions: {platformData.name} Webhooks
+        </h2>
+        <div class="space-y-3">
           {platformData.faqs.map(faq => (
-            <div class="p-5 rounded-xl border border-slate-800 bg-slate-900/60 space-y-2">
-              <h3 class="font-semibold text-white text-base">{faq.q}</h3>
-              <p class="text-sm text-slate-300 leading-relaxed">{faq.a}</p>
+            <div class="p-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 space-y-2 shadow-sm">
+              <h3 class="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">
+                {faq.q}
+              </h3>
+              <p class="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 leading-relaxed font-normal">
+                {faq.a}
+              </p>
             </div>
           ))}
         </div>
       </section>
 
-      <!-- Bottom CTA Banner -->
-      <div class="p-8 sm:p-10 rounded-2xl border border-cyan-500/30 bg-gradient-to-r from-slate-900 to-slate-950 text-center space-y-4 shadow-xl">
-        <h3 class="text-2xl font-bold text-white">Ready to test your {platformData.name} integration?</h3>
-        <p class="text-sm text-slate-300 max-w-xl mx-auto">
-          Spawn an instant edge endpoint, paste it into {platformData.name}, and watch live events arrive at safewebhook.com.
+      <!-- CTA Box -->
+      <section class="rounded-2xl border border-blue-200 dark:border-sky-500/30 bg-gradient-to-br from-blue-50 via-white to-slate-100 dark:from-[#070a12] dark:via-zinc-900/50 dark:to-zinc-950 p-6 sm:p-8 text-center space-y-4 shadow-sm">
+        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white font-sans">
+          Ready to test {platformData.name} webhooks in real-time?
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 max-w-xl mx-auto font-normal">
+          Get your free, private edge endpoint instantly. Zero signup, zero credit card, 100% free forever.
         </p>
-        <div class="pt-2">
+        <div>
           <a
             href="/app"
-            class="inline-flex items-center justify-center px-8 py-3.5 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold text-sm shadow-md shadow-cyan-500/20 transition-all"
+            class="inline-flex items-center justify-center px-6 py-3 text-sm font-semibold rounded-xl text-white bg-indigo-600 hover:bg-indigo-500 shadow-sm shadow-indigo-500/20 transition-all shadow-md hover:scale-105"
           >
-            Launch SafeWebhook Free &rarr;
+            <span>Launch Webhook Workbench &rarr;</span>
           </a>
         </div>
-      </div>
+      </section>
+
+      <!-- Related Cross-Linking Network -->
+      {relatedPlatforms.length > 0 && (
+        <section class="space-y-4 border-t border-slate-200 dark:border-zinc-800 pt-8">
+          <h2 class="text-xs font-mono font-semibold uppercase text-slate-500 dark:text-zinc-400 tracking-wider">
+            Related {platformData.category} Webhook Guides
+          </h2>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {relatedPlatforms.map(p => (
+              <a
+                href={`/test/${p.slug}`}
+                class="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/30 hover:border-indigo-600 dark:hover:border-sky-500/50 transition-all group block shadow-sm"
+              >
+                <div class="text-xs font-semibold text-slate-800 dark:text-zinc-200 group-hover:text-indigo-600 dark:group-hover:text-sky-400 transition-colors">
+                  {p.name} Webhooks
+                </div>
+                <div class="text-[11px] text-slate-500 dark:text-zinc-400 mt-1 font-mono">
+                  {p.signatureHeader}
+                </div>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
 
     </div>
   </main>
 
-  <!-- Footer -->
-  <footer class="py-12 border-t border-slate-800 bg-slate-950 text-slate-400 text-sm">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
-      <div class="flex items-center gap-3">
-        <div class="w-6 h-6 rounded bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-xs font-bold font-mono">
-          S
-        </div>
-        <span class="font-semibold text-slate-200">SafeWebhook</span>
-        <span class="text-xs text-slate-400">&bull; safewebhook.com &bull; {platformData.name} Integration</span>
-      </div>
-
-      <div class="flex items-center gap-6 text-xs">
-        <a href="/" class="hover:text-cyan-300 transition-colors">Home</a>
-        <a href="/docs" class="hover:text-cyan-300 transition-colors">Docs</a>
-        <a href="/faq" class="hover:text-cyan-300 transition-colors">FAQ</a>
-        <a href="/app" class="text-cyan-400 hover:text-cyan-300 font-semibold transition-colors">Open App Workbench &rarr;</a>
-      </div>
-    </div>
-  </footer>
+  <Footer />
 </Layout>

@@ -31,6 +31,7 @@ export interface CapturedWebhookPayload {
 
 // In-memory fallback ring-buffer (up to 50 payloads per endpoint)
 const inMemoryStore = new Map<string, CapturedWebhookPayload[]>();
+const inFlightKVWrites = new Set<string>();
 
 function getKV() {
   try {
@@ -40,11 +41,22 @@ function getKV() {
   }
 }
 
-export async function saveWebhookPayload(
+/**
+ * Saves a webhook payload to the in-memory store immediately (synchronous)
+ * and returns a Promise for the KV write that can be passed to ctx.waitUntil().
+ *
+ * This two-phase approach prevents loopback saturation and race conditions:
+ * 1. Synchronous in-memory write ensures immediate local visibility for polling and SSE.
+ * 2. Asynchronous KV write is deduplicated per-endpoint so rapid bursts of requests
+ *    do not fire concurrent overlapping writes to the same KV key.
+ */
+const pendingKVSync = new Set<string>();
+
+export function saveWebhookPayload(
   endpointId: string,
   payload: CapturedWebhookPayload
 ): Promise<void> {
-  // 1. Save to in-memory store
+  // Phase 1 (sync): Save to in-memory store immediately
   const existing = inMemoryStore.get(endpointId) || [];
   existing.unshift(payload);
   if (existing.length > 50) {
@@ -52,49 +64,65 @@ export async function saveWebhookPayload(
   }
   inMemoryStore.set(endpointId, existing);
 
-  // 2. Save to Cloudflare KV
+  // Phase 2 (async): Sync to Cloudflare KV for cross-isolate visibility
   const kv = getKV();
   if (kv && typeof kv.put === 'function') {
-    try {
-      const kvKey = `wh_events_${endpointId}`;
-      const raw = await kv.get(kvKey);
-      let list: CapturedWebhookPayload[] = [];
-      if (raw) {
-        try {
-          list = JSON.parse(raw);
-        } catch {
-          list = [];
-        }
-      }
-      list.unshift(payload);
-      if (list.length > 50) {
-        list = list.slice(0, 50);
-      }
-      // Store in KV with 1 day expiration (86400 seconds)
-      await kv.put(kvKey, JSON.stringify(list), { expirationTtl: 86400 });
-    } catch (err) {
-      console.error('[KV Store Error]', err);
+    if (inFlightKVWrites.has(endpointId)) {
+      pendingKVSync.add(endpointId);
+      return Promise.resolve();
     }
+
+    inFlightKVWrites.add(endpointId);
+    return (async () => {
+      try {
+        do {
+          pendingKVSync.delete(endpointId);
+          const kvKey = `wh_events_${endpointId}`;
+          const currentList = inMemoryStore.get(endpointId) || [];
+          await kv.put(kvKey, JSON.stringify(currentList), { expirationTtl: 86400 });
+        } while (pendingKVSync.has(endpointId));
+      } catch (err) {
+        console.error('[KV Store Error]', err);
+      } finally {
+        inFlightKVWrites.delete(endpointId);
+      }
+    })();
   }
+  return Promise.resolve();
 }
 
 export async function getWebhookPayloads(
   endpointId: string
 ): Promise<CapturedWebhookPayload[]> {
   const kv = getKV();
+  const memList = inMemoryStore.get(endpointId) || [];
+
   if (kv && typeof kv.get === 'function') {
     try {
       const kvKey = `wh_events_${endpointId}`;
       const raw = await kv.get(kvKey);
       if (raw) {
-        return JSON.parse(raw);
+        const kvList = JSON.parse(raw);
+        if (Array.isArray(kvList)) {
+          // Merge by unique id, maintaining newest-first order
+          const map = new Map<string, CapturedWebhookPayload>();
+          for (const item of memList) map.set(item.id, item);
+          for (const item of kvList) {
+            if (!map.has(item.id)) map.set(item.id, item);
+          }
+          const merged = Array.from(map.values())
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+            .slice(0, 50);
+          inMemoryStore.set(endpointId, merged);
+          return merged;
+        }
       }
     } catch (err) {
       console.error('[KV Get Error]', err);
     }
   }
 
-  return inMemoryStore.get(endpointId) || [];
+  return memList;
 }
 
 export async function clearWebhookPayloads(

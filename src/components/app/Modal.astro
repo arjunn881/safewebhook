@@ -1,0 +1,29 @@
+---
+import { ic } from '../../scripts/app/icons.js';
+
+interface Props {
+  id: string;
+  title: string;
+  sub?: string;
+  icon?: string;
+  size?: string;
+}
+
+const { id, title, sub = '', icon = 'sliders', size = '' } = Astro.props;
+---
+
+<div class="swh-modal hidden" id={`swh-m-${id}`} role="dialog" aria-modal="true" aria-labelledby={`swh-mt-${id}`}>
+  <div class="swh-modal-bg" data-close></div>
+  <div class={`swh-modal-box ${size}`}>
+    <div class="swh-modal-h">
+      <span class="swh-modal-ico"><Fragment set:html={ic(icon, 17)} /></span>
+      <div class="swh-grow">
+        <h2 id={`swh-mt-${id}`}>{title}</h2>
+        {sub && <p>{sub}</p>}
+      </div>
+      <button class="swh-b swh-b--ico" data-close aria-label="Close dialog"><Fragment set:html={ic('x')} /></button>
+    </div>
+    <div class="swh-modal-b"><slot /></div>
+    <slot name="footer" />
+  </div>
+</div>

@@ -1,0 +1,174 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import FaqAccordion from '../../components/FaqAccordion.astro';
+import {
+  FAQ_CATEGORIES,
+  getFaqsByCategory,
+  generateFaqJsonLd,
+  type FaqCategorySlug,
+  ALL_FAQS
+} from '../../data/faqs';
+
+export const prerender = false;
+
+const { category } = Astro.params;
+const catData = FAQ_CATEGORIES.find((c) => c.slug === category);
+
+if (!catData) {
+  return Astro.redirect('/faq');
+}
+
+const categoryFaqs = getFaqsByCategory(catData.slug as FaqCategorySlug);
+const pageUrl = `https://safewebhook.com/faq/${catData.slug}`;
+const pageTitle = `${catData.title} — Webhook FAQ & Troubleshooting Guide | SafeWebhook`;
+const pageDescription = `${catData.description} Explore detailed answers, verification code recipes, and developer best practices for ${catData.shortTitle.toLowerCase()}.`;
+
+const faqSchema = generateFaqJsonLd(categoryFaqs, pageUrl);
+
+const structuredSchema = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'TechArticle',
+      headline: pageTitle,
+      description: pageDescription,
+      url: pageUrl,
+      author: {
+        '@type': 'Organization',
+        name: 'SafeWebhook',
+        url: 'https://safewebhook.com'
+      },
+      about: {
+        '@type': 'Thing',
+        name: catData.title
+      }
+    },
+    faqSchema,
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://safewebhook.com/' },
+        { '@type': 'ListItem', position: 2, name: 'FAQ', item: 'https://safewebhook.com/faq' },
+        { '@type': 'ListItem', position: 3, name: catData.shortTitle, item: pageUrl }
+      ]
+    }
+  ]
+};
+
+// Sibling categories for internal cross-linking
+const otherCategories = FAQ_CATEGORIES.filter((c) => c.slug !== catData.slug);
+---
+
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  keywords={`${catData.shortTitle.toLowerCase()} webhook faq, what is a webhook, how to test webhook, ${catData.slug.replace(/-/g, ' ')}, webhook debugger`}
+  canonicalURL={pageUrl}
+  schema={structuredSchema}
+>
+  <Header activeNav="faq" subTitle={`/ FAQ / ${catData.shortTitle}`} />
+
+  <main class="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-developer-grid flex-1">
+    <div class="max-w-4xl mx-auto space-y-10 sm:space-y-12">
+      
+      <!-- Breadcrumb Navigation -->
+      <nav class="flex items-center gap-2 text-xs font-mono text-slate-500 dark:text-zinc-400" aria-label="Breadcrumb">
+        <a href="/" class="hover:text-slate-900 dark:hover:text-white transition-colors">Home</a>
+        <span>/</span>
+        <a href="/faq" class="hover:text-slate-900 dark:hover:text-white transition-colors">FAQ</a>
+        <span>/</span>
+        <span class="text-indigo-600 dark:text-indigo-400 font-semibold">{catData.shortTitle}</span>
+      </nav>
+
+      <!-- Category Hero Section -->
+      <header class="space-y-4">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 font-mono shadow-sm">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>Category Knowledge Base &bull; {categoryFaqs.length} Questions</span>
+        </div>
+        <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white font-sans">
+          {catData.title}
+        </h1>
+        <p class="text-base sm:text-lg text-slate-600 dark:text-zinc-400 leading-relaxed font-normal max-w-3xl">
+          {catData.description} Includes {categoryFaqs.length} in-depth technical questions with code snippets, security guidelines, and AEO quick answers.
+        </p>
+      </header>
+
+      <!-- Accordion of this category -->
+      <section aria-label={`${catData.title} Questions`}>
+        <FaqAccordion
+          faqs={categoryFaqs}
+          categories={FAQ_CATEGORIES}
+          activeCategory={catData.slug}
+          showCategoryFilter={false}
+          showSearch={true}
+          defaultExpandedIndex={0}
+        />
+      </section>
+
+      <!-- Other FAQ Categories Internal Linking -->
+      <section class="pt-8 border-t border-slate-200 dark:border-zinc-800/80 space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white font-sans">
+            Explore Other Webhook FAQ Topics
+          </h2>
+          <a href="/faq" class="text-xs font-mono text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">
+            View All ({ALL_FAQS.length}) &rarr;
+          </a>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          {otherCategories.map((c) => {
+            const count = ALL_FAQS.filter((f) => f.category === c.slug).length;
+            return (
+              <a
+                href={`/faq/${c.slug}`}
+                class="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 hover:border-indigo-500/40 hover:bg-slate-50 dark:hover:bg-zinc-850/50 transition-all block group shadow-sm"
+              >
+                <div class="flex items-center justify-between mb-1">
+                  <div class="text-sm font-bold text-slate-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    {c.shortTitle}
+                  </div>
+                  <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 font-semibold border border-indigo-200 dark:border-indigo-800/40">
+                    {count}
+                  </span>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-zinc-400 line-clamp-2 leading-relaxed font-normal">
+                  {c.description}
+                </p>
+              </a>
+            );
+          })}
+        </div>
+      </section>
+
+      <!-- Callout to App -->
+      <div class="p-6 sm:p-8 rounded-2xl border border-indigo-200 dark:border-indigo-500/30 bg-gradient-to-br from-indigo-50/50 via-white to-slate-100 dark:from-[#080b11] dark:via-zinc-900/50 dark:to-zinc-950 text-center space-y-4 shadow-sm">
+        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white font-sans">
+          Test Your Webhook Endpoints Live
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 max-w-xl mx-auto font-normal leading-relaxed">
+          Get an instant edge endpoint, inspect raw JSON payloads, test response codes, and replay requests to localhost.
+        </p>
+        <div class="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <a
+            href="/app"
+            class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2.5 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md shadow-indigo-500/25 hover:scale-105"
+          >
+            <span>Launch Webhook Workbench &rarr;</span>
+          </a>
+          <a
+            href="/faq"
+            class="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2.5 text-xs font-semibold rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-800 dark:text-zinc-200 transition-colors shadow-sm"
+          >
+            <span>View All FAQ Hub ({ALL_FAQS.length})</span>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <Footer />
+</Layout>

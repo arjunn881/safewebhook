@@ -1,0 +1,142 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+const pageTitle = 'Privacy Policy — SafeWebhook';
+const pageDescription = 'SafeWebhook Privacy Policy. Comprehensive disclosure of data handling, zero server storage, cookie usage, third-party vendor advertising policies, and Google AdSense compliance.';
+---
+
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  robots="index, follow"
+>
+  <Header subTitle="/ Privacy Policy" />
+
+  <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 flex-1 bg-developer-grid">
+    
+    <!-- Page Header -->
+    <div class="space-y-3 mb-10">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 text-xs font-mono">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        </svg>
+        Legal &amp; Compliance
+      </div>
+      <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white font-sans">
+        Privacy Policy
+      </h1>
+      <p class="text-slate-500 dark:text-zinc-400 font-mono text-xs sm:text-sm">
+        Effective Date: August 20, 2026 &bull; Last Updated: August 20, 2026
+      </p>
+    </div>
+
+    <!-- Content Sections -->
+    <div class="space-y-8 text-slate-700 dark:text-zinc-300 leading-relaxed font-normal text-sm sm:text-base">
+
+      <!-- Short Summary Highlight Box -->
+      <section class="p-6 rounded-2xl border border-blue-200 dark:border-sky-500/30 bg-blue-50/50 dark:bg-sky-950/20 space-y-3 shadow-sm">
+        <h2 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2 font-sans">
+          <svg class="w-5 h-5 text-indigo-600 dark:text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>Summary of Our Privacy Commitments</span>
+        </h2>
+        <p class="text-slate-800 dark:text-zinc-200">
+          At <strong>SafeWebhook</strong> (accessible from <a href="https://safewebhook.com" class="text-indigo-600 dark:text-sky-400 hover:underline">https://safewebhook.com</a>), one of our main priorities is the privacy of our visitors and developer users. We operate on a strict <strong class="text-indigo-600 dark:text-sky-400">zero-server-storage</strong> architecture for webhook payload debugging: captured request payloads stream directly into your browser via in-memory Server-Sent Events (SSE) and are <strong>never stored on persistent disks or databases</strong>.
+        </p>
+      </section>
+
+      <!-- 1. Webhook Payload Privacy & Edge Architecture -->
+      <section class="space-y-3 p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white font-sans">1. Webhook Payloads &amp; Developer Data</h2>
+        <p>When you send webhooks or API requests to a generated SafeWebhook endpoint (e.g. <code>https://safewebhook.com/api/r/:endpoint_id</code>):</p>
+        <ul class="list-disc list-inside space-y-1.5 ml-2">
+          <li><strong>In-Memory Processing:</strong> Payloads are ingested in-memory across the Cloudflare Anycast edge network and broadcast in real-time to your open browser tab.</li>
+          <li><strong>No Server-Side Database Logging:</strong> Headers, bodies, query strings, and authentication tokens are not archived on disk.</li>
+          <li><strong>Client-Side Storage:</strong> Timeline inspection records are stored exclusively in your browser's local storage (<code>localStorage</code>) and are fully purgable at any time via the "Clear" button in the workbench.</li>
+        </ul>
+      </section>
+
+      <!-- 2. Google AdSense & Third-Party Advertising Vendors (Strict Requirement) -->
+      <section class="space-y-3 p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white font-sans">2. Third-Party Vendors &amp; Google Advertising Cookies</h2>
+        <p>
+          We may display advertisements provided by Google AdSense or other third-party advertising networks to help keep SafeWebhook 100% free and open for developers worldwide.
+        </p>
+        <div class="p-4 rounded-lg bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 space-y-2 text-xs sm:text-sm">
+          <p><strong>Important disclosures regarding advertising cookies:</strong></p>
+          <ul class="list-disc list-inside space-y-1.5 ml-2">
+            <li>Third-party vendors, including <strong>Google</strong>, use cookies to serve ads based on a user's prior visits to this website or other websites across the internet.</li>
+            <li>Google's use of advertising cookies enables it and its partners to serve ads to our users based on their visits to SafeWebhook and/or other sites on the Internet.</li>
+            <li>Users may opt out of personalized advertising by visiting <a href="https://www.google.com/settings/ads" target="_blank" rel="noopener noreferrer" class="text-indigo-600 dark:text-sky-400 font-semibold hover:underline">Google Ads Settings</a>.</li>
+            <li>Alternatively, users can opt out of a third-party vendor's use of cookies for personalized advertising by visiting <a href="https://www.aboutads.info/choices/" target="_blank" rel="noopener noreferrer" class="text-indigo-600 dark:text-sky-400 font-semibold hover:underline">www.aboutads.info</a> or <a href="https://optout.networkadvertising.org/" target="_blank" rel="noopener noreferrer" class="text-indigo-600 dark:text-sky-400 font-semibold hover:underline">Network Advertising Initiative</a>.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- 3. Log Files & Edge Telemetry -->
+      <section class="space-y-3 p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white font-sans">3. Log Files &amp; Technical Analytics</h2>
+        <p>
+          Like standard web services, SafeWebhook follows standard procedures of using automated server log information. These logs include:
+        </p>
+        <ul class="list-disc list-inside space-y-1.5 ml-2">
+          <li>Internet Protocol (IP) addresses (used transiently for automated DDoS protection and rate limiting)</li>
+          <li>Browser user-agent, operating system, and language preferences</li>
+          <li>Date, time stamp, and referring/exit URLs</li>
+          <li>Number of clicks and page response latency metrics</li>
+        </ul>
+        <p>This diagnostic information is not linked to any personally identifiable information and is used solely to administer the site, prevent abuse, and optimize global edge routing.</p>
+      </section>
+
+      <!-- 4. Cookies and Web Beacons -->
+      <section class="space-y-3 p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white font-sans">4. Cookies and Web Storage</h2>
+        <p>SafeWebhook uses essential client-side storage technologies:</p>
+        <ul class="list-disc list-inside space-y-1.5 ml-2">
+          <li><strong>Theme Preferences:</strong> Stored in <code>localStorage.getItem('safewebhook_theme')</code> to remember your selected visual mode (Dark, Bright, Midnight).</li>
+          <li><strong>Workbench State:</strong> Temporary session endpoint identifiers and captured requests for your active workspace.</li>
+          <li><strong>Third-Party Cookies:</strong> Third-party services (such as Google AdSense or analytics tools) may place cookies on your browser for advertising and telemetry purposes as detailed in Section 2.</li>
+        </ul>
+        <p>You can choose to disable or block cookies through your individual browser options. Detailed information about cookie management with specific web browsers can be found at the browsers' respective websites.</p>
+      </section>
+
+      <!-- 5. GDPR & CCPA Rights -->
+      <section class="space-y-3 p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white font-sans">5. GDPR &amp; CCPA Privacy Rights</h2>
+        <p>Under global data protection regulations (including GDPR for EU residents and CCPA/CPRA for California residents), you have specific rights:</p>
+        <ul class="list-disc list-inside space-y-1.5 ml-2">
+          <li><strong>The Right to Access:</strong> You have the right to request copies of your personal data. (Because SafeWebhook requires no accounts, we hold no personal profile data).</li>
+          <li><strong>The Right to Rectification / Erasure:</strong> You can purge all browser-stored payload history at any moment by clicking "Clear" or clearing your browser cache.</li>
+          <li><strong>The Right to Object / Opt-Out:</strong> You may opt out of personalized third-party advertising cookies at any time as described in Section 2.</li>
+          <li><strong>Do Not Sell My Personal Information:</strong> We do not sell, rent, or trade your personal information or webhook data to any third party.</li>
+        </ul>
+      </section>
+
+      <!-- 6. Children's Information -->
+      <section class="space-y-3 p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white font-sans">6. Children's Information (COPPA)</h2>
+        <p>
+          SafeWebhook does not knowingly collect any Personal Identifiable Information from children under the age of 13. If you think that your child provided this kind of information on our website, we strongly encourage you to contact us immediately and we will do our best efforts to promptly remove such information from our records.
+        </p>
+      </section>
+
+      <!-- 7. Contact Us Regarding Privacy -->
+      <section class="space-y-3 p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white font-sans">7. Contact Information</h2>
+        <p>If you have any questions or suggestions about our Privacy Policy or data practices, do not hesitate to contact us:</p>
+        <ul class="list-disc list-inside space-y-1 ml-2 font-mono text-xs sm:text-sm">
+          <li>Email: <a href="mailto:privacy@safewebhook.com" class="text-indigo-600 dark:text-sky-400 hover:underline">privacy@safewebhook.com</a></li>
+          <li>Support Desk: <a href="mailto:support@safewebhook.com" class="text-indigo-600 dark:text-sky-400 hover:underline">support@safewebhook.com</a></li>
+          <li>Contact Page: <a href="/contact" class="text-indigo-600 dark:text-sky-400 hover:underline">https://safewebhook.com/contact</a></li>
+          <li>GitHub Issues: <a href="https://github.com/arjunn881/safewebhook" target="_blank" rel="noopener noreferrer" class="text-indigo-600 dark:text-sky-400 hover:underline">https://github.com/arjunn881/safewebhook</a></li>
+        </ul>
+      </section>
+
+    </div>
+  </main>
+
+  <Footer />
+</Layout>

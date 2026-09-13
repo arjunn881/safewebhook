@@ -1,0 +1,923 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   SAFEWEBHOOK WORKSPACE (/app) — APP-ONLY UI LAYER
+   Imported solely by src/components/WebhookDashboard.astro, so none of this
+   reaches the marketing pages. Colours reuse the site tokens in global.css.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+#swh {
+  --r: 10px; --r-sm: 7px; --r-lg: 16px;
+  --ok: #10b981; --warn: #f59e0b; --err: #f43f5e; --info: #38bdf8;
+  --tint: rgba(99, 102, 241, 0.14);
+  --tint-soft: rgba(99, 102, 241, 0.07);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 10px 30px -18px rgba(0, 0, 0, 0.45);
+  --shadow-pop: 0 24px 60px -16px rgba(0, 0, 0, 0.6);
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  letter-spacing: -0.011em;
+}
+
+html.light #swh, html[data-theme="bright"] #swh {
+  --tint: rgba(79, 70, 229, 0.10);
+  --tint-soft: rgba(79, 70, 229, 0.045);
+  --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 10px 30px -20px rgba(15, 23, 42, 0.28);
+  --shadow-pop: 0 24px 60px -20px rgba(15, 23, 42, 0.3);
+}
+
+body:has(#swh) { overflow: hidden; }
+#swh *, #swh *::before, #swh *::after { box-sizing: border-box; }
+#swh button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+#swh input, #swh textarea, #swh select { font: inherit; color: inherit; }
+#swh :focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
+#swh .mono { font-family: var(--font-mono); font-variant-ligatures: none; }
+#swh .hidden { display: none !important; }
+#swh .trunc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#swh .sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+#swh .swh-scroll { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+#swh .swh-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+#swh .swh-scroll::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+#swh .swh-scroll:hover::-webkit-scrollbar-thumb { background: var(--border-muted); background-clip: content-box; }
+
+/* ── Motion ────────────────────────────────────────────────────────────── */
+@keyframes swh-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@keyframes swh-pop { from { opacity: 0; transform: translateY(8px) scale(0.985); } to { opacity: 1; transform: none; } }
+@keyframes swh-slide { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+@keyframes swh-ping { 0% { transform: scale(1); opacity: 0.55; } 70%, 100% { transform: scale(2.6); opacity: 0; } }
+@keyframes swh-spin { to { transform: rotate(360deg); } }
+@keyframes swh-flash { from { background: var(--tint); } to { background: transparent; } }
+@keyframes swh-bar { 0% { transform: scaleY(0.25); } 50% { transform: scaleY(1); } 100% { transform: scaleY(0.25); } }
+
+/* ── Buttons ───────────────────────────────────────────────────────────── */
+#swh .swh-b {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 32px; padding: 0 10px; border-radius: var(--r-sm);
+  font-size: 12.5px; font-weight: 600; white-space: nowrap;
+  color: var(--text-secondary); border: 1px solid transparent;
+  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease, transform 0.1s ease;
+}
+#swh .swh-b:hover { background: var(--bg-elevated); color: var(--text-primary); }
+#swh .swh-b:active { transform: scale(0.97); }
+#swh .swh-b:disabled { opacity: 0.45; pointer-events: none; }
+#swh .swh-b--line { border-color: var(--border-subtle); background: var(--bg-surface); }
+#swh .swh-b--line:hover { border-color: var(--border-muted); }
+#swh .swh-b--pri { background: var(--accent-primary); color: #fff; box-shadow: var(--shadow); }
+#swh .swh-b--pri:hover { background: var(--accent-primary); color: #fff; filter: brightness(1.1); }
+#swh .swh-b--danger { color: var(--err); }
+#swh .swh-b--danger:hover { background: rgba(244, 63, 94, 0.12); color: var(--err); }
+#swh .swh-b--sm { height: 26px; padding: 0 8px; font-size: 11.5px; }
+#swh .swh-b--ico { width: 32px; padding: 0; }
+#swh .swh-b--ico.swh-b--sm { width: 26px; }
+#swh .swh-b[aria-pressed="true"] { background: var(--tint); color: var(--accent-primary); }
+#swh .swh-b svg { width: 15px; height: 15px; flex: none; }
+#swh .swh-b--sm svg { width: 13px; height: 13px; }
+
+/* ── Pills, badges, method colours ─────────────────────────────────────── */
+#swh .swh-pill {
+  display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 9px;
+  border-radius: 999px; border: 1px solid var(--border-subtle); background: var(--bg-surface);
+  font-size: 11px; font-weight: 650; color: var(--text-secondary);
+}
+#swh .swh-dot { width: 7px; height: 7px; border-radius: 999px; background: var(--text-muted); flex: none; position: relative; }
+#swh .swh-dot--live { background: var(--ok); }
+#swh .swh-dot--live::after { content: ""; position: absolute; inset: 0; border-radius: 999px; background: var(--ok); animation: swh-ping 1.9s cubic-bezier(0, 0, 0.2, 1) infinite; }
+#swh .swh-dot--warn { background: var(--warn); }
+#swh .swh-dot--err { background: var(--err); }
+#swh .swh-m {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 52px; height: 20px; padding: 0 6px; border-radius: 5px;
+  font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em;
+  background: var(--bg-elevated); color: var(--text-secondary); border: 1px solid var(--border-subtle);
+}
+#swh .swh-m--POST { background: rgba(16, 185, 129, 0.14); color: #10b981; border-color: rgba(16, 185, 129, 0.3); }
+#swh .swh-m--GET { background: rgba(56, 189, 248, 0.14); color: #0ea5e9; border-color: rgba(56, 189, 248, 0.3); }
+#swh .swh-m--PUT { background: rgba(245, 158, 11, 0.14); color: #d97706; border-color: rgba(245, 158, 11, 0.3); }
+#swh .swh-m--PATCH { background: rgba(168, 85, 247, 0.14); color: #a855f7; border-color: rgba(168, 85, 247, 0.3); }
+#swh .swh-m--DELETE { background: rgba(244, 63, 94, 0.14); color: #f43f5e; border-color: rgba(244, 63, 94, 0.3); }
+#swh .swh-m--EMAIL { background: rgba(99, 102, 241, 0.16); color: var(--accent-primary); border-color: rgba(99, 102, 241, 0.32); }
+#swh .swh-tag {
+  display: inline-flex; align-items: center; gap: 4px; padding: 1px 6px; border-radius: 5px;
+  font-size: 10px; font-weight: 650; background: var(--tint); color: var(--accent-primary);
+  border: 1px solid transparent; white-space: nowrap;
+}
+#swh .swh-tag--ok { background: rgba(16, 185, 129, 0.14); color: var(--ok); }
+#swh .swh-tag--warn { background: rgba(245, 158, 11, 0.15); color: #d97706; }
+#swh .swh-tag--err { background: rgba(244, 63, 94, 0.14); color: var(--err); }
+#swh .swh-tag--mute { background: var(--bg-elevated); color: var(--text-muted); }
+
+/* ── Top bar ───────────────────────────────────────────────────────────── */
+#swh-top {
+  display: flex; align-items: center; gap: 10px; flex: none;
+  height: 54px; padding: 0 12px;
+  background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle);
+  position: relative; z-index: 30;
+}
+#swh .swh-brand { display: flex; align-items: center; gap: 9px; text-decoration: none; color: inherit; flex: none; }
+#swh .swh-logo {
+  width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  color: #fff; font-size: 11px; font-weight: 800; letter-spacing: -0.04em;
+  box-shadow: 0 4px 14px -4px var(--accent-primary);
+}
+#swh .swh-brand-name { font-size: 13.5px; font-weight: 750; line-height: 1.1; }
+#swh .swh-brand-sub { font-size: 9.5px; font-weight: 650; letter-spacing: 0.1em; color: var(--text-muted); text-transform: uppercase; }
+
+/* ── URL bar ───────────────────────────────────────────────────────────── */
+#swh .swh-urlbar {
+  display: flex; align-items: center; gap: 0; flex: 1 1 auto; min-width: 0; max-width: 720px;
+  height: 34px; padding: 0 3px 0 0; border-radius: var(--r);
+  background: var(--bg-base); border: 1px solid var(--border-subtle);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+#swh .swh-urlbar:focus-within, #swh .swh-urlbar:hover { border-color: var(--border-muted); }
+#swh .swh-urlbar-tag {
+  display: grid; place-items: center; height: 100%; padding: 0 9px; flex: none;
+  font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em;
+  color: var(--accent-primary); background: var(--tint-soft);
+  border-right: 1px solid var(--border-subtle); border-radius: var(--r) 0 0 var(--r);
+}
+#swh .swh-urlbar input {
+  flex: 1 1 auto; min-width: 0; height: 100%; padding: 0 10px; border: 0; background: none; outline: none;
+  font-family: var(--font-mono); font-size: 12px; color: var(--text-primary); text-overflow: ellipsis;
+}
+#swh .swh-urlbar .swh-b { height: 28px; }
+
+/* ── Dropdown menus ────────────────────────────────────────────────────── */
+#swh .swh-menu {
+  position: absolute; z-index: 60; min-width: 216px; padding: 6px;
+  background: var(--bg-surface); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg); box-shadow: var(--shadow-pop);
+  animation: swh-pop 0.14s ease-out;
+}
+#swh .swh-menu-item {
+  display: flex; align-items: center; gap: 9px; width: 100%; padding: 7px 9px; border-radius: var(--r-sm);
+  font-size: 12.5px; font-weight: 550; color: var(--text-secondary); text-align: left; text-decoration: none;
+}
+#swh .swh-menu-item:hover, #swh .swh-menu-item[data-active="1"] { background: var(--bg-elevated); color: var(--text-primary); }
+#swh .swh-menu-item svg { width: 15px; height: 15px; flex: none; color: var(--text-muted); }
+#swh .swh-menu-item:hover svg { color: var(--accent-primary); }
+#swh .swh-menu-item kbd, #swh kbd {
+  margin-left: auto; padding: 1px 5px; border-radius: 4px; border: 1px solid var(--border-subtle);
+  background: var(--bg-base); font-family: var(--font-mono); font-size: 9.5px; color: var(--text-muted);
+}
+#swh .swh-menu-label { padding: 8px 9px 4px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+#swh .swh-menu-sep { height: 1px; margin: 5px 4px; background: var(--border-subtle); }
+
+/* ── Segmented control ─────────────────────────────────────────────────── */
+#swh .swh-seg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 9px; background: var(--bg-base); border: 1px solid var(--border-subtle); flex: none; }
+#swh .swh-seg > button {
+  display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px; border-radius: 7px;
+  font-size: 11.5px; font-weight: 650; color: var(--text-muted); transition: all 0.14s ease;
+}
+#swh .swh-seg > button:hover { color: var(--text-primary); }
+#swh .swh-seg > button[aria-checked="true"], #swh .swh-seg > button[aria-selected="true"] {
+  background: var(--bg-surface); color: var(--text-primary); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
+}
+#swh .swh-seg > button svg { width: 13px; height: 13px; }
+
+/* ── Main split ────────────────────────────────────────────────────────── */
+#swh-main { flex: 1 1 auto; display: flex; min-height: 0; position: relative; }
+#swh-list {
+  width: var(--list-w, 356px); flex: none; display: flex; flex-direction: column; min-height: 0;
+  background: var(--bg-surface); border-right: 1px solid var(--border-subtle);
+}
+#swh-grip { width: 5px; margin-left: -3px; flex: none; cursor: col-resize; background: transparent; z-index: 20; transition: background 0.15s ease; }
+#swh-grip:hover, #swh-grip[data-drag="1"] { background: var(--tint); }
+#swh-insp { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--bg-base); }
+
+/* ── Request list ──────────────────────────────────────────────────────── */
+#swh .swh-list-head { flex: none; padding: 9px 10px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--border-subtle); }
+#swh .swh-search { display: flex; align-items: center; gap: 7px; height: 32px; padding: 0 9px; border-radius: var(--r-sm); background: var(--bg-base); border: 1px solid var(--border-subtle); }
+#swh .swh-search:focus-within { border-color: var(--accent-primary); box-shadow: 0 0 0 3px var(--tint-soft); }
+#swh .swh-search svg { width: 14px; height: 14px; color: var(--text-muted); flex: none; }
+#swh .swh-search input { flex: 1; min-width: 0; border: 0; background: none; outline: none; font-size: 12.5px; }
+#swh .swh-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+#swh .swh-chip {
+  height: 22px; padding: 0 8px; border-radius: 999px; border: 1px solid var(--border-subtle);
+  font-family: var(--font-mono); font-size: 10px; font-weight: 650; color: var(--text-muted);
+  display: inline-flex; align-items: center; gap: 4px;
+}
+#swh .swh-chip:hover { border-color: var(--border-muted); color: var(--text-primary); }
+#swh .swh-chip[aria-pressed="true"] { background: var(--tint); border-color: transparent; color: var(--accent-primary); }
+#swh .swh-list-meta { flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-bottom: 1px solid var(--border-subtle); font-size: 11px; color: var(--text-muted); }
+#swh .swh-spark { display: flex; align-items: flex-end; gap: 1.5px; height: 16px; margin-left: 2px; }
+#swh .swh-spark i { width: 3px; border-radius: 2px; background: var(--tint); transform-origin: bottom; }
+#swh .swh-spark i[data-hot="1"] { background: var(--accent-primary); }
+#swh-rows { flex: 1 1 auto; padding: 5px; min-height: 0; }
+#swh .swh-group { padding: 10px 8px 4px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+#swh .swh-row {
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 9px; margin-bottom: 2px;
+  border-radius: var(--r); border: 1px solid transparent; text-align: left; position: relative;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+#swh .swh-row:hover { background: var(--bg-elevated); }
+#swh .swh-row[aria-selected="true"] { background: var(--tint); border-color: color-mix(in srgb, var(--accent-primary) 35%, transparent); }
+#swh .swh-row[data-new="1"] { animation: swh-flash 1.6s ease-out; }
+#swh .swh-row-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+#swh .swh-row-top { display: flex; align-items: center; gap: 6px; min-width: 0; }
+#swh .swh-row-title { font-size: 12.5px; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#swh .swh-row-sub { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); }
+#swh .swh-row-side { display: flex; align-items: center; gap: 4px; flex: none; }
+#swh .swh-ago { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); min-width: 32px; text-align: right; }
+#swh .swh-pin { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; color: var(--border-muted); opacity: 0; }
+#swh .swh-row:hover .swh-pin, #swh .swh-pin[aria-pressed="true"] { opacity: 1; }
+#swh .swh-pin[aria-pressed="true"] { color: var(--warn); }
+#swh .swh-pin:hover { background: var(--bg-surface); color: var(--warn); }
+#swh .swh-pin svg { width: 13px; height: 13px; }
+#swh .swh-chk { width: 14px; height: 14px; accent-color: var(--accent-primary); flex: none; }
+#swh-bulk { display: flex; align-items: center; gap: 6px; padding: 7px 10px; background: var(--tint); font-size: 11.5px; font-weight: 600; color: var(--accent-primary); }
+#swh-jump { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); z-index: 15; animation: swh-in 0.2s ease-out; box-shadow: var(--shadow-pop); }
+#swh-list { position: relative; }
+
+/* ── Empty / waiting state ─────────────────────────────────────────────── */
+#swh .swh-wait { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 34px 18px; text-align: center; }
+#swh .swh-wait-bars { display: flex; align-items: flex-end; gap: 4px; height: 30px; }
+#swh .swh-wait-bars i { width: 4px; height: 100%; border-radius: 3px; background: var(--accent-primary); opacity: 0.55; animation: swh-bar 1.25s ease-in-out infinite; }
+#swh .swh-wait-bars i:nth-child(2) { animation-delay: 0.15s; }
+#swh .swh-wait-bars i:nth-child(3) { animation-delay: 0.3s; }
+#swh .swh-wait-bars i:nth-child(4) { animation-delay: 0.45s; }
+#swh .swh-wait-bars i:nth-child(5) { animation-delay: 0.6s; }
+#swh .swh-wait h3 { font-size: 13.5px; font-weight: 700; }
+#swh .swh-wait p { font-size: 12px; color: var(--text-secondary); line-height: 1.55; max-width: 30ch; }
+#swh .swh-steps { display: flex; flex-direction: column; gap: 6px; width: 100%; text-align: left; }
+#swh .swh-step { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: var(--r-sm); background: var(--bg-base); border: 1px solid var(--border-subtle); font-size: 11.5px; color: var(--text-secondary); }
+#swh .swh-step[data-done="1"] { border-color: color-mix(in srgb, var(--ok) 40%, transparent); color: var(--text-primary); }
+#swh .swh-step-n { width: 18px; height: 18px; border-radius: 999px; display: grid; place-items: center; flex: none; background: var(--bg-elevated); font-size: 9.5px; font-weight: 700; color: var(--text-muted); }
+#swh .swh-step[data-done="1"] .swh-step-n { background: var(--ok); color: #04140d; }
+
+/* ── Inspector ─────────────────────────────────────────────────────────── */
+#swh .swh-insp-bar { flex: none; display: flex; align-items: center; gap: 9px; height: 50px; padding: 0 12px; border-bottom: 1px solid var(--border-subtle); background: var(--bg-surface); }
+#swh .swh-insp-id { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+#swh .swh-insp-title { font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#swh .swh-insp-meta { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); overflow: hidden; white-space: nowrap; }
+#swh .swh-tabs { flex: none; display: flex; align-items: center; gap: 2px; padding: 0 10px; height: 40px; border-bottom: 1px solid var(--border-subtle); overflow-x: auto; scrollbar-width: none; background: var(--bg-surface); }
+#swh .swh-tabs::-webkit-scrollbar { display: none; }
+#swh .swh-tab {
+  display: inline-flex; align-items: center; gap: 6px; height: 100%; padding: 0 11px; flex: none;
+  font-size: 12.5px; font-weight: 600; color: var(--text-muted); position: relative; letter-spacing: -0.005em;
+}
+#swh .swh-tab:hover { color: var(--text-primary); }
+#swh .swh-tab[aria-selected="true"] { color: var(--accent-primary); }
+#swh .swh-tab[aria-selected="true"]::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 2px; border-radius: 2px 2px 0 0; background: var(--accent-primary); }
+#swh .swh-tab-n { padding: 0 5px; min-width: 17px; height: 16px; border-radius: 5px; background: var(--bg-elevated); font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; display: inline-grid; place-items: center; }
+#swh .swh-tab[aria-selected="true"] .swh-tab-n { background: var(--tint); color: var(--accent-primary); }
+#swh-panes { flex: 1 1 auto; min-height: 0; position: relative; }
+#swh .swh-pane { display: none; height: 100%; }
+#swh .swh-pane[data-on="1"] { display: flex; flex-direction: column; animation: swh-in 0.16s ease-out; }
+#swh .swh-pane-tools { flex: none; display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--border-subtle); flex-wrap: wrap; }
+#swh .swh-pane-body { flex: 1 1 auto; min-height: 0; padding: 12px; }
+
+/* ── Cards, key/value grids, tables ────────────────────────────────────── */
+#swh .swh-card { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--r-lg); }
+#swh .swh-card-h { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border-subtle); font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+#swh .swh-card-b { padding: 12px; }
+#swh .swh-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 8px; }
+#swh .swh-stat { padding: 10px 12px; border-radius: var(--r); background: var(--bg-surface); border: 1px solid var(--border-subtle); }
+#swh .swh-stat dt { font-size: 9.5px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+#swh .swh-stat dd { font-size: 14px; font-weight: 700; font-family: var(--font-mono); word-break: break-word; }
+#swh .swh-stat dd small { font-size: 11px; font-weight: 500; color: var(--text-muted); }
+#swh .swh-kv { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 12px; }
+#swh .swh-kv th { text-align: left; padding: 7px 10px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border-subtle); position: sticky; top: 0; background: var(--bg-base); z-index: 1; }
+#swh .swh-kv td { padding: 7px 10px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; }
+#swh .swh-kv tr:hover td { background: var(--bg-surface); }
+#swh .swh-kv td:first-child { color: var(--accent-secondary); font-weight: 600; white-space: nowrap; width: 1%; }
+#swh .swh-kv td:last-child { color: var(--text-primary); word-break: break-all; }
+#swh .swh-kv mark { background: rgba(245, 158, 11, 0.3); color: inherit; border-radius: 2px; }
+#swh .swh-copyable { cursor: copy; }
+#swh .swh-copyable:hover { text-decoration: underline dotted; text-underline-offset: 3px; }
+#swh .swh-none { padding: 26px 12px; text-align: center; font-size: 12px; color: var(--text-muted); }
+
+/* ── Code blocks ───────────────────────────────────────────────────────── */
+#swh .swh-code {
+  margin: 0; padding: 12px 14px; border-radius: var(--r); background: var(--bg-surface);
+  border: 1px solid var(--border-subtle); font-family: var(--font-mono); font-size: 12px; line-height: 1.65;
+  overflow: auto; tab-size: 2; color: var(--text-primary);
+}
+#swh .swh-code--wrap { white-space: pre-wrap; word-break: break-word; }
+#swh .swh-code--nowrap { white-space: pre; }
+#swh .swh-ln { counter-reset: swh-l; }
+#swh .swh-ln > span { display: block; padding-left: 42px; position: relative; }
+#swh .swh-ln > span::before { counter-increment: swh-l; content: counter(swh-l); position: absolute; left: 0; width: 30px; text-align: right; color: var(--text-muted); opacity: 0.55; user-select: none; }
+#swh .k { color: var(--accent-secondary); font-weight: 600; }
+#swh .s { color: #34d399; }
+#swh .n { color: #c084fc; font-weight: 600; }
+#swh .b { color: #f472b6; font-weight: 600; }
+#swh .u { color: var(--text-muted); }
+#swh .p { color: var(--text-muted); }
+html.light #swh .s, html[data-theme="bright"] #swh .s { color: #047857; }
+html.light #swh .n, html[data-theme="bright"] #swh .n { color: #7c3aed; }
+html.light #swh .b, html[data-theme="bright"] #swh .b { color: #be185d; }
+
+/* ── JSON tree ─────────────────────────────────────────────────────────── */
+#swh .swh-tree { font-family: var(--font-mono); font-size: 12.5px; line-height: 1.7; }
+#swh .swh-tree ul { list-style: none; margin: 0; padding-left: 17px; border-left: 1px dashed var(--border-subtle); }
+#swh .swh-tree li { position: relative; }
+#swh .swh-tree li[hidden] { display: none; }
+#swh .swh-tw { display: inline-flex; align-items: center; width: 15px; height: 15px; margin-right: 1px; border-radius: 4px; color: var(--text-muted); justify-content: center; font-size: 9px; }
+#swh .swh-tw:hover { background: var(--bg-elevated); color: var(--accent-primary); }
+#swh .swh-tw[aria-expanded="false"] svg { transform: rotate(-90deg); }
+#swh .swh-tw svg { width: 11px; height: 11px; transition: transform 0.14s ease; }
+#swh .swh-tk { color: var(--accent-secondary); font-weight: 600; cursor: copy; }
+#swh .swh-tk:hover { text-decoration: underline; }
+#swh .swh-tv { cursor: copy; }
+#swh .swh-tv:hover { background: var(--tint); border-radius: 3px; }
+#swh .swh-tc { color: var(--text-muted); font-size: 10.5px; margin-left: 6px; }
+#swh .swh-hit { background: rgba(245, 158, 11, 0.22); border-radius: 3px; }
+
+/* ── Diff ──────────────────────────────────────────────────────────────── */
+#swh .swh-diff { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border-subtle); border-radius: var(--r); overflow: hidden; border: 1px solid var(--border-subtle); }
+#swh .swh-diff > div { background: var(--bg-surface); overflow: auto; }
+#swh .swh-diff-h { padding: 8px 12px; font-size: 11px; font-weight: 700; border-bottom: 1px solid var(--border-subtle); position: sticky; top: 0; background: var(--bg-surface); z-index: 1; display: flex; align-items: center; gap: 7px; }
+#swh .swh-diff pre { margin: 0; padding: 8px 0; font-family: var(--font-mono); font-size: 11.5px; line-height: 1.6; }
+#swh .swh-diff pre > span { display: block; padding: 0 12px; white-space: pre-wrap; word-break: break-all; }
+#swh .swh-dl--add { background: rgba(16, 185, 129, 0.16); }
+#swh .swh-dl--del { background: rgba(244, 63, 94, 0.15); }
+#swh .swh-dl--gap { color: var(--text-muted); opacity: 0.35; }
+
+/* ── Forms ─────────────────────────────────────────────────────────────── */
+#swh .swh-f { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+#swh .swh-f > label, #swh .swh-lb { font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); }
+#swh .swh-in, #swh .swh-ta, #swh .swh-sel {
+  width: 100%; padding: 8px 10px; border-radius: var(--r-sm); background: var(--bg-base);
+  border: 1px solid var(--border-subtle); font-size: 12.5px; outline: none; transition: border-color 0.14s ease, box-shadow 0.14s ease;
+}
+#swh .swh-in:focus, #swh .swh-ta:focus, #swh .swh-sel:focus { border-color: var(--accent-primary); box-shadow: 0 0 0 3px var(--tint-soft); }
+#swh .swh-in::placeholder, #swh .swh-ta::placeholder { color: var(--text-muted); }
+#swh .swh-ta { font-family: var(--font-mono); font-size: 12px; line-height: 1.6; resize: vertical; min-height: 88px; }
+#swh .swh-sel { appearance: none; padding-right: 28px; cursor: pointer; background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%), linear-gradient(135deg, var(--text-muted) 50%, transparent 50%); background-position: calc(100% - 15px) 52%, calc(100% - 10px) 52%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; }
+#swh .swh-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+#swh .swh-hint { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+#swh .swh-sw { display: flex; align-items: center; gap: 9px; padding: 9px 11px; border-radius: var(--r-sm); background: var(--bg-base); border: 1px solid var(--border-subtle); cursor: pointer; font-size: 12.5px; }
+#swh .swh-sw input { width: 15px; height: 15px; accent-color: var(--accent-primary); flex: none; }
+#swh .swh-sw span small { display: block; font-size: 10.5px; color: var(--text-muted); font-weight: 500; }
+
+/* ── Modals ────────────────────────────────────────────────────────────── */
+#swh .swh-modal { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: 16px; }
+#swh .swh-modal-bg { position: absolute; inset: 0; background: rgba(2, 4, 10, 0.72); backdrop-filter: blur(5px); animation: swh-in 0.16s ease-out; }
+html.light #swh .swh-modal-bg, html[data-theme="bright"] #swh .swh-modal-bg { background: rgba(15, 23, 42, 0.38); }
+#swh .swh-modal-box {
+  position: relative; z-index: 1; width: 100%; max-width: 620px; max-height: min(86dvh, 860px);
+  display: flex; flex-direction: column; background: var(--bg-surface);
+  border: 1px solid var(--border-subtle); border-radius: var(--r-lg); box-shadow: var(--shadow-pop);
+  animation: swh-pop 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#swh .swh-modal-box--wide { max-width: 880px; }
+#swh .swh-modal-box--slim { max-width: 460px; }
+#swh .swh-modal-h { flex: none; display: flex; align-items: flex-start; gap: 11px; padding: 15px 16px; border-bottom: 1px solid var(--border-subtle); }
+#swh .swh-modal-h h2 { font-size: 14.5px; font-weight: 750; }
+#swh .swh-modal-h p { margin-top: 2px; font-size: 11.5px; color: var(--text-muted); line-height: 1.5; }
+#swh .swh-modal-ico { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; flex: none; background: var(--tint); color: var(--accent-primary); }
+#swh .swh-modal-ico svg { width: 17px; height: 17px; }
+#swh .swh-modal-b { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 13px; }
+#swh .swh-modal-f { flex: none; display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--border-subtle); background: var(--bg-base); border-radius: 0 0 var(--r-lg) var(--r-lg); }
+#swh .swh-modal-f .swh-b { height: 34px; padding: 0 14px; }
+
+/* ── Command palette ───────────────────────────────────────────────────── */
+#swh-pal { position: fixed; inset: 0; z-index: 95; display: flex; align-items: flex-start; justify-content: center; padding: 12vh 16px 16px; }
+#swh .swh-pal-box { position: relative; z-index: 1; width: 100%; max-width: 560px; background: var(--bg-surface); border: 1px solid var(--border-muted); border-radius: var(--r-lg); box-shadow: var(--shadow-pop); overflow: hidden; animation: swh-pop 0.16s cubic-bezier(0.16, 1, 0.3, 1); }
+#swh .swh-pal-in { display: flex; align-items: center; gap: 9px; padding: 13px 15px; border-bottom: 1px solid var(--border-subtle); }
+#swh .swh-pal-in input { flex: 1; border: 0; background: none; outline: none; font-size: 14.5px; }
+#swh .swh-pal-in svg { width: 17px; height: 17px; color: var(--text-muted); }
+#swh-pal-list { max-height: min(52dvh, 440px); overflow-y: auto; padding: 6px; }
+
+/* ── Toasts ────────────────────────────────────────────────────────────── */
+#swh-toasts { position: fixed; right: 14px; bottom: 14px; z-index: 120; display: flex; flex-direction: column-reverse; gap: 8px; max-width: min(360px, calc(100vw - 28px)); pointer-events: none; }
+#swh .swh-toast {
+  display: flex; align-items: flex-start; gap: 9px; padding: 10px 12px; pointer-events: auto;
+  background: var(--bg-surface); border: 1px solid var(--border-subtle); border-left: 3px solid var(--accent-primary);
+  border-radius: var(--r); box-shadow: var(--shadow-pop); font-size: 12.5px; animation: swh-slide 0.2s ease-out;
+}
+#swh .swh-toast[data-k="ok"] { border-left-color: var(--ok); }
+#swh .swh-toast[data-k="err"] { border-left-color: var(--err); }
+#swh .swh-toast[data-k="warn"] { border-left-color: var(--warn); }
+#swh .swh-toast svg { width: 15px; height: 15px; flex: none; margin-top: 1px; }
+#swh .swh-toast[data-k="ok"] svg { color: var(--ok); }
+#swh .swh-toast[data-k="err"] svg { color: var(--err); }
+#swh .swh-toast[data-k="warn"] svg { color: var(--warn); }
+#swh .swh-toast[data-k="info"] svg { color: var(--info); }
+#swh .swh-toast-t { font-weight: 650; line-height: 1.35; }
+#swh .swh-toast-m { margin-top: 2px; font-size: 11.5px; color: var(--text-muted); line-height: 1.45; word-break: break-word; }
+
+/* ── Status bar ────────────────────────────────────────────────────────── */
+#swh-status {
+  flex: none; display: flex; align-items: center; gap: 10px; height: 26px; padding: 0 12px;
+  border-top: 1px solid var(--border-subtle); background: var(--bg-surface);
+  font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted);
+}
+#swh-status .swh-st { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+#swh-status .swh-st b { color: var(--text-secondary); font-weight: 650; }
+
+/* ── Loading ───────────────────────────────────────────────────────────── */
+#swh .swh-spin { width: 14px; height: 14px; border: 2px solid var(--border-muted); border-top-color: var(--accent-primary); border-radius: 999px; animation: swh-spin 0.7s linear infinite; flex: none; }
+
+/* ── Layout helpers ────────────────────────────────────────────────────── */
+#swh .swh-fr { display: flex; align-items: center; gap: 8px; min-width: 0; }
+#swh .swh-fr--sb { justify-content: space-between; }
+#swh .swh-fc { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+#swh .swh-mla { margin-left: auto; }
+#swh .swh-grow { flex: 1 1 auto; min-width: 0; }
+#swh .swh-pop { position: relative; flex: none; }
+#swh .swh-menu--r { top: calc(100% + 6px); right: 0; }
+#swh .swh-menu--l { top: calc(100% + 6px); left: 0; }
+#swh .swh-menu--up { bottom: calc(100% + 6px); right: 0; }
+#swh .swh-detail { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+#swh .swh-zero-inner { max-width: 720px; margin: 0 auto; padding: 40px 22px 56px; display: flex; flex-direction: column; gap: 16px; }
+#swh .swh-zero-inner h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.25; }
+#swh .swh-zero-inner > p { font-size: 13px; line-height: 1.65; color: var(--text-secondary); max-width: 62ch; }
+#swh-zero { flex: 1 1 auto; min-height: 0; }
+
+/* ── Responsive ────────────────────────────────────────────────────────── */
+@media (max-width: 1180px) {
+  #swh .swh-hide-lg { display: none !important; }
+}
+@media (max-width: 900px) {
+  #swh-top { height: auto; min-height: 52px; padding: 8px 10px; flex-wrap: wrap; row-gap: 8px; }
+  #swh .swh-urlbar { order: 5; flex-basis: 100%; max-width: none; }
+  #swh .swh-hide-md { display: none !important; }
+}
+@media (max-width: 780px) {
+  #swh-grip { display: none; }
+  #swh-list { width: 100% !important; border-right: 0; }
+  #swh-insp { position: absolute; inset: 0; z-index: 25; background: var(--bg-base); }
+  #swh-main[data-view="list"] #swh-insp { display: none; }
+  #swh-main[data-view="insp"] #swh-list { display: none; }
+  #swh .swh-insp-bar { height: auto; min-height: 50px; padding: 8px 10px; flex-wrap: wrap; row-gap: 6px; }
+  #swh .swh-insp-actions { width: 100%; justify-content: flex-start; }
+  #swh .swh-diff { grid-template-columns: 1fr; }
+  #swh .swh-row2 { grid-template-columns: 1fr; }
+  #swh-status { display: none; }
+}
+@media (min-width: 781px) {
+  #swh .swh-only-sm { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #swh *, #swh *::before, #swh *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PART 2 — WORKSPACE REDESIGN LAYER
+   Everything above is the original skeleton. This half adds the pieces the
+   renderers in src/scripts/app/* actually emit (result panes, mock tiles,
+   meters, palette rows, the drop zone) and re-skins the shell: ambient
+   background, glass chrome, an accent rail on the selected row, sticky day
+   headers and a compact density mode. Later rules of equal specificity win,
+   so the redesign lands without editing the skeleton.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Scale tokens ──────────────────────────────────────────────────────────
+   --list-w is set inline on #swh by the grip in main.js; this is the value
+   used before any drag and after a reset. Everything spacing-related routes
+   through --sp so compact mode is a one-line change. */
+#swh {
+  --list-w: 356px;
+  --sp: 1;
+  --row-py: calc(8px * var(--sp));
+  --row-gap: 2px;
+  --rail: 3px;
+  --glass: color-mix(in srgb, var(--bg-surface) 82%, transparent);
+  --hair: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent-primary) 55%, transparent), transparent);
+}
+#swh[data-density="compact"] { --sp: 0.55; --row-gap: 1px; }
+
+/* ── Ambient shell ────────────────────────────────────────────────────────
+   Two very soft accent glows so the workspace reads as a lit surface rather
+   than flat fill. Painted on #swh itself — no extra element needed. */
+#swh {
+  background-image:
+    radial-gradient(90ch 52ch at 8% -12%, var(--tint-soft), transparent 62%),
+    radial-gradient(72ch 44ch at 104% 4%, color-mix(in srgb, var(--accent-secondary) 6%, transparent), transparent 60%);
+  background-attachment: fixed;
+}
+
+/* ── Focus ring ───────────────────────────────────────────────────────────
+   Softer than a hard 2px outline, and readable on every one of the three
+   themes because it layers a halo under the ring. */
+#swh :focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* ── Result panes (out() in actions.js) ───────────────────────────────────
+   Replay, monitor and composer all funnel their transcript through one
+   element whose className is reset to .swh-out with a data-s state. */
+#swh .swh-out {
+  display: block; margin: 0; padding: 11px 13px 11px 15px;
+  border-radius: var(--r); border: 1px solid var(--border-subtle);
+  border-left: var(--rail) solid var(--border-muted);
+  background: var(--bg-surface);
+  font-family: var(--font-mono); font-size: 11.5px; line-height: 1.6;
+  white-space: pre-wrap; word-break: break-word;
+  max-height: 34dvh; overflow: auto; overscroll-behavior: contain;
+  color: var(--text-secondary);
+  animation: swh-in 0.18s ease-out;
+}
+#swh .swh-out[data-s="wait"] {
+  border-left-color: var(--accent-primary);
+  color: var(--text-primary);
+  background:
+    linear-gradient(90deg, var(--tint-soft), transparent 55%),
+    var(--bg-surface);
+}
+#swh .swh-out[data-s="ok"] {
+  border-left-color: var(--ok);
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.09), transparent 55%), var(--bg-surface);
+  color: var(--text-primary);
+}
+#swh .swh-out[data-s="bad"] {
+  border-left-color: var(--err);
+  background: linear-gradient(90deg, rgba(244, 63, 94, 0.09), transparent 55%), var(--bg-surface);
+  color: var(--text-primary);
+}
+#swh .swh-out::-webkit-scrollbar { width: 8px; }
+#swh .swh-out::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+
+/* ── Busy buttons ─────────────────────────────────────────────────────────
+   busy() in main.js and the replay/monitor handlers set data-busy while a
+   request is in flight; the icon is swapped for a spinner in place so the
+   button never changes width. */
+#swh [data-busy="1"] { position: relative; pointer-events: none; color: transparent !important; }
+#swh [data-busy="1"] > * { opacity: 0; }
+#swh [data-busy="1"]::after {
+  content: ""; position: absolute; inset: 0; margin: auto;
+  width: 14px; height: 14px; border-radius: 999px;
+  border: 2px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-top-color: var(--accent-primary);
+  animation: swh-spin 0.7s linear infinite;
+}
+#swh .swh-b--pri[data-busy="1"]::after { border-color: rgba(255, 255, 255, 0.35); border-top-color: #fff; }
+
+/* ── Mock event tiles (renderMockGrid) ────────────────────────────────────
+   Dropped into .swh-grid, so the grid handles the columns and the tile only
+   owns its own internals. */
+#swh .swh-tile {
+  display: flex; flex-direction: column; gap: 3px; padding: 11px 12px; text-align: left;
+  border-radius: var(--r); border: 1px solid var(--border-subtle); background: var(--bg-surface);
+  transition: border-color 0.14s ease, background 0.14s ease, transform 0.12s ease, box-shadow 0.14s ease;
+}
+#swh .swh-tile:hover {
+  border-color: color-mix(in srgb, var(--accent-primary) 45%, transparent);
+  background: var(--bg-elevated); transform: translateY(-1px); box-shadow: var(--shadow);
+}
+#swh .swh-tile:active { transform: none; }
+#swh .swh-tile-g { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent-primary); }
+#swh .swh-tile-t { font-size: 12px; font-weight: 650; color: var(--text-primary); }
+#swh .swh-tile-n { font-size: 11px; color: var(--text-secondary); line-height: 1.45; }
+#swh .swh-tile-f {
+  margin-top: 3px; padding-top: 6px; border-top: 1px dashed var(--border-subtle);
+  font-family: var(--font-mono); font-size: 9.5px; color: var(--text-muted);
+}
+
+/* ── Breakdown meters (loadStats) ─────────────────────────────────────────── */
+#swh .swh-meter { display: grid; grid-template-columns: minmax(64px, 96px) 1fr auto; align-items: center; gap: 9px; }
+#swh .swh-meter-k { font-size: 11px; font-weight: 650; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#swh .swh-meter-t { height: 7px; border-radius: 999px; background: var(--bg-base); border: 1px solid var(--border-subtle); overflow: hidden; }
+#swh .swh-meter-t i {
+  display: block; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+  animation: swh-fill 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#swh .swh-meter-n { font-size: 10px; color: var(--text-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+@keyframes swh-fill { from { transform: scaleX(0); transform-origin: left; } to { transform: none; } }
+
+/* ── Shortcut cheat sheet (renderKeys) ────────────────────────────────────── */
+#swh .swh-keyrow { display: flex; align-items: baseline; gap: 11px; font-size: 12px; color: var(--text-secondary); }
+#swh .swh-keyrow kbd {
+  margin-left: 0; flex: none; min-width: 74px; text-align: center;
+  padding: 3px 7px; font-size: 10.5px; color: var(--text-primary);
+  background: var(--bg-elevated); border-color: var(--border-muted);
+  box-shadow: 0 1.5px 0 var(--border-muted);
+}
+#swh .swh-keyrow span { line-height: 1.5; }
+
+/* ── Palette rows (palRow) ────────────────────────────────────────────────
+   palMove keeps exactly one row at data-on="1" and scrolls it into view, so
+   the highlight is driven by that attribute rather than :hover alone. */
+#swh .swh-pal-row {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 8px 11px; border-radius: var(--r-sm);
+  font-size: 13px; font-weight: 550; color: var(--text-secondary); text-align: left;
+}
+#swh .swh-pal-row svg { width: 15px; height: 15px; flex: none; color: var(--text-muted); }
+#swh .swh-pal-row:hover { background: var(--bg-elevated); color: var(--text-primary); }
+#swh .swh-pal-row[data-on="1"] {
+  background: var(--tint); color: var(--text-primary);
+  box-shadow: inset var(--rail) 0 0 var(--accent-primary);
+}
+#swh .swh-pal-row[data-on="1"] svg { color: var(--accent-primary); }
+#swh .swh-pal-row[data-on="1"] .swh-tag--mute { background: var(--bg-surface); }
+#swh .swh-pal-hint {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 13px; border-top: 1px solid var(--border-subtle);
+  background: var(--bg-base); font-size: 10.5px; color: var(--text-muted);
+}
+
+/* ── Import drop zone ─────────────────────────────────────────────────────
+   wireDrop() flips data-hot on dragenter/dragover and clears it again on
+   dragleave, dragend and drop. */
+#swh-drop {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 26px 18px; border-radius: var(--r-lg);
+  border: 1.5px dashed var(--border-muted); background: var(--bg-base);
+  text-align: center; font-size: 12.5px; color: var(--text-secondary);
+  transition: border-color 0.14s ease, background 0.14s ease, transform 0.12s ease;
+}
+#swh-drop:hover { border-color: color-mix(in srgb, var(--accent-primary) 55%, transparent); }
+#swh-drop svg { width: 22px; height: 22px; color: var(--text-muted); }
+#swh-drop[data-hot="1"] {
+  border-color: var(--accent-primary); border-style: solid;
+  background: linear-gradient(var(--tint-soft), var(--tint-soft)), var(--bg-base);
+  transform: scale(1.008);
+}
+#swh-drop[data-hot="1"] svg { color: var(--accent-primary); }
+#swh-drop b { font-weight: 700; color: var(--text-primary); }
+
+/* ── Tree root ────────────────────────────────────────────────────────────
+   renderBody wraps the top level in .swh-troot; the generic `.swh-tree ul`
+   indent and guide line only belong to nested levels. */
+#swh .swh-tree .swh-troot { padding-left: 0; border-left: 0; }
+#swh .swh-tree .swh-troot > li > .swh-tw { margin-left: -1px; }
+
+/* Reset the auto-margin `#swh kbd` carries for menu rows. */
+#swh .swh-pal-hint span { display: inline-flex; align-items: center; gap: 4px; }
+#swh .swh-pal-hint kbd { margin-left: 0; }
+
+/* ── Filter button gets a dot while a filter is on ────────────────────────
+   paintFilters() sets data-live so a collapsed panel still shows it is
+   narrowing the list. */
+#swh-filters-btn { position: relative; }
+#swh-filters-btn[data-live="1"] { border-color: color-mix(in srgb, var(--accent-primary) 50%, transparent); color: var(--accent-primary); }
+#swh-filters-btn[data-live="1"]::after {
+  content: ""; position: absolute; top: 3px; right: 3px;
+  width: 6px; height: 6px; border-radius: 999px;
+  background: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--bg-surface);
+}
+#swh-filters { animation: swh-in 0.14s ease-out; }
+
+/* ── Density ──────────────────────────────────────────────────────────────
+   Compact mode fits roughly a third more rows on screen. Only paddings and
+   the gap move; type stays legible. */
+#swh .swh-row { padding: var(--row-py) 9px; margin-bottom: var(--row-gap); }
+#swh[data-density="compact"] .swh-row-sub { font-size: 9.5px; }
+#swh[data-density="compact"] .swh-group { padding: 7px 8px 3px; }
+#swh[data-density="compact"] .swh-list-head { padding: 7px 9px; gap: 6px; }
+#swh[data-density="compact"] #swh-rows { padding: 3px; }
+
+/* ── Day group headers stick while scrolling ──────────────────────────────── */
+#swh .swh-group {
+  position: sticky; top: 0; z-index: 2;
+  margin: 0 -5px; padding-left: 13px; padding-right: 13px;
+  background: color-mix(in srgb, var(--bg-surface) 92%, transparent);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--border-subtle);
+}
+#swh .swh-group:first-child { padding-top: 6px; }
+
+/* ── Selected row gets an accent rail ─────────────────────────────────────
+   Clearer than the tint alone once a filter chip is also tinted, and it
+   survives the compact density where the row is only ~30px tall. */
+#swh .swh-row { isolation: isolate; }
+#swh .swh-row[aria-selected="true"] {
+  box-shadow: inset var(--rail) 0 0 var(--accent-primary);
+  padding-left: calc(9px + var(--rail));
+}
+#swh .swh-row[aria-selected="true"] .swh-row-title { color: var(--text-primary); }
+#swh .swh-row[aria-selected="true"] .swh-ago { color: var(--accent-primary); }
+#swh .swh-row:focus-visible { outline-offset: -2px; }
+
+/* A pinned row keeps a faint marker even when it is not selected. */
+#swh .swh-row:has(.swh-pin[aria-pressed="true"]) { border-color: color-mix(in srgb, var(--warn) 26%, transparent); }
+
+/* Unverified-but-signed rows read as "check me" without shouting. */
+#swh .swh-row-sub .swh-tag { padding: 0 5px; font-size: 9px; }
+
+/* ── Glass chrome ─────────────────────────────────────────────────────────
+   The bars float above the ambient gradient rather than covering it. */
+#swh-top, #swh .swh-insp-bar, #swh .swh-tabs, #swh-status, #swh .swh-list-meta {
+  background: var(--glass);
+  backdrop-filter: blur(10px) saturate(140%);
+}
+#swh-top { box-shadow: 0 1px 0 var(--border-subtle), 0 8px 24px -22px rgba(0, 0, 0, 0.8); }
+#swh-top::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
+  background: var(--hair); opacity: 0.5; pointer-events: none;
+}
+#swh-list { background: color-mix(in srgb, var(--bg-surface) 62%, transparent); }
+#swh .swh-list-head { background: var(--glass); backdrop-filter: blur(10px); }
+
+/* ── Live pill reads as a stream indicator ────────────────────────────────── */
+#swh-conn { transition: color 0.2s ease, border-color 0.2s ease; }
+#swh-conn:has(.swh-dot--live) { border-color: color-mix(in srgb, var(--ok) 34%, transparent); color: var(--text-secondary); }
+#swh-conn:has(.swh-dot--err) { border-color: color-mix(in srgb, var(--err) 34%, transparent); color: var(--err); }
+#swh-conn:has(.swh-dot--warn) { border-color: color-mix(in srgb, var(--warn) 34%, transparent); }
+
+/* ── Jump-to-newest pill ──────────────────────────────────────────────────── */
+#swh-jump { border-radius: 999px; padding: 0 13px; height: 28px; font-size: 11.5px; }
+#swh-jump::before {
+  content: ""; position: absolute; inset: -3px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 50%, transparent);
+  animation: swh-halo 2.2s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes swh-halo { 0% { opacity: 0.85; transform: scale(0.97); } 70%, 100% { opacity: 0; transform: scale(1.16); } }
+
+/* ── Inspector chrome ─────────────────────────────────────────────────────── */
+#swh .swh-tab[aria-selected="true"]::after { box-shadow: 0 -4px 12px -2px var(--accent-primary); }
+#swh .swh-tab .swh-dot { margin-left: 1px; }
+#swh .swh-tabs { position: relative; }
+#swh .swh-pane-tools { background: color-mix(in srgb, var(--bg-surface) 45%, transparent); }
+#swh .swh-pane-body { scroll-padding-block: 12px; }
+
+/* Card headers get a hairline accent so stacked cards separate cleanly. */
+#swh .swh-card { overflow: hidden; box-shadow: var(--shadow); }
+#swh .swh-card-h { background: color-mix(in srgb, var(--bg-elevated) 55%, transparent); }
+#swh .swh-card-h svg { color: var(--accent-primary); }
+
+/* Overview stat tiles line up with the mock tiles above. */
+#swh .swh-stat { transition: border-color 0.14s ease, background 0.14s ease; }
+#swh .swh-stat:hover { border-color: var(--border-muted); background: var(--bg-elevated); }
+
+/* Header/query tables: zebra the rows so long values stay traceable. */
+#swh .swh-kv tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--bg-surface) 45%, transparent); }
+#swh .swh-kv tbody tr:hover td { background: var(--tint-soft); }
+#swh .swh-kv td:first-child { padding-right: 18px; }
+
+/* Code blocks share the card surface but stay visually quieter. */
+#swh .swh-code { background: color-mix(in srgb, var(--bg-surface) 78%, transparent); }
+#swh .swh-ln > span:hover { background: var(--tint-soft); }
+#swh .swh-ln > span:hover::before { color: var(--accent-primary); opacity: 1; }
+
+/* ── Security verdict ─────────────────────────────────────────────────────
+   runVerify swaps #swh-sig-result between the tag variants; the card border
+   follows so the answer is legible from across the room. */
+#swh #swh-pane-security .swh-card:has(#swh-sig-result.swh-tag--ok) { border-color: color-mix(in srgb, var(--ok) 42%, transparent); }
+#swh #swh-pane-security .swh-card:has(#swh-sig-result.swh-tag--err) { border-color: color-mix(in srgb, var(--err) 42%, transparent); }
+#swh #swh-sig-result { height: 24px; padding: 0 9px; font-size: 11px; }
+#swh #swh-sig-base, #swh #swh-sig-got, #swh #swh-sig-exp { max-height: 132px; font-size: 11px; }
+
+/* ── Zero state ───────────────────────────────────────────────────────────── */
+#swh .swh-zero-inner > .swh-tag { align-self: flex-start; height: 24px; padding: 0 10px; font-size: 10.5px; }
+#swh .swh-zero-inner h2 {
+  background: linear-gradient(100deg, var(--text-primary), color-mix(in srgb, var(--accent-primary) 62%, var(--text-primary)));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+#swh #swh-zero-url { font-size: 13px; font-weight: 600; }
+
+/* ── Details the sticky group header needs ────────────────────────────────── */
+#swh-rows { overflow-x: hidden; }
+#swh[data-density="compact"] .swh-group { margin: 0 -3px; }
+
+/* ── Text selection picks up the accent ───────────────────────────────────── */
+#swh ::selection { background: color-mix(in srgb, var(--accent-primary) 32%, transparent); color: var(--text-primary); }
+
+/* ── Bright theme: the glass and ambient layers need less contrast ─────────── */
+html.light #swh, html[data-theme="bright"] #swh {
+  --glass: color-mix(in srgb, var(--bg-surface) 88%, transparent);
+}
+html.light #swh-top, html[data-theme="bright"] #swh-top {
+  box-shadow: 0 1px 0 var(--border-subtle), 0 10px 24px -22px rgba(15, 23, 42, 0.5);
+}
+html.light #swh .swh-kv tbody tr:nth-child(even) td,
+html[data-theme="bright"] #swh .swh-kv tbody tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--bg-elevated) 55%, transparent);
+}
+html.light #swh .swh-out[data-s="ok"], html[data-theme="bright"] #swh .swh-out[data-s="ok"] {
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.13), transparent 55%), var(--bg-surface);
+}
+html.light #swh .swh-out[data-s="bad"], html[data-theme="bright"] #swh .swh-out[data-s="bad"] {
+  background: linear-gradient(90deg, rgba(244, 63, 94, 0.12), transparent 55%), var(--bg-surface);
+}
+
+/* ── Narrow screens ───────────────────────────────────────────────────────── */
+@media (max-width: 780px) {
+  #swh { background-attachment: scroll; }
+  #swh .swh-tile { padding: 10px; }
+  #swh .swh-meter { grid-template-columns: minmax(56px, 84px) 1fr auto; gap: 7px; }
+  #swh .swh-keyrow kbd { min-width: 62px; }
+  #swh .swh-pal-hint span:last-child { display: none; }
+  #swh .swh-zero-inner { padding: 26px 16px 40px; }
+  #swh .swh-zero-inner h2 { font-size: 19px; }
+}
+
+/* Blur is expensive on low-end mobile GPUs and pointless behind a solid bar. */
+@media (max-width: 900px) {
+  #swh-top, #swh .swh-insp-bar, #swh .swh-tabs, #swh .swh-list-meta, #swh .swh-list-head {
+    background: var(--bg-surface);
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #swh-jump::before { display: none; }
+  #swh .swh-tile:hover { transform: none; }
+  #swh-drop[data-hot="1"] { transform: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 3 — FIXES FOUND WHILE VERIFYING THE WORKSPACE IN A BROWSER
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Cards are flex items inside `.swh-pane-body.swh-fc`. Giving them
+   `overflow: hidden` above (for the corner radius) also resolves their
+   automatic minimum size to 0, so the flex container was free to squash them
+   and clip whatever did not fit — the signature detail block disappeared even
+   though it was laid out. Cards should never shrink; the pane scrolls instead. */
+#swh .swh-fc > .swh-card,
+#swh .swh-scroll > .swh-card { flex-shrink: 0; }
+
+/* Same trap, one level down: expandable blocks inside a card body. */
+#swh .swh-card-b > .swh-f,
+#swh .swh-card-b > .swh-row2,
+#swh .swh-card-b > .swh-fc { flex-shrink: 0; }
+
+/* The 12-bucket sparkline drew empty buckets as a 2px sliver of `--tint`,
+   which is close to invisible — a quiet minute looked like a broken widget
+   rather than a flat chart. Give every bar a readable floor and a baseline. */
+#swh .swh-spark {
+  position: relative;
+  padding-bottom: 1px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+#swh .swh-spark i {
+  width: 3.5px;
+  min-height: 2px;
+  background: color-mix(in srgb, var(--accent-primary) 34%, var(--border-muted));
+}
+#swh .swh-spark i[data-hot="1"] {
+  background: var(--accent-primary);
+  box-shadow: 0 0 5px -1px color-mix(in srgb, var(--accent-primary) 70%, transparent);
+}
+
+/* Unselected segmented-control labels sat on `--text-muted` (~4:1 on the
+   surface). They are the only way to see the other body/recipe views, so lift
+   them to `--text-secondary` and keep `--text-muted` for genuinely inert text. */
+#swh .swh-seg > button[aria-selected="false"] { color: var(--text-secondary); }
+#swh .swh-seg > button[aria-selected="false"]:hover { color: var(--text-primary); }
+
+/* Compact density only trimmed the row padding, which bought 8px of a 65px
+   row — not enough to justify a toggle. The rest of the height is inherited
+   `line-height: 24px` on two lines of much smaller text, so pin both lines to
+   what their content actually needs. Cosy rows are left alone. */
+#swh[data-density="compact"] .swh-row-body { gap: 1px; }
+#swh[data-density="compact"] .swh-row-top { line-height: 20px; }
+#swh[data-density="compact"] .swh-row-title { font-size: 12px; line-height: 20px; }
+#swh[data-density="compact"] .swh-row-sub { line-height: 13px; }
+#swh[data-density="compact"] .swh-row-side { align-self: flex-start; }
+#swh[data-density="compact"] .swh-group { padding-top: 7px; padding-bottom: 5px; }
+
+/* The provider badge in a row's sub-line is `<span><svg/>Shopify</span>` with
+   no layout of its own, so the inline SVG sat on the text baseline and dragged
+   10px of descender space in — the badge looked dropped below the metadata it
+   belongs to, and it set the height of every row. Lay it out inline instead. */
+#swh .swh-row-sub span:has(svg) {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+#swh .swh-row-sub span > svg { flex: none; }
+
+/* `backdrop-filter` on the workspace bars made each of them a stacking context
+   and a backdrop root. The dropdown menus live inside those bars and hang far
+   outside them, so their opaque panel stopped compositing above the request
+   rows — the menu labels floated over the list with no panel behind them.
+   Nothing behind these bars is detailed enough to benefit from a blur anyway
+   (they sit on an opaque surface or a smooth gradient), so keep the `--glass`
+   tint and drop the filter. Blur is retained where it does real work and
+   nothing overflows: the sticky day headers and the modal/palette backdrops. */
+#swh-top,
+#swh .swh-insp-bar,
+#swh .swh-tabs,
+#swh-status,
+#swh .swh-list-meta { backdrop-filter: none; }
+
+/* The inspector's metadata strip is a flex row with `overflow: hidden`, so once
+   the event id stopped fitting it was chopped through the middle of a glyph —
+   which reads as a rendering fault, not as truncation. `text-overflow` never
+   reaches flex children, so hold the fixed-width segments (clock, size, format
+   and the separators) at their natural size and let the two that can run long —
+   the id at the end and the client IP three from it — shrink and ellipsise. */
+#swh .swh-insp-meta > * { flex: none; }
+#swh .swh-insp-meta > span:last-child,
+#swh .swh-insp-meta > span:nth-last-child(3) {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Below a roomy inspector the id shrinks to a bare "…", which reads as a stray
+   glyph rather than as information. Drop it (and its separator) instead — the
+   full id is still on the Telemetry tab, in the copy menu and in the deep link. */
+@media (max-width: 1200px) {
+  #swh .swh-insp-meta > span:nth-last-child(-n + 2) { display: none; }
+}
+
+/* Four `·` separators at an 8px gap spent 88px of a 246px strip on whitespace,
+   which was enough to push the last segment past the edge on a 1000px window.
+   5px still reads as separation at this size and buys the strip 24px. */
+#swh .swh-insp-meta { gap: 5px; }

@@ -1,0 +1,202 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+const pageTitle = 'Contact Us — SafeWebhook';
+const pageDescription = 'Get in touch with the SafeWebhook team for technical support, feature requests, security disclosures, and developer feedback.';
+---
+
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  robots="index, follow"
+>
+  <Header subTitle="/ Contact Us" />
+
+  <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 flex-1 bg-developer-grid">
+    
+    <!-- Page Header -->
+    <div class="text-center space-y-3 mb-12">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 text-xs font-mono">
+        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+        <span>Developer Support &amp; Inquiries</span>
+      </div>
+      <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white font-sans">
+        Contact the SafeWebhook Team
+      </h1>
+      <p class="text-base sm:text-lg text-slate-600 dark:text-zinc-400 max-w-2xl mx-auto font-normal">
+        Have questions, feedback, or a feature request? Reach out to us directly or submit an issue on GitHub. We typically respond within 24–48 hours.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+      
+      <!-- Card 1: General Support -->
+      <div class="p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 space-y-3 shadow-sm flex flex-col justify-between">
+        <div class="space-y-2">
+          <div class="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <h2 class="text-base font-bold text-slate-900 dark:text-white font-sans">General Support</h2>
+          <p class="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed font-normal">
+            For general questions, troubleshooting assistance, or product feedback.
+          </p>
+        </div>
+        <a
+          href="mailto:support@safewebhook.com"
+          class="text-xs font-mono font-semibold text-indigo-600 dark:text-sky-400 hover:underline inline-flex items-center gap-1 mt-2"
+        >
+          <span>support@safewebhook.com</span>
+          <span>&rarr;</span>
+        </a>
+      </div>
+
+      <!-- Card 2: Security & Privacy -->
+      <div class="p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 space-y-3 shadow-sm flex flex-col justify-between">
+        <div class="space-y-2">
+          <div class="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h2 class="text-base font-bold text-slate-900 dark:text-white font-sans">Security &amp; Privacy</h2>
+          <p class="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed font-normal">
+            For responsible vulnerability disclosures and data privacy questions.
+          </p>
+        </div>
+        <a
+          href="mailto:privacy@safewebhook.com"
+          class="text-xs font-mono font-semibold text-emerald-600 dark:text-emerald-400 hover:underline inline-flex items-center gap-1 mt-2"
+        >
+          <span>privacy@safewebhook.com</span>
+          <span>&rarr;</span>
+        </a>
+      </div>
+
+      <!-- Card 3: GitHub Community -->
+      <div class="p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 space-y-3 shadow-sm flex flex-col justify-between">
+        <div class="space-y-2">
+          <div class="w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+            </svg>
+          </div>
+          <h2 class="text-base font-bold text-slate-900 dark:text-white font-sans">Open Source Repo</h2>
+          <p class="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed font-normal">
+            File bug reports, integration recipes, or feature proposals on GitHub.
+          </p>
+        </div>
+        <a
+          href="https://github.com/arjunn881/safewebhook"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-xs font-mono font-semibold text-purple-600 dark:text-purple-400 hover:underline inline-flex items-center gap-1 mt-2"
+        >
+          <span>github.com/arjunn881/safewebhook</span>
+          <span>&nearr;</span>
+        </a>
+      </div>
+
+    </div>
+
+    <!-- Interactive Contact Form -->
+    <div class="p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm space-y-6">
+      <div class="space-y-1">
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white font-sans">Send Us a Direct Message</h2>
+        <p class="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 font-normal">
+          Fill out the form below and we will get back to your email address promptly.
+        </p>
+      </div>
+
+      <form id="contact-form" class="space-y-4" onsubmit="event.preventDefault(); window.handleContactSubmit();">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="space-y-1">
+            <label for="contact-name" class="block text-xs font-mono font-semibold text-slate-700 dark:text-zinc-300">Your Name / Handle</label>
+            <input
+              type="text"
+              id="contact-name"
+              required
+              placeholder="e.g. Alex Developer"
+              class="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-white text-xs sm:text-sm focus:outline-none focus:border-indigo-600 dark:focus:border-sky-400 transition-colors"
+            />
+          </div>
+          <div class="space-y-1">
+            <label for="contact-email" class="block text-xs font-mono font-semibold text-slate-700 dark:text-zinc-300">Email Address</label>
+            <input
+              type="email"
+              id="contact-email"
+              required
+              placeholder="alex@company.com"
+              class="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-white text-xs sm:text-sm focus:outline-none focus:border-indigo-600 dark:focus:border-sky-400 transition-colors"
+            />
+          </div>
+        </div>
+
+        <div class="space-y-1">
+          <label for="contact-subject" class="block text-xs font-mono font-semibold text-slate-700 dark:text-zinc-300">Topic / Subject</label>
+          <select
+            id="contact-subject"
+            class="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-white text-xs sm:text-sm focus:outline-none focus:border-indigo-600 dark:focus:border-sky-400 transition-colors"
+          >
+            <option value="General Question">General Question</option>
+            <option value="Feature Request">Feature Request</option>
+            <option value="Platform Integration Recipe">Platform Integration Recipe</option>
+            <option value="Bug Report">Bug Report</option>
+            <option value="Security / Privacy Disclosure">Security / Privacy Disclosure</option>
+            <option value="Other">Other Inquiry</option>
+          </select>
+        </div>
+
+        <div class="space-y-1">
+          <label for="contact-message" class="block text-xs font-mono font-semibold text-slate-700 dark:text-zinc-300">Message</label>
+          <textarea
+            id="contact-message"
+            rows="5"
+            required
+            placeholder="Tell us what you're working on or how we can help..."
+            class="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-white text-xs sm:text-sm focus:outline-none focus:border-indigo-600 dark:focus:border-sky-400 transition-colors resize-y"
+          ></textarea>
+        </div>
+
+        <div class="pt-2 flex items-center justify-between">
+          <span id="contact-status" class="text-xs font-mono text-emerald-600 dark:text-emerald-400 hidden"></span>
+          <button
+            type="submit"
+            id="contact-submit-btn"
+            class="inline-flex items-center justify-center px-6 py-2.5 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 shadow-sm shadow-indigo-500/20 transition-all shadow-sm cursor-pointer ml-auto"
+          >
+            <span>Send Message</span>
+            <svg class="w-4 h-4 ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+          </button>
+        </div>
+      </form>
+    </div>
+
+  </main>
+
+  <Footer />
+
+  <script is:inline>
+    window.handleContactSubmit = function() {
+      var name = document.getElementById('contact-name').value;
+      var email = document.getElementById('contact-email').value;
+      var subject = document.getElementById('contact-subject').value;
+      var message = document.getElementById('contact-message').value;
+
+      var mailtoUrl = 'mailto:support@safewebhook.com?subject=' + encodeURIComponent('[' + subject + '] from ' + name) + '&body=' + encodeURIComponent('From: ' + name + ' (' + email + ')\n\n' + message);
+      
+      var statusEl = document.getElementById('contact-status');
+      if (statusEl) {
+        statusEl.textContent = '✓ Opening email client... You can also email support@safewebhook.com directly.';
+        statusEl.classList.remove('hidden');
+      }
+
+      window.location.href = mailtoUrl;
+    };
+  </script>
+</Layout>

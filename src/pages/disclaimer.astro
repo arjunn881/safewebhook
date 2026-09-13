@@ -1,0 +1,112 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+const pageTitle = 'Legal Disclaimer — SafeWebhook';
+const pageDescription = 'SafeWebhook Legal Disclaimer. Comprehensive disclosure regarding testing tools, third-party trademarks, affiliate links, and content limitations.';
+---
+
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  robots="index, follow"
+>
+  <Header subTitle="/ Disclaimer" />
+
+  <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 flex-1 bg-developer-grid">
+    
+    <!-- Page Header -->
+    <div class="space-y-3 mb-10">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 text-xs font-mono">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        Legal Notice
+      </div>
+      <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white font-sans">
+        Legal Disclaimer
+      </h1>
+      <p class="text-slate-500 dark:text-zinc-400 font-mono text-xs sm:text-sm">
+        Last Updated: August 20, 2026
+      </p>
+    </div>
+
+    <!-- Disclaimer Content Sections -->
+    <div class="space-y-8 text-slate-700 dark:text-zinc-300 leading-relaxed font-normal text-sm sm:text-base">
+
+      <!-- Section 1: General Disclaimer -->
+      <section class="space-y-3 p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white font-sans">1. General Information &amp; Tooling Disclaimer</h2>
+        <p>
+          The information and utilities provided on <strong>SafeWebhook</strong> (<a href="https://safewebhook.com" class="text-indigo-600 dark:text-sky-400 hover:underline">https://safewebhook.com</a>) are for educational, testing, debugging, and development purposes only.
+        </p>
+        <p>
+          While we strive to keep all documentation, signature algorithms, and diagnostic recipes accurate and up-to-date, SafeWebhook makes no representations or warranties of any kind, express or implied, about the completeness, accuracy, reliability, suitability, or availability with respect to the website, tools, code snippets, or related information contained on the website.
+        </p>
+      </section>
+
+      <!-- Section 2: Third-Party Trademarks & Brands -->
+      <section class="space-y-3 p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white font-sans">2. Third-Party Trademarks &amp; Brand Names</h2>
+        <p>
+          All product names, logos, brands, and registered trademarks mentioned or displayed on this website are the property of their respective owners. These include, but are not limited to:
+        </p>
+        <div class="p-4 rounded-lg bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 text-xs sm:text-sm font-mono text-slate-600 dark:text-zinc-400 space-y-2">
+          <p>
+            <strong>Stripe</strong> is a trademark of Stripe, Inc. &bull; 
+            <strong>GitHub</strong> is a trademark of GitHub, Inc. &bull; 
+            <strong>Shopify</strong> is a trademark of Shopify Inc. &bull; 
+            <strong>OpenAI</strong> is a trademark of OpenAI, Inc. &bull; 
+            <strong>WhatsApp</strong> is a trademark of Meta Platforms, Inc. &bull; 
+            <strong>Razorpay</strong> is a trademark of Razorpay Software Private Limited &bull; 
+            <strong>Lemon Squeezy</strong> is a trademark of Lemon Squeezy, LLC &bull; 
+            <strong>Clerk</strong> is a trademark of Clerk Inc. &bull; 
+            <strong>Webhook.site</strong>, <strong>Ngrok</strong>, <strong>Hookdeck</strong>, <strong>RequestBin</strong>, and <strong>Smee.io</strong> are trademarks of their respective creators.
+          </p>
+        </div>
+        <p class="text-xs sm:text-sm">
+          <strong>Non-Affiliation Clause:</strong> SafeWebhook is an independent developer platform. SafeWebhook is <strong>not affiliated, associated, authorized, endorsed by, or in any way officially connected</strong> with any of the companies, platforms, or services referenced on this site.
+        </p>
+      </section>
+
+      <!-- Section 3: Content Limitations & Code Recipes -->
+      <section class="space-y-3 p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white font-sans">3. Content Limitations &amp; Code Recipes</h2>
+        <p>
+          Code examples, HMAC verification snippets, and framework recipes (e.g. Next.js App Router, Express, FastAPI, Go) are provided as starting templates. Developers are solely responsible for testing, securing, and validating all integration code before deploying to production environments. SafeWebhook is not responsible for any software defects, service outages, or security vulnerabilities in your applications.
+        </p>
+      </section>
+
+      <!-- Section 4: External & Affiliate Links Disclaimer -->
+      <section class="space-y-3 p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white font-sans">4. External Links &amp; Advertising Disclaimer</h2>
+        <p>
+          SafeWebhook may contain links to external websites that are not provided or maintained by or in any way affiliated with SafeWebhook. Please note that SafeWebhook does not guarantee the accuracy, relevance, timeliness, or completeness of any information on these external websites.
+        </p>
+        <p>
+          Some pages on this site may feature third-party advertisements or sponsored recommendations (e.g. Google AdSense) to support our free infrastructure. We will always strive to ensure advertisements are clearly demarcated.
+        </p>
+      </section>
+
+      <!-- Section 5: Testing & Simulation Usage -->
+      <section class="space-y-3 p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white font-sans">5. Testing &amp; Simulation Usage</h2>
+        <p>
+          SafeWebhook's simulated latency and custom response configurations are intended solely for functional testing of your own webhook producers and consumers. You agree not to use SafeWebhook's edge infrastructure to conduct unauthorized stress testing, denial-of-service attacks, or malicious load generation against third-party systems.
+        </p>
+      </section>
+
+      <!-- Section 6: Limitation of Liability -->
+      <section class="space-y-3 p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white font-sans">6. Limitation of Liability</h2>
+        <p>
+          In no event shall SafeWebhook, its creators, or contributors be liable for any special, direct, indirect, consequential, or incidental damages or any damages whatsoever, whether in an action of contract, negligence, or other tort, arising out of or in connection with the use of the Service or the contents of the Service.
+        </p>
+      </section>
+
+    </div>
+  </main>
+
+  <Footer />
+</Layout>
