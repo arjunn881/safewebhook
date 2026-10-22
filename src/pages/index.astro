@@ -92,39 +92,6 @@ const structuredSchema = {
   "@context": "https://schema.org",
   "@graph": [
     {
-      "@type": "WebSite",
-      "@id": "https://safewebhook.com/#website",
-      url: "https://safewebhook.com/",
-      name: "SafeWebhook",
-      description:
-        "Free Online Webhook Tester, Payload Inspector & No-Login Request Debugger",
-      potentialAction: {
-        "@type": "SearchAction",
-        target: "https://safewebhook.com/integrations?q={search_term_string}",
-        "query-input": "required name=search_term_string",
-      },
-    },
-    {
-      "@type": "WebApplication",
-      "@id": "https://safewebhook.com/#webapp",
-      name: "SafeWebhook",
-      url: "https://safewebhook.com/",
-      applicationCategory: "DeveloperApplication",
-      operatingSystem: "All",
-      aggregateRating: {
-        "@type": "AggregateRating",
-        ratingValue: "4.9",
-        reviewCount: "1420",
-        bestRating: "5",
-        worstRating: "1",
-      },
-      offers: {
-        "@type": "Offer",
-        price: "0",
-        priceCurrency: "USD",
-      },
-    },
-    {
       "@type": "FAQPage",
       mainEntity: homeFaqs.map((f) => ({
         "@type": "Question",
@@ -427,7 +394,40 @@ const structuredSchema = {
       </div>
     </section>
 
-    <!-- 3. THREE CORE PILLARS / ARCHITECTURAL GUARANTEE -->
+    <!-- 3. DIRECT ANSWER / PRODUCT DEFINITION -->
+    <section
+      id="webhook-tester-overview"
+      class="py-12 border-t border-slate-200 dark:border-zinc-850 bg-white dark:bg-zinc-950"
+      aria-labelledby="webhook-tester-overview-title"
+    >
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
+        <h2
+          id="webhook-tester-overview-title"
+          class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white"
+        >
+          What is SafeWebhook?
+        </h2>
+        <p class="speakable-answer text-sm sm:text-base leading-relaxed text-slate-600 dark:text-zinc-400 max-w-3xl mx-auto">
+          SafeWebhook is a free online webhook tester and no-login request debugger that captures HTTP headers, JSON payloads, signatures, and delivery timing in your browser. Developers can test webhooks online, simulate responses, verify HMAC signatures, and replay requests to localhost without installing a tunnel.
+        </p>
+        <div class="flex flex-wrap items-center justify-center gap-3 pt-1">
+          <a
+            href="/app"
+            class="inline-flex items-center justify-center px-5 py-2.5 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors shadow-sm shadow-indigo-500/20"
+          >
+            Start Testing Webhooks &rarr;
+          </a>
+          <a
+            href="/docs"
+            class="inline-flex items-center justify-center px-5 py-2.5 rounded-lg text-xs font-semibold text-slate-700 dark:text-zinc-200 bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-800 transition-colors"
+          >
+            Read API Documentation
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. THREE CORE PILLARS / ARCHITECTURAL GUARANTEE -->
     <section
       id="security"
       class="py-14 border-t border-slate-200 dark:border-zinc-850 bg-slate-50 dark:bg-zinc-950"

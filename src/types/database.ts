@@ -10,6 +10,7 @@ export interface WebhookRecord {
   method: string;
   headers: string; // JSON-serialized string
   body: string | null;
+  size_bytes?: number;
 }
 
 /**
@@ -23,6 +24,21 @@ export interface WebhookHistoryItem {
   headers: Record<string, string>;
   body: string | null;
   size_bytes?: number;
+  query_params?: Record<string, string>;
+  format?: string;
+  signature_provider?: string | null;
+  client_ip?: string;
+  url?: string;
+  path?: string;
+  is_email?: boolean;
+  email?: {
+    from: string;
+    to: string;
+    subject: string;
+    text?: string;
+    html?: string;
+    attachments?: Array<{ filename: string; size: number; contentType: string }>;
+  } | null;
 }
 
 /**

@@ -2,6 +2,7 @@
  * In-Memory Server-Sent Events (SSE) Stream Registry & Response Config Engine
  * Zero-storage, high-throughput edge event router & workflow automation manager
  */
+import { env } from 'cloudflare:workers';
 
 export interface EndpointResponseConfig {
   statusCode: number;
@@ -54,6 +55,31 @@ export const endpointConfigs: Map<string, EndpointResponseConfig> = globalScope.
 export const endpointWorkflows: Map<string, WorkflowRule> = globalScope.endpointWorkflows;
 
 const textEncoder = new TextEncoder();
+
+function getSessionKV(): KVNamespace | null {
+  try {
+    return (env as unknown as { SESSION?: KVNamespace })?.SESSION ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function validConfig(value: unknown): value is EndpointResponseConfig {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Partial<EndpointResponseConfig>;
+  return Number.isInteger(candidate.statusCode) &&
+    Number(candidate.statusCode) >= 200 && Number(candidate.statusCode) <= 599 &&
+    typeof candidate.contentType === 'string' &&
+    typeof candidate.responseBody === 'string' &&
+    typeof candidate.responseHeaders === 'object' && candidate.responseHeaders !== null &&
+    typeof candidate.delayMs === 'number';
+}
+
+function validWorkflow(value: unknown): value is WorkflowRule {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Partial<WorkflowRule>;
+  return typeof candidate.enabled === 'boolean';
+}
 
 /**
  * Default fallback response configuration
@@ -205,6 +231,26 @@ export function getEndpointConfig(endpointId: string): EndpointResponseConfig {
   return endpointConfigs.get(endpointId) || { ...DEFAULT_ENDPOINT_CONFIG };
 }
 
+/** Reads the edge-persisted config so settings survive isolate changes. */
+export async function getEndpointConfigAsync(endpointId: string): Promise<EndpointResponseConfig> {
+  const kv = getSessionKV();
+  if (kv) {
+    try {
+      const raw = await kv.get(`endpoint_config_${endpointId}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (validConfig(parsed)) {
+          endpointConfigs.set(endpointId, parsed);
+          return parsed;
+        }
+      }
+    } catch (err) {
+      console.error('[Endpoint Config KV Read Error]', err);
+    }
+  }
+  return getEndpointConfig(endpointId);
+}
+
 /**
  * Updates custom response configuration for an endpoint
  */
@@ -214,7 +260,7 @@ export function setEndpointConfig(
 ): EndpointResponseConfig {
   const current = getEndpointConfig(endpointId);
   const updated: EndpointResponseConfig = {
-    statusCode: typeof config.statusCode === 'number' ? config.statusCode : current.statusCode,
+    statusCode: typeof config.statusCode === 'number' ? Math.min(599, Math.max(200, Math.round(config.statusCode))) : current.statusCode,
     contentType: config.contentType ? String(config.contentType) : current.contentType,
     responseBody: config.responseBody !== undefined ? String(config.responseBody) : current.responseBody,
     responseHeaders: config.responseHeaders && typeof config.responseHeaders === 'object' ? config.responseHeaders : current.responseHeaders,
@@ -225,11 +271,51 @@ export function setEndpointConfig(
   return updated;
 }
 
+export async function setEndpointConfigAsync(
+  endpointId: string,
+  config: Partial<EndpointResponseConfig>
+): Promise<EndpointResponseConfig> {
+  const updated = setEndpointConfig(endpointId, config);
+  const kv = getSessionKV();
+  if (kv) {
+    try {
+      // Endpoint settings must survive the short-lived event retention window.
+      // Leaving the TTL unset keeps the saved response available until the
+      // user changes it instead of silently reverting after 24 hours.
+      await kv.put(`endpoint_config_${endpointId}`, JSON.stringify(updated));
+    } catch (err) {
+      console.error('[Endpoint Config KV Write Error]', err);
+    }
+  }
+  return updated;
+}
+
 /**
  * Gets workflow rule for an endpoint
  */
 export function getEndpointWorkflow(endpointId: string): WorkflowRule {
   return endpointWorkflows.get(endpointId) || { ...DEFAULT_WORKFLOW_RULE };
+}
+
+/** Reads the edge-persisted workflow so forwarding rules survive isolate changes. */
+export async function getEndpointWorkflowAsync(endpointId: string): Promise<WorkflowRule> {
+  const kv = getSessionKV();
+  if (kv) {
+    try {
+      const raw = await kv.get(`endpoint_workflow_${endpointId}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (validWorkflow(parsed)) {
+          const normalized = { ...DEFAULT_WORKFLOW_RULE, ...parsed };
+          endpointWorkflows.set(endpointId, normalized);
+          return normalized;
+        }
+      }
+    } catch (err) {
+      console.error('[Endpoint Workflow KV Read Error]', err);
+    }
+  }
+  return getEndpointWorkflow(endpointId);
 }
 
 /**
@@ -249,5 +335,21 @@ export function setEndpointWorkflow(
   };
 
   endpointWorkflows.set(endpointId, updated);
+  return updated;
+}
+
+export async function setEndpointWorkflowAsync(
+  endpointId: string,
+  rule: Partial<WorkflowRule>
+): Promise<WorkflowRule> {
+  const updated = setEndpointWorkflow(endpointId, rule);
+  const kv = getSessionKV();
+  if (kv) {
+    try {
+      await kv.put(`endpoint_workflow_${endpointId}`, JSON.stringify(updated));
+    } catch (err) {
+      console.error('[Endpoint Workflow KV Write Error]', err);
+    }
+  }
   return updated;
 }

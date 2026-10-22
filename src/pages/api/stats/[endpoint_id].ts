@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getWebhookHistory, safeGetDatabase } from '../../../lib/db';
+import { getWebhookHistory, getWebhookMethodCounts, getWebhookStatsAggregate, safeGetDatabase } from '../../../lib/db';
 import { getWebhookPayloads } from '../../../lib/kv_store';
 import { jsonResponse, errorResponse, isValidEndpointId, CORS_HEADERS } from '../../../lib/http';
 
@@ -34,12 +34,16 @@ export const GET: APIRoute = async (context) => {
   }
 
   try {
-    // Try D1 first for accurate historic counts
+    // Use SQL aggregates for counts and averages so analytics do not stop at
+    // the 100-record history window. The recent sample is only used for the
+    // header-derived signature provider breakdown.
     const db = safeGetDatabase(context);
+    let aggregate = db ? await getWebhookStatsAggregate(db, endpointId!) : null;
+    const methodCountsFromDb = db ? await getWebhookMethodCounts(db, endpointId!) : null;
     let records = db ? await getWebhookHistory(db, endpointId!, 100) : [];
 
     // Fall back to KV/in-memory if D1 not available
-    if (records.length === 0) {
+    if ((!aggregate || aggregate.total_requests === 0) && records.length === 0) {
       const kvPayloads = await getWebhookPayloads(endpointId!);
       records = kvPayloads.map((p) => ({
         id: p.id,
@@ -49,24 +53,20 @@ export const GET: APIRoute = async (context) => {
         headers: JSON.stringify(p.headers),
         body: p.body ?? null,
       }));
+      if (records.length && aggregate?.total_requests === 0) aggregate = null;
     }
 
-    const now = Date.now();
-    const oneHourAgo = new Date(now - 60 * 60 * 1000).toISOString();
-    const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000).toISOString();
-
-    // Method breakdown
-    const methodCounts: Record<string, number> = {};
+    const methodCounts: Record<string, number> = methodCountsFromDb || {};
     let totalSizeBytes = 0;
-    let lastSeen: string | null = null;
-    let firstSeen: string | null = null;
+    let lastSeen: string | null = aggregate?.last_seen || null;
+    let firstSeen: string | null = aggregate?.first_seen || null;
     let recentHour = 0;
     let recentDay = 0;
     const signatureProviders: Record<string, number> = {};
 
     for (const record of records) {
       // Method counts
-      methodCounts[record.method] = (methodCounts[record.method] ?? 0) + 1;
+      if (!methodCountsFromDb) methodCounts[record.method] = (methodCounts[record.method] ?? 0) + 1;
 
       // Size estimate (body length + headers length)
       const bodyLen = record.body?.length ?? 0;
@@ -74,8 +74,11 @@ export const GET: APIRoute = async (context) => {
       totalSizeBytes += bodyLen + headersLen;
 
       // Time windows
-      if (record.timestamp >= oneHourAgo) recentHour++;
-      if (record.timestamp >= oneDayAgo) recentDay++;
+      if (!aggregate) {
+        const now = Date.now();
+        if (record.timestamp >= new Date(now - 60 * 60 * 1000).toISOString()) recentHour++;
+        if (record.timestamp >= new Date(now - 24 * 60 * 60 * 1000).toISOString()) recentDay++;
+      }
 
       // First/last seen
       if (!lastSeen || record.timestamp > lastSeen) lastSeen = record.timestamp;
@@ -105,14 +108,14 @@ export const GET: APIRoute = async (context) => {
       }
     }
 
-    const totalCount = records.length;
-    const avgSizeBytes = totalCount > 0 ? Math.round(totalSizeBytes / totalCount) : 0;
+    const totalCount = aggregate?.total_requests ?? records.length;
+    const avgSizeBytes = aggregate?.avg_payload_size_bytes ?? (totalCount > 0 ? Math.round(totalSizeBytes / totalCount) : 0);
 
     return jsonResponse({
       endpoint_id: endpointId,
       total_requests: totalCount,
-      requests_last_hour: recentHour,
-      requests_last_24h: recentDay,
+      requests_last_hour: aggregate?.requests_last_hour ?? recentHour,
+      requests_last_24h: aggregate?.requests_last_24h ?? recentDay,
       method_breakdown: methodCounts,
       signature_providers: signatureProviders,
       avg_payload_size_bytes: avgSizeBytes,

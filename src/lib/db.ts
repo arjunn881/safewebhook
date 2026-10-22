@@ -58,8 +58,8 @@ export async function insertWebhook(
   try {
     await db
       .prepare(
-        `INSERT INTO webhooks (id, endpoint_id, timestamp, method, headers, body)
-         VALUES (?, ?, ?, ?, ?, ?)`
+        `INSERT INTO webhooks (id, endpoint_id, timestamp, method, headers, body, size_bytes)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
       )
       .bind(
         record.id,
@@ -67,13 +67,89 @@ export async function insertWebhook(
         record.timestamp,
         record.method,
         record.headers,
-        record.body
+        record.body,
+        record.size_bytes ?? (record.body ? new TextEncoder().encode(record.body).length : 0)
       )
       .run();
     return true;
   } catch (err) {
     console.error('[D1 Insert Error]', err);
     return false;
+  }
+}
+
+export interface WebhookStatsAggregate {
+  total_requests: number;
+  requests_last_hour: number;
+  requests_last_24h: number;
+  avg_payload_size_bytes: number;
+  first_seen: string | null;
+  last_seen: string | null;
+}
+
+/** Uses D1 aggregates so analytics do not silently stop at the history page size. */
+export async function getWebhookStatsAggregate(
+  db: D1Database | null,
+  endpointId: string,
+  now = Date.now()
+): Promise<WebhookStatsAggregate | null> {
+  if (!db || typeof db.prepare !== 'function') return null;
+  const oneHourAgo = new Date(now - 60 * 60 * 1000).toISOString();
+  const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000).toISOString();
+
+  try {
+    const row = await db.prepare(
+      `SELECT
+         COUNT(*) AS total_requests,
+         SUM(CASE WHEN timestamp >= ? THEN 1 ELSE 0 END) AS requests_last_hour,
+         SUM(CASE WHEN timestamp >= ? THEN 1 ELSE 0 END) AS requests_last_24h,
+         COALESCE(AVG(CASE WHEN size_bytes > 0 THEN size_bytes ELSE length(COALESCE(body, '')) END), 0) AS avg_payload_size_bytes,
+         MIN(timestamp) AS first_seen,
+         MAX(timestamp) AS last_seen
+       FROM webhooks
+       WHERE endpoint_id = ?`
+    ).bind(oneHourAgo, oneDayAgo, endpointId).first<{
+      total_requests: number | string;
+      requests_last_hour: number | string | null;
+      requests_last_24h: number | string | null;
+      avg_payload_size_bytes: number | string | null;
+      first_seen: string | null;
+      last_seen: string | null;
+    }>();
+
+    if (!row) return null;
+    return {
+      total_requests: Number(row.total_requests) || 0,
+      requests_last_hour: Number(row.requests_last_hour) || 0,
+      requests_last_24h: Number(row.requests_last_24h) || 0,
+      avg_payload_size_bytes: Math.round(Number(row.avg_payload_size_bytes) || 0),
+      first_seen: row.first_seen || null,
+      last_seen: row.last_seen || null,
+    };
+  } catch (err) {
+    console.error('[D1 Stats Aggregate Error]', err);
+    return null;
+  }
+}
+
+export async function getWebhookMethodCounts(
+  db: D1Database | null,
+  endpointId: string
+): Promise<Record<string, number> | null> {
+  if (!db || typeof db.prepare !== 'function') return null;
+  try {
+    const result = await db.prepare(
+      `SELECT method, COUNT(*) AS count
+       FROM webhooks
+       WHERE endpoint_id = ?
+       GROUP BY method`
+    ).bind(endpointId).all<{ method: string; count: number | string }>();
+    const counts: Record<string, number> = {};
+    for (const row of result.results || []) counts[row.method] = Number(row.count) || 0;
+    return counts;
+  } catch (err) {
+    console.error('[D1 Method Stats Error]', err);
+    return null;
   }
 }
 
@@ -93,7 +169,7 @@ export async function getWebhookHistory(
 
     const result = await db
       .prepare(
-        `SELECT id, endpoint_id, timestamp, method, headers, body
+        `SELECT id, endpoint_id, timestamp, method, headers, body, size_bytes
          FROM webhooks
          WHERE endpoint_id = ?
          ORDER BY timestamp DESC

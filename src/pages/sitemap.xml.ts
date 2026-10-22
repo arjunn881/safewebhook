@@ -5,12 +5,13 @@ import { USE_CASE_SLUGS } from '../data/usecases';
 import { ERROR_GUIDE_SLUGS } from '../data/errorGuides';
 import { FRAMEWORK_GUIDE_SLUGS } from '../data/frameworkGuides';
 import { FAQ_CATEGORIES } from '../data/faqs';
+import { SITE_URL, escapeXml } from '../lib/seo';
 
 export const prerender = true;
 
 
 export const GET: APIRoute = async () => {
-  const baseUrl = 'https://safewebhook.com';
+  const baseUrl = SITE_URL;
   const currentDate = new Date().toISOString().slice(0, 10);
 
   const staticPages = [
@@ -91,7 +92,7 @@ export const GET: APIRoute = async () => {
 ${allUrls
   .map(
     (page) => `  <url>
-    <loc>${page.loc}</loc>
+    <loc>${escapeXml(page.loc)}</loc>
     <lastmod>${page.lastmod ?? currentDate}</lastmod>
     <changefreq>${page.changefreq}</changefreq>
     <priority>${page.priority}</priority>
@@ -104,6 +105,7 @@ ${allUrls
     status: 200,
     headers: {
       'Content-Type': 'application/xml; charset=utf-8',
+      'X-Content-Type-Options': 'nosniff',
       'Cache-Control': 'public, max-age=3600',
     },
   });

@@ -26,6 +26,7 @@ export interface CapturedWebhookPayload {
     subject: string;
     text?: string;
     html?: string;
+    attachments?: Array<{ filename: string; size: number; contentType: string }>;
   } | null;
 }
 

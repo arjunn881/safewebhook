@@ -16,6 +16,8 @@ out/
 # Cloudflare Workers & Wrangler Local State
 .wrangler/
 .mf/
+wrangler.jsonc
+!wrangler.jsonc.example
 
 # Environment Variables & Private Credentials
 .env

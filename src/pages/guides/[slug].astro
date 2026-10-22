@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { FRAMEWORK_GUIDES, type FrameworkGuideInfo } from '../../data/frameworkGuides';
+import { SITE_URL } from '../../lib/seo';
 
 export const prerender = false;
 
@@ -15,6 +16,7 @@ if (!guideData) {
 
 const pageTitle = `${guideData.title} | SafeWebhook`;
 const pageDescription = `${guideData.headline} Learn how to parse raw bodies and verify HMAC signatures in ${guideData.framework} with complete production boilerplates.`;
+const pageUrl = `${SITE_URL}/guides/${guideData.slug}`;
 
 const structuredSchema = {
   '@context': 'https://schema.org',
@@ -23,7 +25,7 @@ const structuredSchema = {
       '@type': 'TechArticle',
       headline: pageTitle,
       description: pageDescription,
-      url: Astro.url.href,
+      url: pageUrl,
       inLanguage: 'en',
       datePublished: '2026-08-21',
       dateModified: '2026-09-13',
@@ -52,7 +54,7 @@ const structuredSchema = {
         position: idx + 1,
         name: `Step ${idx + 1}`,
         text: typeof step === 'string' ? step : String(step),
-        url: Astro.url.href
+        url: pageUrl
       }))
     },
     {
@@ -68,7 +70,7 @@ const structuredSchema = {
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://safewebhook.com/' },
         { '@type': 'ListItem', position: 2, name: 'Guides', item: 'https://safewebhook.com/guides' },
-        { '@type': 'ListItem', position: 3, name: guideData.framework, item: Astro.url.href }
+        { '@type': 'ListItem', position: 3, name: guideData.framework, item: pageUrl }
       ]
     }
   ]
@@ -82,9 +84,11 @@ const otherGuides = Object.values(FRAMEWORK_GUIDES)
 <Layout
   title={pageTitle}
   description={pageDescription}
-  canonicalURL={Astro.url.href}
+  canonicalURL={pageUrl}
   keywords={`${guideData.framework.toLowerCase()} webhook handler, ${guideData.language.toLowerCase()} webhook raw body, verify webhook signature ${guideData.framework.toLowerCase()}, ${guideData.framework.toLowerCase()} stripe webhook`}
   schema={structuredSchema}
+  ogType="article"
+  articleSection="Framework Webhook Guide"
 >
   <Header activeNav="guides" subTitle={`/ ${guideData.framework}`} />
 
@@ -127,7 +131,7 @@ const otherGuides = Object.values(FRAMEWORK_GUIDES)
             </svg>
             Direct Answer / Quick Implementation Guide
           </div>
-          <p class="text-sm sm:text-base text-slate-800 dark:text-zinc-200 leading-relaxed font-sans font-medium">
+          <p class="speakable-answer text-sm sm:text-base text-slate-800 dark:text-zinc-200 leading-relaxed font-sans font-medium">
             {guideData.directAnswer}
           </p>
         </section>

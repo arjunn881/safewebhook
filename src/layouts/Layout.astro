@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import { SITE_URL } from '../lib/seo';
 
 export interface Props {
   title?: string;
@@ -11,6 +12,10 @@ export interface Props {
   robots?: string;
   schema?: Record<string, unknown> | Array<unknown>;
   googleSiteVerification?: string;
+  showAds?: boolean;
+  publishedTime?: string;
+  modifiedTime?: string;
+  articleSection?: string;
 }
 
 const {
@@ -23,100 +28,139 @@ const {
   robots = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
   schema,
   googleSiteVerification = import.meta.env.GOOGLE_SITE_VERIFICATION || '',
+  showAds = true,
+  publishedTime,
+  modifiedTime,
+  articleSection,
 } = Astro.props;
 
-const siteUrl = Astro.site ? Astro.site.toString().replace(/\/$/, '') : (Astro.url ? Astro.url.origin : 'https://safewebhook.com');
-const canonical = canonicalURL || new URL(Astro.url.pathname, siteUrl).toString();
+const isApp = Astro.url ? (Astro.url.pathname === '/app' || Astro.url.pathname.startsWith('/app/')) : false;
+const shouldShowAds = showAds && !isApp;
+
+const siteUrl = Astro.site ? Astro.site.toString().replace(/\/$/, '') : SITE_URL;
+const canonicalUrl = new URL(canonicalURL || Astro.url.pathname, siteUrl);
+// Query strings and fragments are not content variants. Removing them keeps
+// filter/search URLs from creating duplicate canonical signals.
+canonicalUrl.search = '';
+canonicalUrl.hash = '';
+const canonical = canonicalUrl.pathname === '/' ? `${siteUrl}/` : canonicalUrl.toString();
 const absoluteOgImage = ogImage.startsWith('http') ? ogImage : `${siteUrl}${ogImage}`;
 
-const defaultStructuredData = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'WebSite',
-      '@id': `${siteUrl}/#website`,
-      url: siteUrl,
-      name: 'SafeWebhook',
-      description: description,
-      inLanguage: 'en',
-      publisher: { '@id': `${siteUrl}/#organization` },
-      potentialAction: {
-        '@type': 'SearchAction',
-        target: `${siteUrl}/integrations?q={search_term_string}`,
-        'query-input': 'required name=search_term_string'
-      },
-      speakable: {
-        '@type': 'SpeakableSpecification',
-        cssSelector: ['.speakable-answer', '.speakable-description']
-      }
+const globalStructuredData = [
+  {
+    '@type': 'WebSite',
+    '@id': `${siteUrl}/#website`,
+    url: siteUrl,
+    name: 'SafeWebhook',
+    description: description,
+    inLanguage: 'en',
+    publisher: { '@id': `${siteUrl}/#organization` },
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: `${siteUrl}/integrations?q={search_term_string}`,
+      'query-input': 'required name=search_term_string'
     },
-    {
-      '@type': 'Organization',
-      '@id': `${siteUrl}/#organization`,
-      name: 'SafeWebhook',
-      url: siteUrl,
-      logo: `${siteUrl}/favicon.svg`,
-      foundingDate: '2026',
-      email: 'support@safewebhook.com',
-      description: 'SafeWebhook is the zero-login, privacy-first developer platform for testing, debugging, and simulating inbound HTTP webhooks in real time at the Cloudflare edge.',
-      knowsAbout: [
-        'Webhook Testing',
-        'HMAC Signature Verification',
-        'HTTP Payload Inspection',
-        'Cryptographic Security',
-        'Developer Tools',
-        'Cloudflare Workers',
-        'Server-Sent Events'
-      ],
-      contactPoint: {
-        '@type': 'ContactPoint',
-        contactType: 'technical support',
-        email: 'support@safewebhook.com',
-        availableLanguage: 'English'
-      },
-      sameAs: [
-        'https://github.com/safewebhook',
-        'https://twitter.com/safewebhook',
-        'https://www.linkedin.com/company/safewebhook'
-      ]
-    },
-    {
-      '@type': 'WebApplication',
-      '@id': `${siteUrl}/#webapp`,
-      name: 'SafeWebhook',
-      alternateName: 'SafeWebhook — Zero-Login Request Debugger & Client-Side Webhook Listener',
-      url: siteUrl,
-      description: description,
-      applicationCategory: 'DeveloperApplication',
-      operatingSystem: 'All',
-      keywords: keywords,
-      aggregateRating: {
-        '@type': 'AggregateRating',
-        ratingValue: '4.9',
-        reviewCount: '1240',
-        bestRating: '5',
-        worstRating: '1'
-      },
-      offers: {
-        '@type': 'Offer',
-        price: '0',
-        priceCurrency: 'USD'
-      },
-      featureList: [
-        'SafeWebhook Free Online Webhook Tester with zero signup required',
-        'No-Login Webhook Debugger for Stripe, GitHub, Shopify, and OpenAI',
-        '100% Client-Side Payload Inspector with live header breakdown',
-        'Private Local-Only Request Logging with zero persistent server storage',
-        'Custom HTTP Status Code & Response Simulator (200, 201, 400, 500)',
-        'Simulated Latency Engine (0-5000ms delay)',
-        '1-Click Request Replay to Localhost without Ngrok',
-        'Inbound Email Webhook Ingestion & Parser'
-      ]
+    speakable: {
+      '@type': 'SpeakableSpecification',
+      cssSelector: ['.speakable-answer', '.speakable-description']
     }
-  ]
-};
+  },
+  {
+    '@type': 'Organization',
+    '@id': `${siteUrl}/#organization`,
+    name: 'SafeWebhook',
+    url: siteUrl,
+    logo: `${siteUrl}/favicon.svg`,
+    foundingDate: '2026',
+    email: 'support@safewebhook.com',
+    description: 'SafeWebhook is the zero-login, privacy-first developer platform for testing, debugging, and simulating inbound HTTP webhooks in real time at the Cloudflare edge.',
+    knowsAbout: [
+      'Webhook Testing',
+      'HMAC Signature Verification',
+      'HTTP Payload Inspection',
+      'Cryptographic Security',
+      'Developer Tools',
+      'Cloudflare Workers',
+      'Server-Sent Events'
+    ],
+    contactPoint: {
+      '@type': 'ContactPoint',
+      contactType: 'technical support',
+      email: 'support@safewebhook.com',
+      availableLanguage: 'English'
+    },
+    sameAs: [
+      'https://github.com/arjunn881/safewebhook',
+      'https://twitter.com/safewebhook',
+      'https://www.linkedin.com/company/safewebhook'
+    ]
+  },
+  {
+    '@type': 'WebApplication',
+    '@id': `${siteUrl}/#webapp`,
+    name: 'SafeWebhook',
+    alternateName: 'SafeWebhook — Zero-Login Request Debugger & Client-Side Webhook Listener',
+    url: siteUrl,
+    description: description,
+    applicationCategory: 'DeveloperApplication',
+    operatingSystem: 'All',
+    keywords: keywords,
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'USD'
+    },
+    featureList: [
+      'SafeWebhook Free Online Webhook Tester with zero signup required',
+      'No-Login Webhook Debugger for Stripe, GitHub, Shopify, and OpenAI',
+      '100% Client-Side Payload Inspector with live header breakdown',
+      'Private Local-Only Request Logging with zero persistent server storage',
+      'Custom HTTP Status Code & Response Simulator (200, 201, 400, 500)',
+      'Simulated Latency Engine (0-5000ms delay)',
+      '1-Click Request Replay to Localhost without Ngrok',
+      'Inbound Email Webhook Ingestion & Parser'
+    ]
+  },
+  {
+    '@type': 'WebPage',
+    '@id': `${canonical}#webpage`,
+    url: canonical,
+    name: title,
+    description: description,
+    inLanguage: 'en',
+    isPartOf: { '@id': `${siteUrl}/#website` },
+    about: { '@id': `${siteUrl}/#webapp` },
+    publisher: { '@id': `${siteUrl}/#organization` },
+    ...(publishedTime ? { datePublished: publishedTime } : {}),
+    ...(modifiedTime ? { dateModified: modifiedTime } : {}),
+    ...(articleSection ? { articleSection } : {})
+  }
+];
 
-const finalStructuredData = schema || defaultStructuredData;
+const providedSchemaItems = schema
+  ? (Array.isArray(schema)
+    ? schema
+    : Array.isArray(schema['@graph'])
+      ? schema['@graph']
+      : [schema])
+  : [];
+
+// Page-level schemas already describe their own FAQ, HowTo, Article, or
+// CollectionPage entities. Keep every supplied entity and only add global
+// entities that the page has not supplied itself, avoiding duplicate nodes.
+const providedTypes = new Set(
+  providedSchemaItems
+    .filter((item) => item && typeof item === 'object' && !Array.isArray(item))
+    .map((item) => (item as Record<string, unknown>)['@type'])
+);
+const missingGlobalStructuredData = globalStructuredData.filter(
+  (item) => !providedTypes.has(item['@type'])
+);
+
+const finalStructuredData = {
+  '@context': 'https://schema.org',
+  '@graph': [...missingGlobalStructuredData, ...providedSchemaItems]
+};
 ---
 
 <!doctype html>
@@ -146,9 +190,11 @@ const finalStructuredData = schema || defaultStructuredData;
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="alternate icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
+    <link rel="manifest" href="/site.webmanifest" />
     <link rel="canonical" href={canonical} />
     <link rel="alternate" hreflang="en" href={canonical} />
     <link rel="alternate" hreflang="x-default" href={canonical} />
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <link rel="alternate" type="application/rss+xml" title="SafeWebhook Feed" href="/feed.xml" />
 
@@ -159,9 +205,13 @@ const finalStructuredData = schema || defaultStructuredData;
     <meta name="keywords" content={keywords} />
     <meta name="author" content="SafeWebhook" />
     <meta name="robots" content={robots} />
+    <meta name="googlebot" content={robots} />
     <meta name="rating" content="general" />
     {googleSiteVerification && <meta name="google-site-verification" content={googleSiteVerification} />}
     <meta name="monetag" content="353ab587f7bcc5216dbd7f7554c0c218" />
+    {shouldShowAds && (
+      <script is:inline>(function(s){s.dataset.zone='11796680',s.src='https://n6wxm.com/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
+    )}
 
     <!-- Generative Engine Optimization (GEO) & AEO Meta Hints -->
     <meta name="ai-content-declaration" content="developer-documentation" />
@@ -180,11 +230,16 @@ const finalStructuredData = schema || defaultStructuredData;
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:image" content={absoluteOgImage} />
+    <meta property="og:image:secure_url" content={absoluteOgImage} />
+    <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content={title} />
     <meta property="og:site_name" content="SafeWebhook" />
     <meta property="og:locale" content="en_US" />
+    {modifiedTime && <meta property="article:modified_time" content={modifiedTime} />}
+    {publishedTime && <meta property="article:published_time" content={publishedTime} />}
+    {articleSection && <meta property="article:section" content={articleSection} />}
 
     <!-- Twitter / X Cards -->
     <meta name="twitter:card" content="summary_large_image" />

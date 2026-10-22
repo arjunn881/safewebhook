@@ -1,6 +1,11 @@
 {
   "name": "SafeWebhook",
   "short_name": "SWH",
+  "description": "Free online webhook tester, request inspector, and zero-login webhook debugger.",
+  "lang": "en-US",
+  "id": "/",
+  "start_url": "/app",
+  "scope": "/",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",
@@ -17,5 +22,7 @@
   ],
   "theme_color": "#ffffff",
   "background_color": "#ffffff",
-  "display": "standalone"
+  "display": "standalone",
+  "categories": ["developer", "utilities"],
+  "prefer_related_applications": false
 }

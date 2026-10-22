@@ -72,6 +72,14 @@ export const GET: APIRoute = async (context) => {
         headers: ev.headers || {},
         body: ev.body || null,
         size_bytes: ev.size_bytes,
+        query_params: ev.query_params || {},
+        format: ev.format,
+        signature_provider: ev.signature_provider,
+        client_ip: ev.client_ip,
+        url: ev.url,
+        path: ev.path,
+        is_email: ev.is_email,
+        email: ev.email || null,
       });
     }
 
@@ -87,7 +95,25 @@ export const GET: APIRoute = async (context) => {
           } catch {
             parsedHeaders = { 'raw-headers': row.headers };
           }
-          const bodySize = row.body ? new TextEncoder().encode(row.body).length : 0;
+          const bodySize = Number(row.size_bytes) || (row.body ? new TextEncoder().encode(row.body).length : 0);
+          let email: WebhookHistoryItem['email'] = null;
+          if (row.method.toUpperCase() === 'EMAIL' && row.body) {
+            try {
+              const parsed = JSON.parse(row.body) as Record<string, unknown>;
+              email = {
+                from: String(parsed.from || 'sender@example.com'),
+                to: String(parsed.to || `${endpointId}@inbound.tester`),
+                subject: String(parsed.subject || 'No Subject'),
+                text: parsed.text == null ? '' : String(parsed.text),
+                html: parsed.html == null ? '' : String(parsed.html),
+                attachments: Array.isArray(parsed.attachments)
+                  ? parsed.attachments as Array<{ filename: string; size: number; contentType: string }>
+                  : [],
+              };
+            } catch {
+              email = null;
+            }
+          }
           itemsMap.set(row.id, {
             id: row.id,
             endpoint_id: row.endpoint_id,
@@ -96,6 +122,11 @@ export const GET: APIRoute = async (context) => {
             headers: parsedHeaders,
             body: row.body,
             size_bytes: bodySize,
+            query_params: {},
+            format: row.method.toUpperCase() === 'EMAIL' ? 'json' : undefined,
+            path: row.method.toUpperCase() === 'EMAIL' ? `/api/email/${endpointId}` : `/api/r/${endpointId}`,
+            is_email: row.method.toUpperCase() === 'EMAIL',
+            email,
           });
         }
       }
@@ -215,4 +246,3 @@ export const POST: APIRoute = async (context) => {
 
   return errorResponse('Method Not Allowed. Use DELETE to clear history, or POST with ?action=clear.', 405);
 };
-

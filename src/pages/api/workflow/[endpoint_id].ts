@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
-import { getEndpointWorkflow, setEndpointWorkflow } from '../../../lib/streams';
-import { isValidEndpointId, CORS_HEADERS, jsonResponse, errorResponse } from '../../../lib/http';
+import { getEndpointWorkflowAsync, setEndpointWorkflowAsync } from '../../../lib/streams';
+import { isValidEndpointId, CORS_HEADERS, jsonResponse, errorResponse, readRequestBody } from '../../../lib/http';
+import { checkSSRF } from '../../../lib/ssrf_guard';
 
 export const prerender = false;
 
@@ -33,7 +34,7 @@ export const GET: APIRoute = async (context) => {
     return errorResponse('Invalid endpoint_id parameter', 400);
   }
 
-  const workflow = getEndpointWorkflow(endpointId!);
+  const workflow = await getEndpointWorkflowAsync(endpointId!);
   return jsonResponse({
     success: true,
     endpoint_id: endpointId,
@@ -53,8 +54,25 @@ async function handleUpdateWorkflow(context: Parameters<APIRoute>[0]): Promise<R
   }
 
   try {
-    const body = (await request.json()) as WorkflowRequestBody;
-    const updated = setEndpointWorkflow(endpointId!, {
+    let rawBody: string | null;
+    try {
+      rawBody = (await readRequestBody(request, 64 * 1024)).bodyText;
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('Payload too large')) {
+        return errorResponse('Workflow request is too large. Maximum body size is 64KB.', 413);
+      }
+      return errorResponse('Invalid workflow request body.', 400);
+    }
+    const body = (rawBody ? JSON.parse(rawBody) : {}) as WorkflowRequestBody;
+    const urls = [body.autoForwardUrl, body.notifyWebhookUrl].filter(Boolean).map((value) => String(value).trim());
+    for (const target of urls) {
+      const blockReason = checkSSRF(target);
+      if (blockReason) {
+        return errorResponse(`Blocked workflow URL: ${blockReason}`, 403);
+      }
+    }
+
+    const updated = await setEndpointWorkflowAsync(endpointId!, {
       enabled: body.enabled,
       autoForwardUrl: body.autoForwardUrl,
       jsTransformCode: body.jsTransformCode,

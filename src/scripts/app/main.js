@@ -6,6 +6,7 @@
 import {
   S, K, EP_RE, $$, el, read, newId, setPref, epList,
   ok, oops, note, copy, dl, close, closeTop, closeMenus,
+  stack,
 } from './core.js';
 import { ic } from './icons.js';
 import * as V from './view.js';
@@ -114,7 +115,8 @@ function firstEndpoint() {
 }
 
 /* Deep links are /app?ep=<id>#<event id>. useEndpoint() rewrites the URL and
-   drops the fragment, so grab it before booting and retry until history lands. */
+   drops the fragment, so grab it before booting and resolve it when history
+   hydration finishes. */
 let pendingHash = '';
 
 function hashTarget() {
@@ -132,7 +134,6 @@ function chaseHash(tries) {
     return;
   }
   if (tries > 0) setTimeout(() => chaseHash(tries - 1), 700);
-  else pendingHash = '';
 }
 
 /* ── Resizable request list ─────────────────────────────────────────────── */
@@ -598,6 +599,9 @@ function wireKeys() {
       if (q && q.value) { q.value = ''; S.q = ''; V.renderRows(); e.preventDefault(); }
       return;
     }
+    // Modal controls own their keyboard input. Do not let a focused button in a
+    // modal trigger destructive or unrelated workspace shortcuts.
+    if (stack.length) return;
     if (meta || e.altKey || typing(e.target)) return;
 
     const k = e.key;
@@ -683,6 +687,9 @@ export function boot() {
     if (document.visibilityState !== 'visible') return;
     A.markSeen();
     if (S.conn === 'offline') A.connect();
+  });
+  document.addEventListener('swh:history-ready', (e) => {
+    if (e.detail === S.ep) chaseHash(0);
   });
   window.addEventListener('pagehide', () => A.stopFeed());
   window.addEventListener('hashchange', () => { pendingHash = hashTarget(); chaseHash(2); });

@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { COMPETITORS } from '../../data/competitors';
+import { SITE_URL } from '../../lib/seo';
 
 export const prerender = false;
 
@@ -10,6 +11,7 @@ const competitors = Object.values(COMPETITORS);
 
 const pageTitle = 'SafeWebhook Alternatives & Competitor Comparisons (2026) | SafeWebhook';
 const pageDescription = 'Compare SafeWebhook vs Webhook.site, Ngrok, RequestBin, Hookdeck, Beeceptor, Smee.io, Pipedream, Postman Mock Server, and Cloudflare Tunnel.';
+const pageUrl = `${SITE_URL}/vs`;
 
 const structuredSchema = {
   '@context': 'https://schema.org',
@@ -18,7 +20,7 @@ const structuredSchema = {
       '@type': 'CollectionPage',
       name: pageTitle,
       description: pageDescription,
-      url: Astro.url.href,
+       url: pageUrl,
       mainEntity: {
         '@type': 'ItemList',
         itemListElement: competitors.map((c, idx) => ({
@@ -33,7 +35,7 @@ const structuredSchema = {
       '@type': 'BreadcrumbList',
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://safewebhook.com/' },
-        { '@type': 'ListItem', position: 2, name: 'Alternatives', item: Astro.url.href }
+         { '@type': 'ListItem', position: 2, name: 'Alternatives', item: pageUrl }
       ]
     }
   ]
@@ -43,7 +45,7 @@ const structuredSchema = {
 <Layout
   title={pageTitle}
   description={pageDescription}
-  canonicalURL={Astro.url.href}
+  canonicalURL={pageUrl}
   keywords="webhook site alternative, ngrok alternative, requestbin alternative, hookdeck alternative, beeceptor free alternative, best webhook tester"
   schema={structuredSchema}
 >

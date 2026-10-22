@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { COMPETITORS, type CompetitorInfo } from '../../data/competitors';
+import { SITE_URL } from '../../lib/seo';
 
 export const prerender = false;
 
@@ -15,6 +16,7 @@ if (!compData) {
 
 const pageTitle = `SafeWebhook vs ${compData.name} — Feature & Privacy Comparison (2026) | SafeWebhook`;
 const pageDescription = `Detailed head-to-head comparison of SafeWebhook vs ${compData.name}. Compare privacy architecture, pricing, rate limits, latency, and client-side payload inspection without accounts.`;
+const pageUrl = `${SITE_URL}/vs/${compData.slug}`;
 
 const structuredSchema = {
   '@context': 'https://schema.org',
@@ -23,7 +25,7 @@ const structuredSchema = {
       '@type': 'TechArticle',
       headline: pageTitle,
       description: pageDescription,
-      url: Astro.url.href,
+      url: pageUrl,
       inLanguage: 'en',
       datePublished: '2026-08-21',
       dateModified: '2026-09-13',
@@ -50,7 +52,7 @@ const structuredSchema = {
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://safewebhook.com/' },
         { '@type': 'ListItem', position: 2, name: 'Alternatives', item: 'https://safewebhook.com/vs' },
-        { '@type': 'ListItem', position: 3, name: `SafeWebhook vs ${compData.name}`, item: Astro.url.href }
+        { '@type': 'ListItem', position: 3, name: `SafeWebhook vs ${compData.name}`, item: pageUrl }
       ]
     }
   ]
@@ -64,9 +66,11 @@ const otherCompetitors = Object.values(COMPETITORS)
 <Layout
   title={pageTitle}
   description={pageDescription}
-  canonicalURL={Astro.url.href}
+  canonicalURL={pageUrl}
   keywords={`${compData.name.toLowerCase()} alternative, free ${compData.name.toLowerCase()} alternative, safewebhook vs ${compData.name.toLowerCase()}, ${compData.name.toLowerCase()} without login, best ${compData.name.toLowerCase()} replacement`}
   schema={structuredSchema}
+  ogType="article"
+  articleSection="Webhook Tool Comparison"
 >
   <Header activeNav="vs" subTitle={`/ vs ${compData.name}`} />
 
@@ -104,7 +108,7 @@ const otherCompetitors = Object.values(COMPETITORS)
             </svg>
             Direct Answer / Executive Verdict
           </div>
-          <p class="text-sm sm:text-base text-slate-800 dark:text-zinc-200 leading-relaxed font-sans font-medium">
+          <p class="speakable-answer text-sm sm:text-base text-slate-800 dark:text-zinc-200 leading-relaxed font-sans font-medium">
             {compData.directAnswer}
           </p>
         </section>

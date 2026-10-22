@@ -4,11 +4,12 @@ import { USE_CASES } from '../data/usecases';
 import { COMPETITORS } from '../data/competitors';
 import { ERROR_GUIDES } from '../data/errorGuides';
 import { FRAMEWORK_GUIDES } from '../data/frameworkGuides';
+import { SITE_URL, escapeXml } from '../lib/seo';
 
 export const prerender = true;
 
 export const GET: APIRoute = async () => {
-  const baseUrl = 'https://safewebhook.com';
+  const baseUrl = SITE_URL;
   const buildDate = new Date().toUTCString();
 
   const items = [
@@ -63,8 +64,8 @@ export const GET: APIRoute = async () => {
         (item) => `
     <item>
       <title><![CDATA[${item.title}]]></title>
-      <link>${item.link}</link>
-      <guid isPermaLink="true">${item.guid}</guid>
+      <link>${escapeXml(item.link)}</link>
+      <guid isPermaLink="true">${escapeXml(item.guid)}</guid>
       <description><![CDATA[${item.description}]]></description>
       <pubDate>${item.pubDate}</pubDate>
     </item>`

@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { broadcastWebhook, getEndpointConfig, getEndpointWorkflow } from '../../../lib/streams';
+import { broadcastWebhook, getEndpointConfigAsync, getEndpointWorkflowAsync } from '../../../lib/streams';
 import { saveWebhookPayload } from '../../../lib/kv_store';
 import { safeGetDatabase, insertWebhook } from '../../../lib/db';
 import {
@@ -8,6 +8,9 @@ import {
   isValidEndpointId,
   readRequestBody,
   errorResponse,
+  appendQueryParams,
+  isBodylessStatus,
+  sanitizeForwardHeaders,
 } from '../../../lib/http';
 import { checkRateLimit, rateLimitResponse, rateLimitHeaders } from '../../../lib/rate_limit';
 import { checkSSRF } from '../../../lib/ssrf_guard';
@@ -49,10 +52,9 @@ async function handleInboundWebhook(context: Parameters<APIRoute>[0]): Promise<R
     queryParams[key] = value;
   });
 
-  // 4. Per-endpoint rate limiting: default 100 requests/min (supports ?rate_limit=N for custom throttling/testing)
-  const rateLimitParam = queryParams['rate_limit'];
-  const parsedLimit = rateLimitParam ? parseInt(rateLimitParam, 10) : NaN;
-  const limit = (!isNaN(parsedLimit) && parsedLimit >= 1 && parsedLimit <= 5000) ? parsedLimit : 100;
+  // 4. Per-endpoint rate limiting. The limit is intentionally server-owned;
+  // accepting it from the webhook URL would let senders disable protection.
+  const limit = 100;
 
   const kv = (env as unknown as Record<string, KVNamespace | undefined>)?.SESSION ?? null;
   const rlResult = await checkRateLimit(kv, `rl:inbound:${endpointId}`, limit, 60_000);
@@ -159,6 +161,7 @@ async function handleInboundWebhook(context: Parameters<APIRoute>[0]): Promise<R
         method: payload.method,
         headers: JSON.stringify(headersMap),
         body: bodyText || null,
+        size_bytes: byteSize,
       }).catch((err) => console.error('[D1 Inbound Insert Error]', err));
 
       if (ctx?.waitUntil) {
@@ -167,16 +170,18 @@ async function handleInboundWebhook(context: Parameters<APIRoute>[0]): Promise<R
     }
 
     // 9. Execute automated workflows (Auto-forwarding / Slack notifications)
-    const workflow = getEndpointWorkflow(endpointId!);
+    const workflow = await getEndpointWorkflowAsync(endpointId!);
     if (workflow && workflow.enabled) {
       // Auto-Forwarding proxy (with SSRF protection) — registered via waitUntil
       if (workflow.autoForwardUrl) {
         const ssrfBlock = checkSSRF(workflow.autoForwardUrl);
         if (!ssrfBlock) {
-          const fwdFetch = fetch(workflow.autoForwardUrl!, {
+          const forwardUrl = appendQueryParams(workflow.autoForwardUrl, queryParams);
+          const fwdFetch = fetch(forwardUrl, {
             method: payload.method,
+            redirect: 'manual',
             headers: {
-              ...headersMap,
+              ...sanitizeForwardHeaders(headersMap),
               'X-Forwarded-By': 'SafeWebhook-Workflow-Engine',
               'X-Safewebhook-Endpoint': endpointId!,
             },
@@ -190,26 +195,32 @@ async function handleInboundWebhook(context: Parameters<APIRoute>[0]): Promise<R
 
       // Notify external Discord / Slack webhook — registered via waitUntil
       if (workflow.notifyWebhookUrl) {
-        const notifyFetch = fetch(workflow.notifyWebhookUrl!, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            content: `**[EVENT] New Webhook Received [${payload.method}]**\nEndpoint: \`${endpointId}\`\nSize: ${byteSize} bytes\nSignature: ${signatureProvider || 'None'}`,
-            text: `[EVENT] New Webhook [${payload.method}] on ${endpointId}`,
-          }),
-        }).catch(() => { /* Notification errors are suppressed */ });
-        if (ctx?.waitUntil) ctx.waitUntil(notifyFetch);
+        const notifyBlock = checkSSRF(workflow.notifyWebhookUrl);
+        if (!notifyBlock) {
+          const notifyFetch = fetch(workflow.notifyWebhookUrl!, {
+            method: 'POST',
+            redirect: 'manual',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              content: `**[EVENT] New Webhook Received [${payload.method}]**\nEndpoint: \`${endpointId}\`\nSize: ${byteSize} bytes\nSignature: ${signatureProvider || 'None'}`,
+              text: `[EVENT] New Webhook [${payload.method}] on ${endpointId}`,
+            }),
+          }).catch(() => { /* Notification errors are suppressed */ });
+          if (ctx?.waitUntil) ctx.waitUntil(notifyFetch);
+        } else {
+          console.warn(`[Workflow Notification SSRF Block] endpoint=${endpointId} url=${workflow.notifyWebhookUrl} reason=${notifyBlock}`);
+        }
       }
     }
 
     // 10. Resolve configured custom response & simulated delay
-    const config = getEndpointConfig(endpointId!);
+    const config = await getEndpointConfigAsync(endpointId!);
 
     // Allow query parameter overrides if passed (e.g. ?status=201&delay=500)
     let statusCode = config.statusCode;
     if (queryParams['status']) {
       const parsedStatus = parseInt(queryParams['status'], 10);
-      if (!isNaN(parsedStatus) && parsedStatus >= 100 && parsedStatus <= 599) {
+      if (!isNaN(parsedStatus) && parsedStatus >= 200 && parsedStatus <= 599) {
         statusCode = parsedStatus;
       }
     }
@@ -228,17 +239,18 @@ async function handleInboundWebhook(context: Parameters<APIRoute>[0]): Promise<R
     }
 
     // Construct response headers
+    const bodyless = isBodylessStatus(statusCode);
     const responseHeaders: Record<string, string> = {
       ...CORS_HEADERS,
-      'Content-Type': config.contentType,
       'X-Webhook-Delivered': delivered ? 'true' : 'false',
       'X-Webhook-Recipients': String(recipientCount),
       'X-Webhook-Simulated-Delay': `${delayMs}ms`,
       ...rateLimitHeaders(rlResult),
-      ...config.responseHeaders,
+      ...sanitizeForwardHeaders(config.responseHeaders),
     };
+    if (!bodyless) responseHeaders['Content-Type'] = config.contentType;
 
-    return new Response(config.responseBody, {
+    return new Response(bodyless ? null : config.responseBody, {
       status: statusCode,
       headers: responseHeaders,
     });

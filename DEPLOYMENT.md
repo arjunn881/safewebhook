@@ -24,7 +24,7 @@ To route `safewebhook.com` directly to this Cloudflare Worker:
 6. Cloudflare will automatically configure DNS records and issue an instant SSL certificate.
 
 ### Option 2: Via Wrangler CLI
-Add the route definition to [`wrangler.jsonc`](file:///d:/CODE/mitool/wrangler.jsonc):
+Add the route definition to [`wrangler.jsonc.example`](file:///d:/Websites/safewebhook/wrangler.jsonc.example) (or your local `wrangler.jsonc`):
 ```jsonc
 {
   "name": "safewebhook",

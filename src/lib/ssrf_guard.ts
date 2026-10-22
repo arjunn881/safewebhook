@@ -61,6 +61,43 @@ function isPrivateIPv4(ip: string): boolean {
   return BLOCKED_CIDRS.some(({ base, mask }) => (int & mask) === base);
 }
 
+function ipv6Words(raw: string): number[] | null {
+  let value = raw.toLowerCase();
+  if (value.includes('.')) {
+    const dot = value.lastIndexOf(':');
+    if (dot < 0) return null;
+    const mapped = ipToInt(value.slice(dot + 1));
+    if (mapped === null) return null;
+    value = `${value.slice(0, dot)}:${(mapped >>> 16).toString(16)}:${(mapped & 0xffff).toString(16)}`;
+  }
+  const halves = value.split('::');
+  if (halves.length > 2) return null;
+  const left = halves[0] ? halves[0].split(':') : [];
+  const right = halves.length === 2 && halves[1] ? halves[1].split(':') : [];
+  const parse = (part: string) => /^[0-9a-f]{1,4}$/.test(part) ? parseInt(part, 16) : null;
+  const leftParsed = left.map(parse);
+  const rightParsed = right.map(parse);
+  if (leftParsed.some((v) => v === null) || rightParsed.some((v) => v === null)) return null;
+  const leftWords = leftParsed as number[];
+  const rightWords = rightParsed as number[];
+  const words = [...leftWords, ...rightWords];
+  if (halves.length === 1) return words.length === 8 ? words : null;
+  const missing = 8 - words.length;
+  return missing > 0 ? [...leftWords, ...new Array(missing).fill(0), ...rightWords] : null;
+}
+
+function isPrivateIPv6(raw: string): boolean {
+  const words = ipv6Words(raw);
+  if (!words) return false;
+  if (words.every((word) => word === 0) || (words.slice(0, 7).every((word) => word === 0) && words[7] === 1)) return true;
+  if ((words[0] & 0xfe00) === 0xfc00 || (words[0] >= 0xfe80 && words[0] <= 0xfebf) || (words[0] & 0xff00) === 0xff00) return true;
+  if (words.slice(0, 5).every((word) => word === 0) && words[5] === 0xffff) {
+    const mapped = `${words[6] >>> 8}.${words[6] & 255}.${words[7] >>> 8}.${words[7] & 255}`;
+    return isPrivateIPv4(mapped);
+  }
+  return false;
+}
+
 /**
  * Validates that a URL is safe to fetch without SSRF risk.
  *
@@ -79,7 +116,7 @@ export function checkSSRF(rawUrl: string): string | null {
     return `Forbidden URL scheme: ${parsed.protocol}. Only http:// and https:// are allowed.`;
   }
 
-  const hostname = parsed.hostname.toLowerCase();
+  const hostname = parsed.hostname.toLowerCase().replace(/\.$/, '');
 
   // 2. Block explicitly known dangerous hostnames
   if (BLOCKED_HOSTNAMES.has(hostname)) {
@@ -100,10 +137,11 @@ export function checkSSRF(rawUrl: string): string | null {
     }
   }
 
-  // 5. Block IPv6 brackets with loopback/link-local
-  if (hostname.startsWith('[')) {
+  // 5. Block IPv6 loopback, unspecified, private, link-local, multicast and
+  // IPv4-mapped private addresses. URL.hostname includes brackets for IPv6.
+  if (hostname.startsWith('[') && hostname.endsWith(']')) {
     const v6 = hostname.slice(1, -1).toLowerCase();
-    if (v6 === '::1' || v6.startsWith('fc') || v6.startsWith('fd') || v6.startsWith('fe80')) {
+    if (isPrivateIPv6(v6)) {
       return `Blocked IPv6 address: ${v6} is a private/loopback address.`;
     }
   }

@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { ERROR_GUIDES } from '../../data/errorGuides';
+import { SITE_URL } from '../../lib/seo';
 
 export const prerender = false;
 
@@ -10,6 +11,7 @@ const errorGuides = Object.values(ERROR_GUIDES);
 
 const pageTitle = 'Webhook HTTP Error Troubleshooting & Fixes | SafeWebhook';
 const pageDescription = 'Diagnose and fix webhook HTTP errors: 504 Gateway Timeout, 502 Bad Gateway, 500 Internal Server Error, 429 Too Many Requests, 400 Bad Request, and 401 Unauthorized.';
+const pageUrl = `${SITE_URL}/errors`;
 
 const structuredSchema = {
   '@context': 'https://schema.org',
@@ -18,7 +20,7 @@ const structuredSchema = {
       '@type': 'CollectionPage',
       name: pageTitle,
       description: pageDescription,
-      url: Astro.url.href,
+       url: pageUrl,
       mainEntity: {
         '@type': 'ItemList',
         itemListElement: errorGuides.map((e, idx) => ({
@@ -33,7 +35,7 @@ const structuredSchema = {
       '@type': 'BreadcrumbList',
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://safewebhook.com/' },
-        { '@type': 'ListItem', position: 2, name: 'Error Guides', item: Astro.url.href }
+         { '@type': 'ListItem', position: 2, name: 'Error Guides', item: pageUrl }
       ]
     }
   ]
@@ -43,7 +45,7 @@ const structuredSchema = {
 <Layout
   title={pageTitle}
   description={pageDescription}
-  canonicalURL={Astro.url.href}
+  canonicalURL={pageUrl}
   keywords="webhook error codes, fix webhook 504 gateway timeout, debug webhook 502 bad gateway, fix webhook 500 error, webhook 429 rate limit fix, webhook 401 signature failed"
   schema={structuredSchema}
 >

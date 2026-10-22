@@ -6,12 +6,13 @@
 import {
   S, el, $, $$, esc, read, write, K, CAP, EP_RE, copy, dl, ok, oops, note, heads,
   open, close, closeMenus, confirmBox, newId, hookUrl, mailAddr, epList, touchEp,
-  forgetEp, saveLog, setPref, targets, rememberTarget, bytes, sizeOf, clock, stamp,
+  forgetEp, saveLog, setPref, targets, rememberTarget, bytes, sizeOf, stamp,
   ago, pretty, dur, saveSecrets, storeBytes, savePins,
+  readDeleted, saveDeleted, clearDeleted,
 } from './core.js';
 import { ic } from './icons.js';
 import * as V from './view.js';
-import { verify, signHeaders, detect, SCHEMES } from './sign.js';
+import { verify, signHeaders, SCHEMES } from './sign.js';
 
 /* ── Normalising incoming events ────────────────────────────────────────── */
 function obj(v) {
@@ -69,7 +70,7 @@ export function addEvents(list, opts) {
   const fresh = [];
   (Array.isArray(list) ? list : [list]).forEach((raw) => {
     const ev = normalise(raw);
-    if (!ev || S.seenIds.has(ev.id)) return;
+    if (!ev || S.deleted.has(ev.id) || S.seenIds.has(ev.id)) return;
     S.seenIds.add(ev.id);
     fresh.push(ev);
   });
@@ -123,9 +124,12 @@ export function markSeen() {
 /* ── Live feed: SSE first, polling only while SSE is unhealthy ──────────── */
 const POLL_MS = 5000;
 let reT = 0;
+let feedGeneration = 0;
+let pollAbort = null;
 
 function stopPoll() {
   if (S.pollT) { clearInterval(S.pollT); S.pollT = 0; }
+  if (pollAbort) { try { pollAbort.abort(); } catch { /* ignore */ } pollAbort = null; }
 }
 function startPoll() {
   if (S.pollT || !S.ep) return;
@@ -133,18 +137,30 @@ function startPoll() {
   poll();
 }
 async function poll() {
-  if (!S.ep) return;
+  const endpointId = S.ep;
+  const generation = feedGeneration;
+  if (!endpointId) return;
+  const controller = new AbortController();
+  pollAbort = controller;
   try {
-    const r = await fetch(`/api/poll/${encodeURIComponent(S.ep)}`, { headers: { accept: 'application/json' } });
+    const r = await fetch(`/api/poll/${encodeURIComponent(endpointId)}`, {
+      headers: { accept: 'application/json' },
+      signal: controller.signal,
+    });
     if (!r.ok) return;
     const d = await r.json();
+    if (generation !== feedGeneration || endpointId !== S.ep) return;
     const list = Array.isArray(d && d.events) ? d.events : [];
     if (list.length) addEvents(list, { live: true });
     if (S.conn === 'offline') V.setConn('polling');
-  } catch { /* offline; the interval keeps trying */ }
+  } catch { /* offline or superseded; the interval keeps trying */ }
+  finally {
+    if (pollAbort === controller) pollAbort = null;
+  }
 }
 
 export function stopFeed() {
+  feedGeneration += 1;
   clearTimeout(reT);
   if (S.es) { try { S.es.close(); } catch { /* ignore */ } S.es = null; }
   stopPoll();
@@ -159,10 +175,19 @@ export function connect() {
   try { es = new EventSource(`/api/stream/${encodeURIComponent(S.ep)}`); }
   catch { V.setConn('polling'); startPoll(); return; }
   S.es = es;
+  const endpointId = S.ep;
+  const generation = feedGeneration;
 
-  const healthy = () => { S.tries = 0; stopPoll(); V.setConn(S.paused ? 'paused' : 'live'); };
+  const active = () => S.es === es && S.ep === endpointId && feedGeneration === generation;
+  const healthy = () => {
+    if (!active()) return;
+    S.tries = 0;
+    stopPoll();
+    V.setConn(S.paused ? 'paused' : 'live');
+  };
   es.onopen = healthy;
   es.onmessage = (m) => {
+    if (!active()) return;
     let d = null;
     try { d = JSON.parse(m.data); } catch { return; }
     if (!d || typeof d !== 'object') return;
@@ -171,7 +196,7 @@ export function connect() {
     if (d.id || d.method || d.body !== undefined) addEvents([d], { live: true });
   };
   es.onerror = () => {
-    if (S.es !== es) return;
+    if (!active()) return;
     try { es.close(); } catch { /* ignore */ }
     S.es = null;
     S.tries += 1;
@@ -201,13 +226,17 @@ export function togglePause(force) {
 
 /* ── Edge history (survives a cleared cache / another device) ───────────── */
 export async function syncHistory(loud) {
-  if (!S.ep) return 0;
+  const endpointId = S.ep;
+  const generation = feedGeneration;
+  if (!endpointId) return 0;
   try {
-    const r = await fetch(`/api/history/${encodeURIComponent(S.ep)}?limit=100`, { headers: { accept: 'application/json' } });
+    const r = await fetch(`/api/history/${encodeURIComponent(endpointId)}?limit=100`, { headers: { accept: 'application/json' } });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json();
+    if (generation !== feedGeneration || endpointId !== S.ep) return 0;
     const list = Array.isArray(d && d.webhooks) ? d.webhooks : [];
-    const n = addEvents(list, { live: false, force: true });
+    const n = addEvents(list, { live: false });
+    document.dispatchEvent(new CustomEvent('swh:history-ready', { detail: endpointId }));
     if (loud) {
       if (n) ok('History restored', `${n} request${n === 1 ? '' : 's'} pulled from the edge.`);
       else note('Nothing new', 'The edge has no requests this browser is missing.');
@@ -252,6 +281,7 @@ export function useEndpoint(id, opts) {
   write(K.ep, clean);
   touchEp(clean);
   S.events = hydrate(read(K.log(clean), []));
+  S.deleted = readDeleted(clean);
   S.seenIds = new Set(S.events.map((e) => e.id));
   S.sel = null; S.held = []; S.unseen = 0;
   S.baseline = null; S.diffOn = false;
@@ -302,12 +332,23 @@ export async function clearAll() {
   if (!S.events.length && !S.held.length) { note('Nothing to clear', 'This endpoint has no captured requests.'); return; }
   const yes = await confirmBox(`Delete all ${S.events.length} captured requests for "${S.ep}" — here and on the edge? This cannot be undone.`, 'Delete everything');
   if (!yes) return;
+  const clearedIds = new Set([
+    ...S.events.map((e) => e.id),
+    ...S.held.map((e) => e.id),
+  ]);
   let edge = true;
   try {
     const r = await fetch(`/api/history/${encodeURIComponent(S.ep)}`, { method: 'DELETE' });
     edge = r.ok;
   } catch { edge = false; }
   S.events = []; S.held = []; S.unseen = 0; S.seenIds.clear();
+  if (edge) {
+    S.deleted.clear();
+    clearDeleted();
+  } else {
+    clearedIds.forEach((id) => S.deleted.add(id));
+    saveDeleted(S.deleted);
+  }
   S.sel = null; S.baseline = null; S.diffOn = false; S.checked.clear();
   saveLog();
   V.clearSelection();
@@ -322,6 +363,8 @@ export function forgetEvent(id) {
   if (i < 0) return;
   S.events.splice(i, 1);
   S.seenIds.delete(id);
+  S.deleted.add(id);
+  saveDeleted(S.deleted);
   S.checked.delete(id);
   if (S.baseline === id) { S.baseline = null; S.diffOn = false; }
   saveLog();
@@ -340,6 +383,8 @@ export async function deleteChecked() {
   const gone = new Set(ids);
   S.events = S.events.filter((e) => !gone.has(e.id));
   ids.forEach((id) => { S.seenIds.delete(id); if (S.pins[id]) delete S.pins[id]; });
+  ids.forEach((id) => S.deleted.add(id));
+  saveDeleted(S.deleted);
   savePins();
   S.checked.clear();
   if (S.sel && gone.has(S.sel)) V.clearSelection();
@@ -423,9 +468,30 @@ export function replayHeaders(ev, mode) {
   return out;
 }
 
-export function toCurl(ev, url) {
+function requestUrl(ev, rawUrl) {
+  const target = String(rawUrl || hookUrl());
+  const query = V.queryOf(ev);
+  if (!query || !Object.keys(query).length) return target;
+  try {
+    const url = new URL(target);
+    Object.entries(query).forEach(([key, value]) => {
+      if (!url.searchParams.has(key) && value != null) url.searchParams.set(key, String(value));
+    });
+    return url.toString();
+  } catch {
+    // Preserve query parameters in exported shell snippets that use $TARGET.
+    const suffix = Object.entries(query)
+      .filter(([, value]) => value != null)
+      .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+      .join('&');
+    return suffix ? `${target}${target.includes('?') ? '&' : '?'}${suffix}` : target;
+  }
+}
+
+export function toCurl(ev, url, includeQuery = true) {
   const hs = replayHeaders(ev, 'all');
-  const lines = [`curl -X ${String(ev.method || 'POST').toUpperCase()} ${shq(url || hookUrl())}`];
+  const target = includeQuery ? requestUrl(ev, url || hookUrl()) : String(url || hookUrl());
+  const lines = [`curl -X ${String(ev.method || 'POST').toUpperCase()} ${shq(target)}`];
   Object.keys(hs).forEach((k) => lines.push(`  -H ${shq(k + ': ' + hs[k])}`));
   if (ev.body) lines.push(`  --data-raw ${shq(ev.body)}`);
   return lines.join(' \\\n');
@@ -434,7 +500,7 @@ export function toCurl(ev, url) {
 export function toFetch(ev, url) {
   const hs = replayHeaders(ev, 'all');
   return [
-    `await fetch(${JSON.stringify(url || hookUrl())}, {`,
+    `await fetch(${JSON.stringify(requestUrl(ev, url || hookUrl()))}, {`,
     `  method: ${JSON.stringify(String(ev.method || 'POST').toUpperCase())},`,
     `  headers: ${JSON.stringify(hs, null, 2).replace(/\n/g, '\n  ')},`,
     ev.body ? `  body: ${JSON.stringify(ev.body)},` : null,
@@ -443,6 +509,7 @@ export function toFetch(ev, url) {
 }
 
 export function copyKind(kind) {
+  closeMenus();
   if (kind === 'url' || kind === 'email') setPref('copied', 1);
   if (kind === 'url') { copy(hookUrl(), hookUrl()); V.renderRows(); return; }
   if (kind === 'email') { copy(mailAddr(), mailAddr()); V.renderRows(); return; }
@@ -458,7 +525,6 @@ export function copyKind(kind) {
     return;
   }
   if (kind === 'id') { copy(S.ep, 'Endpoint id'); return; }
-  closeMenus();
 }
 
 export function icopy(kind) {
@@ -582,7 +648,8 @@ export async function exportAs(kind) {
       '',
     ].join('\n');
     const body = list.slice().reverse().map((ev, i) => {
-      const c = toCurl(ev, '$TARGET').replace(shq('$TARGET'), '"$TARGET"');
+      const generatedUrl = requestUrl(ev, '$TARGET');
+      const c = toCurl(ev, generatedUrl, false).replace(shq(generatedUrl), `"${generatedUrl}"`);
       return `# ${i + 1}/${list.length} · ${stamp(ev.timestamp)} · ${V.nameOf(ev)}\n${c}\necho`;
     }).join('\n\n');
     dl(`${base}.sh`, head + body + '\n', 'text/x-shellscript');
@@ -654,6 +721,8 @@ export function importText(text, mode) {
   if (mode === 'replace') {
     S.events = []; S.seenIds.clear(); S.sel = null;
     S.baseline = null; S.diffOn = false; S.checked.clear();
+    S.deleted.clear();
+    clearDeleted();
     V.clearSelection();
   }
   const n = addEvents(list, { live: false, force: true });
@@ -817,7 +886,7 @@ export async function saveConfig() {
   const ct = String((el('swh-resp-ct') || {}).value || 'application/json').trim();
   const body = String((el('swh-resp-body') || {}).value || '');
   const delay = Number((el('swh-resp-delay') || {}).value || 0);
-  if (!(status >= 100 && status <= 599)) { oops('Bad status code', 'Use a number between 100 and 599.'); return; }
+  if (!(Number.isInteger(status) && status >= 200 && status <= 599)) { oops('Bad status code', 'Use an integer between 200 and 599.'); return; }
   if (!checkResponseBody()) {
     const go = await confirmBox('That body is not valid JSON but the content type says JSON. Save it anyway?', 'Save anyway');
     if (!go) return;
@@ -917,7 +986,7 @@ export async function testForward() {
     ? ev.body
     : JSON.stringify({ safewebhook: 'forward-test', endpoint_id: S.ep, at: new Date().toISOString() }, null, 2);
   const res = await sendReplay({
-    target_url: fwd,
+    target_url: ev ? requestUrl(ev, fwd) : fwd,
     method: 'POST',
     headers: Object.assign(
       { 'content-type': 'application/json', 'x-safewebhook-test': 'forward' },
@@ -997,7 +1066,7 @@ export async function runReplay() {
   if (btn) { btn.disabled = true; btn.dataset.busy = '1'; }
   setPref('fwdTarget', target);
   const res = await sendReplay({
-    target_url: target,
+    target_url: requestUrl(ev, target),
     method: String(ev.method || 'POST').toUpperCase(),
     headers: replayHeaders(ev, mode),
     body: ev.body == null ? '' : String(ev.body),
@@ -1030,7 +1099,7 @@ export async function runMonitor() {
     } else {
       lines.push(`HTTP ${d.status} ${d.status_text || ''} · ${dur(d.response_time_ms)}`);
       const ssl = d.ssl || {};
-      if (ssl.enabled) lines.push(`TLS: ${ssl.protocol || 'negotiated'}${ssl.valid ? ' · certificate valid' : ' · certificate unverified'}`);
+      if (ssl.enabled) lines.push(`TLS: ${ssl.protocol || 'HTTPS'} · certificate details are not exposed by the edge runtime`);
       else lines.push('TLS: not used (plain HTTP)');
       if (d.redirected) lines.push('Redirected to ' + (d.final_url || 'another host'));
       const hs = d.headers || {};
@@ -1096,7 +1165,7 @@ export async function loadStats() {
       breakdown('Method breakdown', d.method_breakdown) +
       breakdown('Signature providers seen', d.signature_providers) +
       (total ? '' : '<p class="swh-none">Nothing has reached this endpoint yet. Send a test event and refresh.</p>') +
-      `<p class="swh-hint">Computed ${esc(stamp(d.computed_at || Date.now()))} · the edge keeps the most recent 100 requests per endpoint.</p>`;
+      `<p class="swh-hint">Computed ${esc(stamp(d.computed_at || Date.now()))} · totals use edge aggregates; signature providers are sampled from the latest 100 requests.</p>`;
   } catch (e) {
     host.innerHTML = `<p class="swh-none">Could not load analytics — ${esc(e && e.message ? e.message : 'network error')}</p>`;
   }
@@ -1238,18 +1307,22 @@ function fwdScript(lang, target) {
       '#!/usr/bin/env bash',
       '# Streams SafeWebhook captures into your local server. Needs curl + jq.',
       'set -euo pipefail',
-      `TARGET="\${TARGET:-${target}}"`,
+      `TARGET=\${TARGET:-${shq(target)}}`,
       `curl -sN "${stream}" | while read -r line; do`,
       '  case "$line" in',
       '    data:*)',
       '      payload="${line#data: }"',
       '      [ -z "$payload" ] && continue',
-      '      echo "$payload" | jq -e .body >/dev/null 2>&1 || continue',
       '      body=$(echo "$payload" | jq -r ".body // \\"\\"")',
       '      method=$(echo "$payload" | jq -r ".method // \\"POST\\"")',
-      '      echo "→ $method $TARGET"',
+      '      query=$(echo "$payload" | jq -r \'(.query_params // {}) | to_entries | map((.key|@uri) + "=" + ((.value|tostring)|@uri)) | join("&")\')',
+      '      target="$TARGET"; if [ -n "$query" ]; then case "$target" in *\?*) target="$target&$query" ;; *) target="$target?$query" ;; esac; fi',
+      '      args=(-X "$method")',
+      '      while IFS= read -r header; do args+=( -H "$header" ); done < <(echo "$payload" | jq -r \'(.headers // {}) | to_entries[] | select((.key|ascii_downcase) as $k | ($k != "host" and $k != "content-length" and $k != "connection" and $k != "keep-alive" and $k != "transfer-encoding" and $k != "upgrade" and $k != "proxy-authorization" and $k != "te" and $k != "trailer")) | .key + ": " + (.value|tostring)\')',
+      '      echo "→ $method $target"',
+      '      if [ -n "$body" ] && [ "$method" != "GET" ] && [ "$method" != "HEAD" ]; then args+=(--data-raw "$body"); fi',
       '      curl -s -o /dev/null -w "  ← HTTP %{http_code} in %{time_total}s\\n" \\',
-      '        -X "$method" -H "content-type: application/json" -d "$body" "$TARGET"',
+      '        "${args[@]}" "$target"',
       '      ;;',
       '  esac',
       'done',
@@ -1261,9 +1334,10 @@ function fwdScript(lang, target) {
       '"""Streams SafeWebhook captures into your local server.  pip install httpx"""',
       'import json',
       'import httpx',
+      'from urllib.parse import urlencode, urlsplit, urlunsplit, parse_qsl',
       '',
       `STREAM = "${stream}"`,
-      `TARGET = "${target}"`,
+      `TARGET = ${JSON.stringify(target)}`,
       '',
       'with httpx.Client(timeout=None) as client:',
       '    with client.stream("GET", STREAM) as res:',
@@ -1278,9 +1352,14 @@ function fwdScript(lang, target) {
       '            if ev.get("type") == "connected":',
       '                continue',
       '            method = (ev.get("method") or "POST").upper()',
+      '            parts = urlsplit(TARGET)',
+      '            existing = dict(parse_qsl(parts.query, keep_blank_values=True))',
+      '            for key, value in (ev.get("query_params") or {}).items(): existing.setdefault(key, str(value))',
+      '            target = urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(existing), parts.fragment))',
       '            headers = {k: v for k, v in (ev.get("headers") or {}).items()',
-      '                       if k.lower() not in ("host", "content-length", "connection")}',
-      '            out = httpx.request(method, TARGET, content=ev.get("body") or "",',
+      '                       if k.lower() not in ("host", "content-length", "connection", "keep-alive", "transfer-encoding", "upgrade", "proxy-authorization", "te", "trailer")}',
+      '            content = (ev.get("body") or "") if method not in ("GET", "HEAD") else None',
+      '            out = httpx.request(method, target, content=content,',
       '                                headers=headers or {"content-type": "application/json"},',
       '                                timeout=15)',
       '            print(f"{method} -> {out.status_code}")',
@@ -1290,8 +1369,8 @@ function fwdScript(lang, target) {
     '#!/usr/bin/env node',
     '// Streams SafeWebhook captures into your local server. Node 18+, zero dependencies.',
     `const STREAM = '${stream}';`,
-    `const TARGET = process.env.TARGET || '${target}';`,
-    'const SKIP = new Set([\'host\', \'content-length\', \'connection\', \'transfer-encoding\']);',
+    `const TARGET = process.env.TARGET || ${JSON.stringify(target)};`,
+    'const SKIP = new Set([\'host\', \'content-length\', \'connection\', \'keep-alive\', \'transfer-encoding\', \'upgrade\', \'proxy-authorization\', \'te\', \'trailer\']);',
     '',
     'async function listen() {',
     '  const res = await fetch(STREAM, { headers: { accept: \'text/event-stream\' } });',
@@ -1317,12 +1396,14 @@ function fwdScript(lang, target) {
     '        if (!SKIP.has(k.toLowerCase())) headers[k] = String(v);',
     '      }',
     '      if (!headers[\'content-type\']) headers[\'content-type\'] = \'application/json\';',
-    '      const t0 = Date.now();',
     '      try {',
-    '        const hit = await fetch(TARGET, {',
+    '        const target = new URL(TARGET);',
+    '        for (const [key, value] of Object.entries(ev.query_params || {})) { if (!target.searchParams.has(key)) target.searchParams.set(key, String(value)); }',
+    '        const t0 = Date.now();',
+    '        const hit = await fetch(target, {',
     '          method: (ev.method || \'POST\').toUpperCase(),',
     '          headers,',
-    '          body: ev.body ?? undefined,',
+    '          body: [\'GET\', \'HEAD\'].includes((ev.method || \'POST\').toUpperCase()) ? undefined : ev.body ?? undefined,',
     '        });',
     '        console.log(`${ev.method || \'POST\'} -> ${hit.status} in ${Date.now() - t0}ms`);',
     '      } catch (err) {',
@@ -1362,7 +1443,7 @@ const rid = (n) => Math.random().toString(36).slice(2, 2 + (n || 10));
 const nowSec = () => Math.floor(Date.now() / 1000);
 
 export function expand(text) {
-  return String(text == null ? '' : text).replace(/\{\{(uuid|now|iso|rand)\}\}/g, (m, k) => {
+  return String(text == null ? '' : text).replace(/\{\{(uuid|now|iso|rand)\}\}/g, (_m, k) => {
     if (k === 'uuid') return uuid();
     if (k === 'now') return String(nowSec());
     if (k === 'iso') return new Date().toISOString();
@@ -1521,7 +1602,7 @@ export async function sendMock(id) {
   try {
     const r = await fetch(hookUrl(), { method: 'POST', headers, body });
     if (r.status === 429) { heads('Rate limited', 'The edge caps inbound requests per minute. Wait a moment.'); return; }
-    if (!r.ok && r.status >= 500) heads(`Endpoint answered ${r.status}`, 'The capture still landed — check the response builder.');
+    if (!r.ok) heads(`Endpoint answered ${r.status}`, `The capture landed, but the configured response is an HTTP error (${r.status}).`);
     else ok('Mock delivered', `${m.group} · ${m.label}${m.provider && secret ? ' (signed)' : ''}`);
     setPref('copied', true);
     setTimeout(() => { if (!S.events.length) syncHistory(false); }, 900);
@@ -1676,6 +1757,8 @@ export function toggleSecretEye() {
   btn.setAttribute('aria-label', show ? 'Hide secret' : 'Reveal secret');
 }
 
+let verifyGeneration = 0;
+
 export async function runVerify(auto) {
   const ev = V.current();
   const tag = el('swh-sig-result');
@@ -1684,11 +1767,14 @@ export async function runVerify(auto) {
   const provider = String((el('swh-sig-provider') || {}).value || 'auto');
   const field = el('swh-sig-secret');
   const secret = String((field && field.value) || '').trim();
+  const eventId = ev.id;
+  const generation = ++verifyGeneration;
   const remember = !!(el('swh-sig-remember') || {}).checked;
   if (remember && secret) { S.secrets[secretKey(provider)] = secret; saveSecrets(); }
   else if (!remember && S.secrets[secretKey(provider)]) { delete S.secrets[secretKey(provider)]; saveSecrets(); }
 
   const res = await verify(provider, V.headersOf(ev), ev.body, secret);
+  if (generation !== verifyGeneration || !V.current() || V.current().id !== eventId) return res;
   if (tag) {
     tag.textContent = res.state === 'ok' ? 'Signature valid' : res.state === 'bad' ? 'Signature mismatch' : (res.msg || 'Cannot verify');
     tag.className = 'swh-tag ' + (res.state === 'ok' ? 'swh-tag--ok' : res.state === 'bad' ? 'swh-tag--err' : 'swh-tag--mute');
@@ -1909,4 +1995,3 @@ export function palRun(i) {
   closePal();
   try { row.run(); } catch (e) { oops('That command failed', e && e.message ? e.message : 'Unknown error'); }
 }
-

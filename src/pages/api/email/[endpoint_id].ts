@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { broadcastWebhook } from '../../../lib/streams';
 import { saveWebhookPayload } from '../../../lib/kv_store';
 import { safeGetDatabase, insertWebhook } from '../../../lib/db';
-import { isValidEndpointId, CORS_HEADERS, jsonResponse, errorResponse } from '../../../lib/http';
+import { isValidEndpointId, CORS_HEADERS, jsonResponse, errorResponse, readRequestBody } from '../../../lib/http';
 import { checkRateLimit, rateLimitResponse, rateLimitHeaders } from '../../../lib/rate_limit';
 import { env } from 'cloudflare:workers';
 
@@ -17,6 +17,9 @@ interface EmailPayload {
   headers?: Record<string, string>;
   attachments?: Array<{ filename: string; size: number; contentType: string }>;
 }
+
+const MAX_EMAIL_BODY_BYTES = 5 * 1024 * 1024;
+const MAX_EMAIL_ATTACHMENTS = 20;
 
 export const OPTIONS: APIRoute = async () => {
   return new Response(null, {
@@ -53,12 +56,25 @@ export const POST: APIRoute = async (context) => {
     return rateLimitResponse(rlResult);
   }
 
+  const declaredLength = Number(request.headers.get('content-length') || 0);
+  if (declaredLength > MAX_EMAIL_BODY_BYTES) {
+    return errorResponse('Email payload too large. Maximum accepted size is 5MB.', 413);
+  }
+
   try {
     let emailData: EmailPayload = {};
     const contentType = request.headers.get('content-type') || '';
 
     if (contentType.includes('application/json')) {
-      const rawText = await request.text();
+      let rawText: string;
+      try {
+        rawText = (await readRequestBody(request, MAX_EMAIL_BODY_BYTES)).bodyText || '';
+      } catch (err) {
+        if (err instanceof Error && err.message.includes('Payload too large')) {
+          return errorResponse('Email payload too large. Maximum accepted size is 5MB.', 413);
+        }
+        throw err;
+      }
       try {
         emailData = (rawText ? JSON.parse(rawText) : {}) as EmailPayload;
       } catch {
@@ -88,15 +104,37 @@ export const POST: APIRoute = async (context) => {
       }
     } else if (contentType.includes('application/x-www-form-urlencoded') || contentType.includes('multipart/form-data')) {
       const formData = await request.formData();
+      const attachments: Array<{ filename: string; size: number; contentType: string }> = [];
+      for (const [, value] of formData.entries()) {
+        if (typeof File !== 'undefined' && value instanceof File) {
+          attachments.push({
+            filename: value.name,
+            size: value.size,
+            contentType: value.type || 'application/octet-stream',
+          });
+        }
+      }
+      if (attachments.length > MAX_EMAIL_ATTACHMENTS) {
+        return errorResponse(`Too many attachments. Maximum accepted count is ${MAX_EMAIL_ATTACHMENTS}.`, 413);
+      }
       emailData = {
         from: (formData.get('from') || formData.get('sender') || 'sender@example.com') as string,
         to: (formData.get('to') || formData.get('recipient') || `${endpointId}@inbound.tester`) as string,
         subject: (formData.get('subject') || 'No Subject') as string,
         text: (formData.get('text') || formData.get('body-plain') || '') as string,
         html: (formData.get('html') || formData.get('body-html') || '') as string,
+        attachments,
       };
     } else {
-      const rawText = await request.text();
+      let rawText: string;
+      try {
+        rawText = (await readRequestBody(request, MAX_EMAIL_BODY_BYTES)).bodyText || '';
+      } catch (err) {
+        if (err instanceof Error && err.message.includes('Payload too large')) {
+          return errorResponse('Email payload too large. Maximum accepted size is 5MB.', 413);
+        }
+        throw err;
+      }
       emailData = {
         from: 'unknown@example.com',
         to: `${endpointId}@inbound.tester`,
@@ -120,6 +158,7 @@ export const POST: APIRoute = async (context) => {
       content_type: contentType || 'application/json',
       content_length: JSON.stringify(emailData).length,
       headers: {
+        ...(emailData.headers || {}),
         'from': emailData.from || 'sender@example.com',
         'to': emailData.to || `${endpointId}@inbound.tester`,
         'subject': emailData.subject || 'No Subject',
@@ -134,6 +173,7 @@ export const POST: APIRoute = async (context) => {
         subject: emailData.subject || 'No Subject',
         text: emailData.text || '',
         html: emailData.html || '',
+        attachments: emailData.attachments || [],
       },
     };
 
@@ -153,6 +193,7 @@ export const POST: APIRoute = async (context) => {
         method: 'EMAIL',
         headers: JSON.stringify(broadcastEvent.headers),
         body: broadcastEvent.body,
+        size_bytes: new TextEncoder().encode(broadcastEvent.body).length,
       }).catch((err) => console.error('[D1 Email Insert Error]', err));
 
       if (ctx?.waitUntil) {

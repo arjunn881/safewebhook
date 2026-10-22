@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { PLATFORMS, type PlatformInfo } from '../../data/platforms';
+import { SITE_URL } from '../../lib/seo';
 
 export const prerender = false;
 
@@ -15,6 +16,7 @@ if (!platformData) {
 
 const pageTitle = `Test ${platformData.name} Webhooks Online — HMAC Signature & Payload Inspector | SafeWebhook`;
 const pageDescription = `Free online ${platformData.name} webhook debugger and tester. Inspect incoming ${platformData.name} payloads, verify ${platformData.signatureHeader} with ${platformData.signatureAlgorithm}, simulate latency, and replay to localhost without signups.`;
+const pageUrl = `${SITE_URL}/test/${platformData.slug}`;
 
 const structuredSchema = {
   '@context': 'https://schema.org',
@@ -23,7 +25,7 @@ const structuredSchema = {
       '@type': 'TechArticle',
       headline: pageTitle,
       description: pageDescription,
-      url: Astro.url.href,
+      url: pageUrl,
       inLanguage: 'en',
       datePublished: '2026-08-21',
       dateModified: '2026-09-13',
@@ -49,7 +51,7 @@ const structuredSchema = {
         position: idx + 1,
         name: `Step ${idx + 1}`,
         text: typeof step === 'string' ? step : String(step),
-        url: Astro.url.href
+        url: pageUrl
       }))
     },
     {
@@ -68,7 +70,7 @@ const structuredSchema = {
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://safewebhook.com/' },
         { '@type': 'ListItem', position: 2, name: 'Integrations', item: 'https://safewebhook.com/integrations' },
-        { '@type': 'ListItem', position: 3, name: platformData.name, item: Astro.url.href }
+        { '@type': 'ListItem', position: 3, name: platformData.name, item: pageUrl }
       ]
     }
   ]
@@ -83,9 +85,11 @@ const relatedPlatforms = Object.values(PLATFORMS)
 <Layout
   title={pageTitle}
   description={pageDescription}
-  canonicalURL={Astro.url.href}
+  canonicalURL={pageUrl}
   keywords={`test ${platformData.name.toLowerCase()} webhook online, ${platformData.name.toLowerCase()} webhook tester, verify ${platformData.signatureHeader.toLowerCase()}, ${platformData.name.toLowerCase()} webhook simulator, inspect ${platformData.name.toLowerCase()} payload`}
   schema={structuredSchema}
+  ogType="article"
+  articleSection="Platform Webhook Integration"
 >
   <Header activeNav="integrations" subTitle={`/ ${platformData.name}`} />
 
@@ -124,7 +128,7 @@ const relatedPlatforms = Object.values(PLATFORMS)
             </svg>
             Direct Answer / Quick Summary
           </div>
-          <p class="text-sm sm:text-base text-slate-800 dark:text-zinc-200 leading-relaxed font-sans font-medium">
+          <p class="speakable-answer text-sm sm:text-base text-slate-800 dark:text-zinc-200 leading-relaxed font-sans font-medium">
             {platformData.directAnswer}
           </p>
         </section>

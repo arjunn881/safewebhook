@@ -18,9 +18,13 @@ function memo(ev, key, make) {
   return v;
 }
 
-export function parsed(ev) {
-  return memo(ev, '__p', () => { try { return JSON.parse(ev.body); } catch { return null; } });
+export function parseResult(ev) {
+  return memo(ev, '__pr', () => {
+    try { return { ok: true, value: JSON.parse(ev.body) }; }
+    catch { return { ok: false, value: null }; }
+  });
 }
+export function parsed(ev) { return parseResult(ev).value; }
 export function headersOf(ev) {
   const h = ev && ev.headers;
   if (!h) return {};
@@ -42,7 +46,7 @@ export function fmtOf(ev) {
   if (ev.format) return String(ev.format);
   const b = String(ev.body || '').trim();
   if (!b) return 'empty';
-  if (parsed(ev) !== null) return 'json';
+  if (parseResult(ev).ok) return 'json';
   if (b.startsWith('<')) return 'xml';
   if (/^[\w.[\]%+-]+=[^&]*(&|$)/.test(b)) return 'form';
   return 'text';
@@ -240,7 +244,7 @@ function numbered(src, colour) {
 /* ── Inspector shell ────────────────────────────────────────────────────── */
 export const current = () => S.events.find((e) => e.id === S.sel) || null;
 
-export function select(id, keepPane) {
+export function select(id) {
   const ev = S.events.find((e) => e.id === id);
   if (!ev) return;
   S.sel = id;
@@ -249,7 +253,7 @@ export function select(id, keepPane) {
   if (zero) zero.classList.add('hidden');
   if (detail) detail.classList.remove('hidden');
   const main = el('swh-main');
-  if (main && !keepPane && window.innerWidth <= 780) main.dataset.view = 'insp';
+  if (main && window.innerWidth <= 780) main.dataset.view = 'insp';
   $$('#swh-rows .swh-row').forEach((r) => r.setAttribute('aria-selected', r.dataset.id === id ? 'true' : 'false'));
   const row = $(`#swh-rows .swh-row[data-id="${window.CSS && CSS.escape ? CSS.escape(id) : id}"]`);
   if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest' });
@@ -345,8 +349,9 @@ function renderOverview(ev) {
   if (!host) return;
   const hs = headersOf(ev);
   const size = Number(ev.size_bytes) || sizeOf(ev.body);
-  const p = parsed(ev);
-  const leaves = p ? flatten(p, '', [], 0).slice(0, 12) : [];
+  const parsedBody = parseResult(ev);
+  const p = parsedBody.value;
+  const leaves = parsedBody.ok ? flatten(p, '', [], 0).slice(0, 12) : [];
   const ua = hs['user-agent'] || hs['User-Agent'] || '';
   const grid = [
     stat('Method', String(ev.method || '—').toUpperCase()),
@@ -432,7 +437,8 @@ export function renderBody(ev) {
   if (!target) return;
   const qEl = el('swh-body-q');
   const f = ((qEl && qEl.value) || '').trim().toLowerCase();
-  const p = parsed(target);
+  const parsedBody = parseResult(target);
+  const p = parsedBody.value;
 
   const mail = el('swh-email');
   if (mail) {
@@ -450,7 +456,7 @@ export function renderBody(ev) {
 
   const tree = el('swh-tree');
   if (tree) {
-    tree.innerHTML = p === null
+    tree.innerHTML = !parsedBody.ok
       ? `<p class="swh-none">${target.body ? 'This body is not JSON — try Pretty or the Raw tab.' : 'No body was sent with this request.'}</p>`
       : `<ul class="swh-troot">${node(null, p, 0, f)}</ul>`;
   }
@@ -464,7 +470,7 @@ export function renderBody(ev) {
 
   const table = el('swh-btable');
   if (table) {
-    const leaves = p !== null ? flatten(p, '', [], 0) : [];
+    const leaves = parsedBody.ok ? flatten(p, '', [], 0) : [];
     const rows = leaves.filter(([k, v]) => !f || (k + ' ' + v).toLowerCase().indexOf(f) > -1);
     table.innerHTML = rows.length
       ? `<table class="swh-kv"><thead><tr><th>Path</th><th>Value</th></tr></thead><tbody>${rows.map(([k, v]) =>
@@ -527,7 +533,9 @@ export function rawText(ev) {
   const target = ev || current();
   if (!target) return '';
   const hs = headersOf(target);
-  const head = [`${String(target.method || 'POST').toUpperCase()} ${pathOf(target)} HTTP/1.1`]
+  const qs = queryOf(target);
+  const q = Object.keys(qs).map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(qs[k])}`).join('&');
+  const head = [`${String(target.method || 'POST').toUpperCase()} ${pathOf(target)}${q ? '?' + q : ''} HTTP/1.1`]
     .concat(Object.keys(hs).sort().map((k) => `${k}: ${hs[k]}`)).join('\n');
   return head + '\n\n' + String(target.body == null ? '' : target.body);
 }
@@ -718,4 +726,3 @@ export function renderEndpoint() {
   if (curl) curl.innerHTML = hl(sampleCurl());
   updateStatus();
 }
-

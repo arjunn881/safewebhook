@@ -15,6 +15,7 @@ export const K = {
   secrets: 'swh_secrets',
   targets: 'swh_replay_targets',
   log: (id) => `wh_captured_payloads_${id}`,
+  deleted: (id) => `wh_deleted_payloads_${id}`,
 };
 
 export const CAP = 100;                       // events kept per endpoint locally
@@ -43,7 +44,7 @@ export const S = {
   paused: false, held: [], unseen: 0,
   selMode: false, checked: new Set(),
   baseline: null, diffOn: false,
-  conn: 'boot', es: null, tries: 0, pollT: 0, seenIds: new Set(),
+  conn: 'boot', es: null, tries: 0, pollT: 0, seenIds: new Set(), deleted: new Set(),
   hits: [], cfg: null, wf: null, boot: Date.now(),
 };
 
@@ -52,6 +53,14 @@ export function setPref(k, v) { S.prefs[k] = v; savePrefs(); }
 export function saveLog() { write(K.log(S.ep), S.events.slice(0, CAP)); }
 export function savePins() { write(K.pins, S.pins); }
 export function saveSecrets() { write(K.secrets, S.secrets); }
+export function readDeleted(id) {
+  const ids = read(K.deleted(id), []);
+  return new Set(Array.isArray(ids) ? ids.filter((v) => typeof v === 'string') : []);
+}
+export function saveDeleted(ids, id) { write(K.deleted(id || S.ep), Array.from(ids || [])); }
+export function clearDeleted(id) {
+  try { localStorage.removeItem(K.deleted(id || S.ep)); } catch { /* private mode */ }
+}
 
 /* ── Formatting ─────────────────────────────────────────────────────────── */
 const ESC_RE = /[&<>"']/g;
@@ -245,6 +254,7 @@ export function touchEp(id) {
 export function forgetEp(id) {
   write(K.list, epList().filter((e) => e.id !== id));
   try { localStorage.removeItem(K.log(id)); } catch { /* ignore */ }
+  clearDeleted(id);
 }
 export function storeBytes(id) {
   try { return (localStorage.getItem(K.log(id || S.ep)) || '').length; } catch { return 0; }
@@ -260,4 +270,3 @@ export function rememberTarget(url) {
   list.unshift(url);
   write(K.targets, list.slice(0, 8));
 }
-

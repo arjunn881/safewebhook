@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { USE_CASES } from '../../data/usecases';
+import { SITE_URL } from '../../lib/seo';
 
 export const prerender = false;
 
@@ -10,6 +11,7 @@ const tools = Object.values(USE_CASES);
 
 const pageTitle = 'Free Online Webhook Developer Tools & Utilities | SafeWebhook';
 const pageDescription = 'Explore free online developer utilities for webhooks: Status Code Simulator, Latency Timeout Simulator, Cryptographic HMAC Signature Verifier, Localhost Replay, Inbound Email Parser, and JWT Validator.';
+const pageUrl = `${SITE_URL}/tools`;
 
 const structuredSchema = {
   '@context': 'https://schema.org',
@@ -18,7 +20,7 @@ const structuredSchema = {
       '@type': 'CollectionPage',
       name: pageTitle,
       description: pageDescription,
-      url: Astro.url.href,
+       url: pageUrl,
       mainEntity: {
         '@type': 'ItemList',
         itemListElement: tools.map((t, idx) => ({
@@ -33,7 +35,7 @@ const structuredSchema = {
       '@type': 'BreadcrumbList',
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://safewebhook.com/' },
-        { '@type': 'ListItem', position: 2, name: 'Tools', item: Astro.url.href }
+         { '@type': 'ListItem', position: 2, name: 'Tools', item: pageUrl }
       ]
     }
   ]
@@ -43,7 +45,7 @@ const structuredSchema = {
 <Layout
   title={pageTitle}
   description={pageDescription}
-  canonicalURL={Astro.url.href}
+  canonicalURL={pageUrl}
   keywords="webhook tools, mock api response, simulate webhook latency, verify webhook signature online, replay webhook to localhost, inbound email webhook parser"
   schema={structuredSchema}
 >

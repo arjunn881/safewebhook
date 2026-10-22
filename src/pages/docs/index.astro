@@ -77,11 +77,39 @@ export function verifyStripeSignature(rawBody, signatureHeader, secret) {
     Buffer.from(expectedSignature, 'utf8')
   );
 }`;
+
+const docsSchema = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'TechArticle',
+      headline: 'SafeWebhook API Documentation & Integration Guides',
+      description: 'Reference for the SafeWebhook webhook ingestion API, Server-Sent Events streaming, HMAC verification, and localhost forwarding.',
+      url: 'https://safewebhook.com/docs',
+      inLanguage: 'en',
+      author: { '@id': 'https://safewebhook.com/#organization' },
+      publisher: { '@id': 'https://safewebhook.com/#organization' },
+      isPartOf: { '@id': 'https://safewebhook.com/#website' },
+      about: ['Webhook API', 'Server-Sent Events', 'HMAC signature verification', 'Webhook testing']
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://safewebhook.com/' },
+        { '@type': 'ListItem', position: 2, name: 'API Documentation', item: 'https://safewebhook.com/docs' }
+      ]
+    }
+  ]
+};
 ---
 
 <Layout
   title="SafeWebhook API Documentation & Integration Guides — safewebhook.com"
   description="Comprehensive developer documentation for SafeWebhook REST API, real-time SSE streaming, HMAC cryptographic verification, and local forwarding."
+  keywords="SafeWebhook API documentation, webhook API, HTTP webhook endpoint, SSE webhook streaming, HMAC signature verification, replay webhook to localhost, webhook tester API"
+  schema={docsSchema}
+  ogType="article"
+  articleSection="API Documentation"
 >
   <Header activeNav="docs" subTitle="/ API Docs" />
 
