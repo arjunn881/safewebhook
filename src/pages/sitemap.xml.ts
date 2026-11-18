@@ -16,6 +16,7 @@ export const GET: APIRoute = async () => {
 
   const staticPages = [
     { loc: `${baseUrl}/`, priority: '1.0', changefreq: 'daily', lastmod: currentDate },
+    { loc: `${baseUrl}/app`, priority: '0.95', changefreq: 'daily', lastmod: currentDate },
     { loc: `${baseUrl}/about`, priority: '0.7', changefreq: 'monthly', lastmod: '2026-08-30' },
     { loc: `${baseUrl}/contact`, priority: '0.7', changefreq: 'monthly', lastmod: '2026-08-30' },
     { loc: `${baseUrl}/docs`, priority: '0.8', changefreq: 'weekly', lastmod: currentDate },

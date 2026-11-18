@@ -11,7 +11,7 @@ const { competitor } = Astro.params;
 const compData: CompetitorInfo | undefined = COMPETITORS[competitor as string];
 
 if (!compData) {
-  return Astro.redirect('/vs');
+  return Astro.rewrite('/404');
 }
 
 const pageTitle = `SafeWebhook vs ${compData.name} — Feature & Privacy Comparison (2026) | SafeWebhook`;

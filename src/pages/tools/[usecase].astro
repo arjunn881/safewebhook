@@ -11,7 +11,7 @@ const { usecase } = Astro.params;
 const caseData: UseCaseInfo | undefined = USE_CASES[usecase as string];
 
 if (!caseData) {
-  return Astro.redirect('/tools');
+  return Astro.rewrite('/404');
 }
 
 const pageTitle = `${caseData.name} — Free Online Webhook Utility | SafeWebhook`;

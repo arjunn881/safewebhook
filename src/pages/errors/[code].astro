@@ -11,7 +11,7 @@ const { code } = Astro.params;
 const errorData: ErrorGuideInfo | undefined = ERROR_GUIDES[code as string];
 
 if (!errorData) {
-  return Astro.redirect('/errors');
+  return Astro.rewrite('/404');
 }
 
 const pageTitle = `Fix Webhook HTTP ${errorData.statusCode} Error (${errorData.title}) | SafeWebhook`;

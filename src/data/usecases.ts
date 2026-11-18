@@ -616,6 +616,58 @@ export async function validatePayPalIpn(rawBody) {
         a: 'Legacy IPN systems do not sign payloads with HMAC headers; instead, the receiver must post the entire raw body back to the gateway to confirm authenticity.'
       }
     ]
+  },
+  'curl-to-webhook': {
+    slug: 'curl-to-webhook',
+    name: 'cURL to Webhook Online Converter & Replay Tester',
+    headline: 'Convert cURL commands to live HTTP webhooks, inspect request headers, and test payloads online',
+    description: 'Easily convert cURL requests into live test webhooks or trigger automated webhook calls from your terminal to safewebhook.com with instant edge telemetry.',
+    directAnswer: 'SafeWebhook allows developers to test webhooks using simple cURL commands or replay captured payloads as executable cURL CLI snippets. With instant edge reception and zero signup, you can pipe JSON payloads directly from your terminal to your private inspection workbench.',
+    keyTakeaways: [
+      'One-click cURL code export for every captured webhook payload.',
+      'Instant terminal testing: send POST, PUT, and PATCH webhooks via cURL.',
+      'Full header and body inspection with real-time SSE streaming.',
+      'Zero signup and zero server disk storage at safewebhook.com.'
+    ],
+    targetQueries: [
+      'curl to webhook',
+      'send webhook using curl',
+      'test webhook with curl',
+      'curl webhook tester online',
+      'convert curl command to webhook'
+    ],
+    benefits: [
+      'Test webhook receivers directly from bash, zsh, or PowerShell using cURL',
+      'Export captured webhooks as reproducible cURL snippets in 1 click',
+      'Inspect exact request headers, user agents, and raw bodies in real time',
+      'Test simulated latency and custom status codes against cURL calls'
+    ],
+    practicalGuide: [
+      'Generate your free temporary webhook endpoint at safewebhook.com.',
+      'Copy the curl command snippet provided on the dashboard.',
+      'Execute the curl command in your terminal with your JSON payload.',
+      'Watch the payload appear instantly in the SafeWebhook real-time timeline.',
+      'Use the Replay Drawer to re-run or export the payload as code.'
+    ],
+    codeSnippet: `// Send a test JSON webhook to SafeWebhook using cURL
+curl -X POST "https://safewebhook.com/api/r/YOUR_ENDPOINT_ID" \\
+  -H "Content-Type: application/json" \\
+  -H "User-Agent: SafeWebhook-cURL-Tester/1.0" \\
+  -d '{"event":"user.signup","email":"dev@example.com","timestamp":1700000000}'`,
+    faqs: [
+      {
+        q: 'How do I send a webhook using cURL?',
+        a: 'Run curl -X POST https://safewebhook.com/api/r/YOUR_ENDPOINT_ID -H "Content-Type: application/json" -d \'{"test":true}\' in your terminal.'
+      },
+      {
+        q: 'Can I export captured webhooks back to cURL commands?',
+        a: 'Yes! Select any received webhook in the SafeWebhook workbench and click the cURL tab to copy the exact executable command with all original headers and body.'
+      },
+      {
+        q: 'Does SafeWebhook support binary or multipart cURL uploads?',
+        a: 'Yes. SafeWebhook accepts application/json, application/x-www-form-urlencoded, multipart/form-data, and raw text payloads up to 1MB.'
+      }
+    ]
   }
 };
 

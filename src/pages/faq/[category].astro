@@ -17,7 +17,7 @@ const { category } = Astro.params;
 const catData = FAQ_CATEGORIES.find((c) => c.slug === category);
 
 if (!catData) {
-  return Astro.redirect('/faq');
+  return Astro.rewrite('/404');
 }
 
 const categoryFaqs = getFaqsByCategory(catData.slug as FaqCategorySlug);

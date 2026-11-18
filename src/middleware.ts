@@ -20,11 +20,26 @@ export const onRequest = defineMiddleware((context, next) => {
 
   const needsHttpsUpgrade = url.protocol === 'http:';
   const needsWwwStrip = url.hostname === `www.${CANONICAL_HOST}`;
+  const hasTemplateString = url.search.includes('{search_term_string}') || url.pathname.includes('{search_term_string}');
+  const isLegacyWebhookPath = url.pathname === '/webhook' || url.pathname === '/webhooks';
+  const isLegacyApiWebhookPath = url.pathname === '/api/webhook';
 
-  if (needsHttpsUpgrade || needsWwwStrip) {
+  if (isLegacyWebhookPath) {
+    return Response.redirect(`https://${CANONICAL_HOST}/app`, 301);
+  }
+
+  if (isLegacyApiWebhookPath) {
+    return Response.redirect(`https://${CANONICAL_HOST}/docs`, 301);
+  }
+
+  if (needsHttpsUpgrade || needsWwwStrip || hasTemplateString) {
     const canonical = new URL(url);
     canonical.protocol = 'https:';
     canonical.hostname = CANONICAL_HOST;
+    if (hasTemplateString) {
+      canonical.search = '';
+      canonical.pathname = canonical.pathname.replace(/{search_term_string}/g, '');
+    }
     return new Response(null, {
       status: 301,
       headers: {

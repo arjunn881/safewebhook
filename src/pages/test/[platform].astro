@@ -11,7 +11,7 @@ const { platform } = Astro.params;
 const platformData: PlatformInfo | undefined = PLATFORMS[platform as string];
 
 if (!platformData) {
-  return Astro.redirect('/integrations');
+  return Astro.rewrite('/404');
 }
 
 const pageTitle = `Test ${platformData.name} Webhooks Online — HMAC Signature & Payload Inspector | SafeWebhook`;

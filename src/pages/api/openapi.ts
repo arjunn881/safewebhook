@@ -33,10 +33,6 @@ export const GET: APIRoute = async () => {
         description: 'Production Global Edge (Cloudflare Anycast)',
       },
       {
-        url: 'https://www.safewebhook.com',
-        description: 'Production Global Edge (WWW Alternate)',
-      },
-      {
         url: 'http://localhost:3000',
         description: 'Local Development Server',
       },

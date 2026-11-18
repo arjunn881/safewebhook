@@ -173,7 +173,7 @@ export const ALL_FAQS: FaqItem[] = [
     detailedAnswer: `
 <p>A <strong>webhook URL</strong> is the destination address that you supply in a service's developer settings (e.g. Stripe Dashboard, GitHub Settings, Shopify Admin) telling that service where to route event notifications.</p>
 <p>For example, if your application runs on <code>https://example.com</code>, your webhook URL might be <code>https://example.com/api/v1/webhooks/billing</code>.</p>
-<p>When testing during development, you can generate a free temporary webhook URL on <strong>SafeWebhook</strong> (e.g. <code>https://safewebhook.com/api/in/[uuid]</code>) to inspect live headers and JSON bodies in real-time before writing server code.</p>
+<p>When testing during development, you can generate a free temporary webhook URL on <strong>SafeWebhook</strong> (e.g. <code>https://safewebhook.com/api/r/[uuid]</code>) to inspect live headers and JSON bodies in real-time before writing server code.</p>
 `,
     keywords: ['what is a webhook url', 'webhook url', 'what is webhook url', 'webhook url format'],
     isHomepageFeatured: false,
@@ -376,7 +376,7 @@ app.listen(3000, () => console.log('Webhook server running on port 3000'));</cod
     detailedAnswer: `
 <p>Testing webhooks online is 100% free and instant with <strong>SafeWebhook</strong>:</p>
 <ol>
-  <li>Navigate to <a href="/app" class="text-blue-600 dark:text-sky-400 font-semibold hover:underline">SafeWebhook Workbench (/app)</a>. You immediately receive a unique endpoint URL (e.g. <code>https://safewebhook.com/api/in/ep_dev_...</code>).</li>
+  <li>Navigate to <a href="/app" class="text-blue-600 dark:text-sky-400 font-semibold hover:underline">SafeWebhook Workbench (/app)</a>. You immediately receive a unique endpoint URL (e.g. <code>https://safewebhook.com/api/r/ep_dev_...</code>).</li>
   <li>Copy this URL and paste it into your webhook sender (Stripe, GitHub, Shopify, custom cURL, Postman).</li>
   <li>Trigger a test event. Inbound HTTP requests stream directly to your browser screen in sub-20 milliseconds via Server-Sent Events (SSE).</li>
   <li>Inspect raw headers, parsed JSON bodies, query strings, and auth tokens client-side.</li>
@@ -418,7 +418,7 @@ app.listen(3000, () => console.log('Webhook server running on port 3000'));</cod
   <li>Open <a href="/app" class="text-blue-600 dark:text-sky-400 font-semibold hover:underline">safewebhook.com/app</a>.</li>
   <li>Click <strong>Copy Endpoint</strong> to copy your unique URL.</li>
   <li>Run this one-line terminal command:
-    <pre class="bg-slate-900 text-slate-100 p-3 rounded-lg text-xs overflow-x-auto my-2"><code>curl -X POST https://safewebhook.com/api/in/YOUR_ENDPOINT_ID \\
+    <pre class="bg-slate-900 text-slate-100 p-3 rounded-lg text-xs overflow-x-auto my-2"><code>curl -X POST https://safewebhook.com/api/r/YOUR_ENDPOINT_ID \\
   -H "Content-Type: application/json" \\
   -d '{"status":"success","message":"Hello from webhook test"}'</code></pre>
   </li>
@@ -458,7 +458,7 @@ app.listen(3000, () => console.log('Webhook server running on port 3000'));</cod
 <p>To generate a temporary webhook URL:</p>
 <ol>
   <li>Go to <a href="/app" class="text-blue-600 dark:text-sky-400 font-semibold hover:underline">safewebhook.com/app</a>.</li>
-  <li>An isolated temporary URL (such as <code>https://safewebhook.com/api/in/ep_6f9e31...</code>) is generated instantly for your session.</li>
+  <li>An isolated temporary URL (such as <code>https://safewebhook.com/api/r/ep_6f9e31...</code>) is generated instantly for your session.</li>
   <li>Use this URL in your testing pipelines, integration tests, or API mock environments.</li>
   <li>Whenever you need a fresh URL, click <strong>New Endpoint</strong> in the dashboard to generate a clean identifier.</li>
 </ol>
@@ -555,7 +555,7 @@ app.listen(3000, () => console.log('Webhook server running on port 3000'));</cod
 <ol>
   <li>Generate an endpoint at <a href="/app" class="text-blue-600 dark:text-sky-400 font-semibold hover:underline">SafeWebhook (/app)</a>.</li>
   <li>Send a sample POST request via cURL:
-    <pre class="bg-slate-900 text-slate-100 p-3 rounded-lg text-xs overflow-x-auto my-2"><code>curl -X POST https://safewebhook.com/api/in/YOUR_ENDPOINT_ID \\
+    <pre class="bg-slate-900 text-slate-100 p-3 rounded-lg text-xs overflow-x-auto my-2"><code>curl -X POST https://safewebhook.com/api/r/YOUR_ENDPOINT_ID \\
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer test_token_123" \\
   -d '{"event": "user.created", "userId": 48210, "timestamp": 1756281600}'</code></pre>
@@ -594,7 +594,7 @@ app.listen(3000, () => console.log('Webhook server running on port 3000'));</cod
     detailedAnswer: `
 <p>Traditionally, testing webhooks locally required installing tunneling binaries (like Ngrok or Localtunnel) and keeping terminal tunnels open. SafeWebhook offers an easier, zero-install alternative:</p>
 <ol>
-  <li>Set your webhook provider's endpoint to your SafeWebhook URL (e.g. <code>https://safewebhook.com/api/in/ep_dev_...</code>).</li>
+  <li>Set your webhook provider's endpoint to your SafeWebhook URL (e.g. <code>https://safewebhook.com/api/r/ep_dev_...</code>).</li>
   <li>Trigger a live test event from your provider.</li>
   <li>Click the <strong>Replay</strong> button on the captured request in SafeWebhook.</li>
   <li>Enter your local server URL (e.g., <code>http://localhost:3000/api/webhook</code>) and click <strong>Dispatch Replay</strong>.</li>
@@ -747,7 +747,7 @@ if (req.headers.authorization !== \`Bearer \${process.env.WEBHOOK_AUTH_TOKEN}\`)
 <p>To test API key validation in webhooks:</p>
 <ol>
   <li>Send an HTTP POST with your API key:
-    <pre class="bg-slate-900 text-slate-100 p-3 rounded-lg text-xs overflow-x-auto my-2"><code>curl -X POST https://safewebhook.com/api/in/YOUR_ENDPOINT_ID \\
+    <pre class="bg-slate-900 text-slate-100 p-3 rounded-lg text-xs overflow-x-auto my-2"><code>curl -X POST https://safewebhook.com/api/r/YOUR_ENDPOINT_ID \\
   -H "X-Api-Key: sec_test_99a81b2c" \\
   -d '{"event":"ping"}'</code></pre>
   </li>
@@ -916,7 +916,7 @@ function verifyWebhookSignature(rawBody, signatureHeader, secret) {
     shortAnswer: 'Test custom headers by using cURL, Postman, or SafeWebhook’s test emitter to send headers like X-Custom-Tenant-ID and verifying they are parsed accurately without header stripping.',
     detailedAnswer: `
 <p>To dispatch and verify custom headers:</p>
-<pre class="bg-slate-900 text-slate-100 p-3 rounded-lg text-xs overflow-x-auto my-2"><code>curl -X POST https://safewebhook.com/api/in/YOUR_ENDPOINT_ID \\
+<pre class="bg-slate-900 text-slate-100 p-3 rounded-lg text-xs overflow-x-auto my-2"><code>curl -X POST https://safewebhook.com/api/r/YOUR_ENDPOINT_ID \\
   -H "X-Custom-Tenant-ID: tenant_org_88192" \\
   -H "X-Webhook-Trace-ID: trace_99381a" \\
   -H "Content-Type: application/json" \\

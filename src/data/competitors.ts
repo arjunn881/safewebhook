@@ -378,6 +378,56 @@ export const COMPETITORS: Record<string, CompetitorComparison> = {
         a: 'Use SafeWebhook for rapid webhook debugging, signature validation, and payload inspection during development. Use Cloudflare Tunnel for permanent production service routing.'
       }
     ]
+  },
+  'svix': {
+    slug: 'svix',
+    name: 'Svix',
+    tagline: 'Zero-Cost Developer Webhook Debugger vs Svix Enterprise Webhook Infrastructure',
+    summary: 'Svix is an enterprise webhook-as-a-service platform built for outbound SaaS dispatching, charging $150 to $500+/month with strict monthly dispatch quotas. SafeWebhook (safewebhook.com) is a 100% free, zero-login developer workbench for testing, receiving, and cryptographically verifying Svix webhooks in real time with zero server disk storage.',
+    directAnswer: 'SafeWebhook provides an instant, free developer testing workbench for Svix webhooks. Unlike Svix which is a costly outbound infrastructure pipeline for SaaS providers, SafeWebhook gives developers a disposable, private edge URL to inspect, debug, and cryptographically verify Svix signature headers (svix-id, svix-timestamp, svix-signature) with zero registration.',
+    keyTakeaways: [
+      '100% Free developer testing: No $150+/mo infrastructure fees or monthly event caps.',
+      'Built-in Svix signature verification (svix-id, svix-timestamp, svix-signature) with base64 secret support.',
+      'Instant zero-login receiver at safewebhook.com with sub-20ms Cloudflare edge SSE delivery.',
+      'Zero server disk writes ensures confidential test tokens and customer records never persist.'
+    ],
+    pricingDifference: 'Svix charges from $150/mo to $500+/mo for infrastructure event routing and storage. SafeWebhook is 100% free forever for receiving, testing, and debugging webhook events.',
+    privacyDifference: 'Svix stores event payloads in multi-tenant cloud databases. SafeWebhook streams events ephemerally through Cloudflare Edge RAM with zero persistent disk storage.',
+    latencyDifference: 'SafeWebhook routes through Cloudflare’s 300+ global edge locations (< 20ms SSE latency) compared to centralized cloud VPC clusters.',
+    advantages: [
+      'Instant zero-signup endpoint creation at safewebhook.com',
+      'Native Svix cryptographic signature validation engine (HMAC-SHA256)',
+      'Inspect svix-id, svix-timestamp, and raw body side-by-side in real time',
+      'Localhost Replay Drawer to forward Svix payloads directly to local ports (3000, 8000)',
+      'Simulate custom HTTP status codes (200, 400, 500) and artificial network latency'
+    ],
+    limitations: [
+      'Svix is designed for high-throughput enterprise SaaS webhook dispatching, not ad-hoc debugging',
+      'Svix requires extensive API token configuration and SDK integration before testing',
+      'Svix plans require credit card entry and recurring monthly commitments'
+    ],
+    comparisonMatrix: [
+      { feature: 'Target Use Case', safewebhook: 'Instant Webhook Debugging & Verification', competitor: 'Outbound SaaS Dispatch Pipeline' },
+      { feature: 'Pricing / Monthly Cost', safewebhook: '100% Free Forever ($0)', competitor: 'Starts at $150 - $500+/mo' },
+      { feature: 'Registration & Auth', safewebhook: 'Zero Signup Required', competitor: 'Mandatory Account & API Keys' },
+      { feature: 'Svix Header Verification', safewebhook: 'Built-in Visual Validator', competitor: 'Requires CLI or SDK Implementation' },
+      { feature: 'Ephemeral Memory Privacy', safewebhook: 'Zero Server Disk Writes', competitor: 'Multi-Tenant Cloud DB' },
+      { feature: 'Localhost Replay Proxy', safewebhook: 'Built-in 1-Click Replay Drawer', competitor: 'Requires Svix CLI or Tunnel' }
+    ],
+    faqs: [
+      {
+        q: 'Can I use SafeWebhook to test Svix and Clerk webhooks?',
+        a: 'Yes! SafeWebhook natively parses and cryptographically validates Svix headers (svix-id, svix-timestamp, and svix-signature) used by Clerk, Resend, and other Svix-powered services.'
+      },
+      {
+        q: 'Is SafeWebhook competing with Svix or complementary?',
+        a: 'SafeWebhook is the ideal testing workbench for developers integrating with Svix. While Svix delivers production webhooks for SaaS companies, SafeWebhook allows developers to capture, inspect, and replay those payloads locally without cost.'
+      },
+      {
+        q: 'Do I need a credit card or Svix account to test?',
+        a: 'No. Open safewebhook.com and get an instant edge URL with zero registration.'
+      }
+    ]
   }
 };
 

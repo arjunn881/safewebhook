@@ -38,12 +38,19 @@ const isApp = Astro.url ? (Astro.url.pathname === '/app' || Astro.url.pathname.s
 const shouldShowAds = showAds && !isApp;
 
 const siteUrl = Astro.site ? Astro.site.toString().replace(/\/$/, '') : SITE_URL;
-const canonicalUrl = new URL(canonicalURL || Astro.url.pathname, siteUrl);
+const rawPathname = Astro.url ? Astro.url.pathname : '';
+const normalizedPathname = rawPathname.length > 1 && rawPathname.endsWith('/')
+  ? rawPathname.slice(0, -1)
+  : rawPathname;
+const canonicalUrl = new URL(canonicalURL || normalizedPathname, siteUrl);
 // Query strings and fragments are not content variants. Removing them keeps
 // filter/search URLs from creating duplicate canonical signals.
 canonicalUrl.search = '';
 canonicalUrl.hash = '';
-const canonical = canonicalUrl.pathname === '/' ? `${siteUrl}/` : canonicalUrl.toString();
+const cleanPath = canonicalUrl.pathname.length > 1 && canonicalUrl.pathname.endsWith('/')
+  ? canonicalUrl.pathname.slice(0, -1)
+  : canonicalUrl.pathname;
+const canonical = cleanPath === '' || cleanPath === '/' ? `${siteUrl}/` : `${siteUrl}${cleanPath}`;
 const absoluteOgImage = ogImage.startsWith('http') ? ogImage : `${siteUrl}${ogImage}`;
 
 const globalStructuredData = [
@@ -55,11 +62,6 @@ const globalStructuredData = [
     description: description,
     inLanguage: 'en',
     publisher: { '@id': `${siteUrl}/#organization` },
-    potentialAction: {
-      '@type': 'SearchAction',
-      target: `${siteUrl}/integrations?q={search_term_string}`,
-      'query-input': 'required name=search_term_string'
-    },
     speakable: {
       '@type': 'SpeakableSpecification',
       cssSelector: ['.speakable-answer', '.speakable-description']

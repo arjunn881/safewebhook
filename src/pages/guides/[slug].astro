@@ -11,7 +11,7 @@ const { slug } = Astro.params;
 const guideData: FrameworkGuideInfo | undefined = FRAMEWORK_GUIDES[slug as string];
 
 if (!guideData) {
-  return Astro.redirect('/guides');
+  return Astro.rewrite('/404');
 }
 
 const pageTitle = `${guideData.title} | SafeWebhook`;

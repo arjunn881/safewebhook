@@ -6,6 +6,7 @@ import tailwindcss from '@tailwindcss/vite';
 // https://astro.build/config
 export default defineConfig({
   site: 'https://safewebhook.com',
+  trailingSlash: 'never',
   server: {
     port: 3000,
     host: true

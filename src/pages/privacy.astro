@@ -51,7 +51,7 @@ const pageDescription = 'SafeWebhook Privacy Policy. Comprehensive disclosure of
       <!-- 1. Webhook Payload Privacy & Edge Architecture -->
       <section class="space-y-3 p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm">
         <h2 class="text-xl font-bold text-slate-900 dark:text-white font-sans">1. Webhook Payloads &amp; Developer Data</h2>
-        <p>When you send webhooks or API requests to a generated SafeWebhook endpoint (e.g. <code>https://safewebhook.com/api/r/:endpoint_id</code>):</p>
+        <p>When you send webhooks or API requests to a generated SafeWebhook endpoint (e.g. <code>https://safewebhook.com/api/r/&lbrace;endpoint_id&rbrace;</code>):</p>
         <ul class="list-disc list-inside space-y-1.5 ml-2">
           <li><strong>In-Memory Processing:</strong> Payloads are ingested in-memory across the Cloudflare Anycast edge network and broadcast in real-time to your open browser tab.</li>
           <li><strong>No Server-Side Database Logging:</strong> Headers, bodies, query strings, and authentication tokens are not archived on disk.</li>
