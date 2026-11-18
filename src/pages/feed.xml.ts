@@ -78,6 +78,7 @@ export const GET: APIRoute = async () => {
     status: 200,
     headers: {
       'Content-Type': 'application/xml; charset=utf-8',
+      'X-Robots-Tag': 'noindex, follow',
       'Cache-Control': 'public, max-age=3600',
     },
   });
